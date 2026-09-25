@@ -446,8 +446,6 @@ class Segment(BaseModel):
             raise ValueError("effective_dv_mV requires known gain")
         if self.temporal_trace_path is not None and self.temporal_trace_units is None:
             raise ValueError("temporal_trace_units required with temporal_trace_path")
-            # an arbitrary/px trace is allowed while time is unknown; it only
-            # becomes temporal evidence after an explicit scale confirmation
 
         if (
             time_known

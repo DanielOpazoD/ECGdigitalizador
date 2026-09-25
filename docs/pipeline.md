@@ -88,4 +88,10 @@ Ejecutado sobre `runs/f2/imgkit_seed7/tiled12-0.png` (verdad: 12 derivaciones,
 - Relectura WFDB `seg-II-page-1` vs verdad (`metrics_for_lead` de
   `benchmarks/f2_synthetic_bench.py`): coverage 0.998, best_lag 39 ms,
   r@lag 0.654, rr_est 1.008 s (verdad 1.000), r_peak_amp_ratio 0.848,
-  amplitude_ratio 0.98 — valores coherentes con el bench F2 de ahus.
+  amplitude_ratio 0.98. RR, amplitud y cobertura coinciden con el bench
+  F2; `r@lag` no (F2 informó 0.954 para la misma semilla). La señal
+  exportada y el CSV canónico guardado en `runs/f2/ahus_seed7` difieren
+  como máximo 0.07 mV y ambos dan r@lag 0.654 con el mismo procedimiento,
+  así que la discrepancia está en la comparación (o en una corrida distinta
+  del motor), no en el pipeline. Pendiente de reconciliar (B-07) antes de
+  usar r@lag como métrica de gate.
