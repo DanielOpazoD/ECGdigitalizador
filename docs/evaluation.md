@@ -110,13 +110,17 @@ Sigue sin ser validación clínica ni datos de los equipos locales (B-01/B-03).
 
 ## Estado
 
-**Fase 1 ejecutada (2026-09-25)**: 10 registros × variantes `0001` (original),
-`0003` (escaneo color) y `0005` (foto móvil) × 2 motores × 2 ejes, en CPU
-x86 de 4 núcleos y 16 GB, sin GPU. Resultados:
-`benchmarks/results/f6b_kaggle_two_engines_2026-09-25_phase1.json` (sólo
-métricas, sha256 y metadatos; ni imágenes ni señales). Fase 2 (resto de
-variantes: Ahus en todas, ECG-Digitiser en los escaneos de los 10 registros
-y en las fotos de 3) en curso; se añadirá aquí al terminar.
+**Ejecutado (2026-09-25)** en CPU x86 de 4 núcleos y 16 GB, sin GPU:
+
+- Fase 1: 10 registros × `0001`/`0003`/`0005` × 2 motores × 2 ejes.
+- Fase 2: Ahus en las 9 variantes de los 10 registros; ECG-Digitiser en
+  `0004` (10 registros) y `0011`/`0012` (3 registros). ECG-Digitiser **no** se
+  corrió en las fotos `0006`/`0009`/`0010`: en `0005` ya daba r@lag 0.13 y
+  cuesta ≈17 min por foto; se juzgó que no aportaba información nueva.
+
+Resultados finales (sólo métricas, sha256 y metadatos; ni imágenes ni
+señales): `benchmarks/results/f6b_kaggle_two_engines_2026-09-25.json`. El
+JSON `_phase1` queda como registro intermedio (mismas cifras en sus tipos).
 
 ## Requisitos
 
@@ -262,11 +266,71 @@ cambio el escaneo daba 38.3 px/mm, 5× el valor real (≈7.5 px/mm).
    (sólo barras de progreso); derivaciones no devueltas fuera del
    denominador.
 
+## Resultados fase 2 (todas las variantes; medianas por derivación)
+
+Tras la fase 2 se repitieron los `engine_error` (con mensaje completo): los
+dos de 3203822582-0005 causados por mí salen bien al repetirlos (Ahus 12/12,
+ECG-Digitiser 11/12); 3406869873-0005 es `Signal is empty` de ECG-Digitiser.
+
+Ahus, eje `engine` (10 registros por variante):
+
+| tipo | ok/filas | r@lag med [IQR] | SNR dB med | amp. med | no-ok |
+|---|---|---|---|---|---|
+| 0001 original | 120/120 | 0.993 [0.99–1.00] | 18.1 | 1.01 | |
+| 0003 escaneo color | 120/120 | 0.910 [0.75–0.97] | 7.5 | 1.01 | |
+| 0004 escaneo B/N | 120/120 | 0.919 [0.76–0.96] | 7.9 | 1.02 | |
+| 0005 foto impresión | 118/120 | 0.833 [0.66–0.95] | 4.5 | 1.02 | `lead_missing` 2 |
+| 0006 foto de pantalla | 95/120 | 0.954 [0.84–0.98] | 10.4 | 1.00 | `lead_missing` 25 |
+| 0009 foto manchada/empapada | 120/120 | 0.933 [0.86–0.97] | 8.7 | 1.04 | |
+| 0010 foto con daño extenso | 120/120 | 0.854 [0.72–0.94] | 5.6 | 1.03 | |
+| 0011 escaneo color con moho | 120/120 | 0.899 [0.74–0.97] | 7.0 | 1.03 | |
+| 0012 escaneo B/N con moho | 119/120 | 0.834 [0.67–0.96] | 4.6 | 1.04 | `lead_missing` 1 |
+| **todas** | 1052/1080 | 0.922 [0.78–0.98] | 8.1 | 1.02 | `lead_missing` 28 |
+
+ECG-Digitiser, eje `engine`:
+
+| tipo | registros | ok/filas | r@lag med [IQR] | SNR dB med | no-ok |
+|---|---|---|---|---|---|
+| 0001 | 10 | 120/120 | 0.989 [0.97–1.00] | 16.6 | |
+| 0003 | 10 | 36/43 | 0.957 [0.91–0.98] | 10.7 | `engine_error` 7 |
+| 0004 | 10 | 48/54 | 0.951 [0.90–0.98] | 10.0 | `engine_error` 6 |
+| 0005 | 10 | 100/109 | 0.132 [0.05–0.29] | −14.9 | `engine_error` 1, `lead_missing` 8 |
+| 0011 | 3 | 12/14 | 0.873 [0.76–0.96] | 5.8 | `engine_error` 2 |
+| 0012 | 3 | 12/14 | 0.839 [0.73–0.95] | 4.7 | `engine_error` 2 |
+
+Eje `evidence`: sólo hay rejilla propia en la original (10/10) y en **2 de 10
+escaneos B/N** (`0004`: 1512936796 7.49 px/mm; 4079781180 7.47 px/mm en x,
+sin y). En esos dos, Ahus r@lag 0.936 (24/24) y ECG-Digitiser 0.980 (24/24).
+En las otras 7 variantes, 0/10 (`time_scale_unknown`).
+
+Tiempo de pared mediano por imagen: Ahus 35–39 s (escaneos), 59–64 s
+(fotos); ECG-Digitiser ≈290–300 s (escaneos), ≈1000 s (fotos). Parte de la
+fase 2 coincidió con ≈1.5 min de otra ejecución de Ahus (fotos del usuario,
+fuera del banco): efecto menor en los tiempos, ninguno en las métricas.
+
+### Fallos observados (fase 2)
+
+1. **ECG-Digitiser "Signal is empty" es sistemático en escaneos**: 7/10 en
+   color (0003), 6/10 en B/N (0004), 2/3 con moho (0011 y 0012); también en
+   una foto (3406869873-0005). Los 18 `engine_error` del motor tienen ese
+   mismo mensaje. Cuando no aborta, su calidad en escaneos es la mejor
+   (r@lag 0.95–0.96).
+2. **Ahus en fotos de pantalla (0006)** no devuelve 25 de 120 derivaciones,
+   17 de ellas en 2 registros (3203822582 devuelve 3 de 12; 4166392674, 4 de
+   12); las que devuelve son buenas (r@lag 0.954).
+3. **Degradaciones para Ahus**, de menor a mayor impacto en r@lag: pantalla
+   (0.954, pero con derivaciones perdidas), manchas (0.933), escaneos
+   (0.91–0.92), moho color (0.899), daño extenso (0.854), foto de impresión
+   y moho B/N (0.833–0.834). La amplitud apenas se desvía (1.00–1.04).
+4. **La tira de ritmo de 10 s es la derivación más frágil** en escaneos y
+   fotos: el error temporal se acumula a lo largo de la tira (visto al
+   superponer traza y verdad; mismo fenómeno que B-07).
+
 ## Limitaciones
 
-- 10 registros, 3 de 9 variantes en esta fase; ECG-Digitiser en las fotos de
-  la fase 2 sólo en 3 registros (≈17 min por foto en CPU). Sin intervalos de
-  confianza: medianas e IQR descriptivos.
+- 10 registros; ECG-Digitiser sólo en escaneos (3 registros en los de moho) y
+  sin las fotos 0006/0009/0010. Sin intervalos de confianza: medianas e IQR
+  descriptivos.
 - Métrica por derivación estilo competición, no la oficial por registro.
 - El eje `engine` asume 10 s de página y 25 mm/s/10 mm/mV confirmados a mano;
   en esta competición es cierto por construcción, en el flujo local no se
@@ -275,9 +339,6 @@ cambio el escaneo daba 38.3 px/mm, 5× el valor real (≈7.5 px/mm).
   el que se entrenó ECG-Digitiser): 0001 es ese render; el resto son su
   impresión escaneada o fotografiada. No son de los equipos locales ni de su
   formato (B-02/B-03). No es validación clínica.
-- Un `engine_error` de ECG-Digitiser en fotos (3406869873-0005) quedó con el
-  mensaje recortado (código anterior); la fase 2 lo repite con el mensaje
-  completo.
 
 ## Verificación de la cadena (no es evaluación)
 
