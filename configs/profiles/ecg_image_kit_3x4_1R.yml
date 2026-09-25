@@ -1,0 +1,19 @@
+# Perfil sintético: salida de ecg-image-kit (gen_ecg_image_from_data.py) a 200 dpi.
+# Documentado, no confirmado sobre hardware real. Válido sólo para el banco F2.
+schema_version: "1.0.0"
+profile_id: ecg_image_kit_3x4_1R
+status: documented_synthetic
+layout: "3x4+1R"
+source: ecg-image-kit commit 27b90f56896c9fc78b05a83ca14844ea2637aa0b
+page:
+  dpi: 200
+  size_px: [2198, 1698]      # ancho x alto observado (tiled12-0.png)
+expected:
+  px_per_mm_x: 7.874         # 200 dpi / 25.4
+  px_per_mm_y: 7.874
+  x_grid_px_per_5mm: 39.37   # metadato x_grid del generador
+admission:
+  residual_rel_max: 0.03
+  axes_agree_rel_max: 0.05   # px/mm x e y dentro del 5 % entre sí
+  require_minor_found: true
+  require_major_found: true

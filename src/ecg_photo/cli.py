@@ -1,8 +1,17 @@
 import argparse
 import json
+import uuid
 from pathlib import Path
 
-from ecg_photo.contracts import load_manifest, validate_revision_dir
+import numpy as np
+from PIL import Image
+
+from ecg_photo.contracts import (
+    CalibrationEvidence,
+    dump_json,
+    load_manifest,
+    validate_revision_dir,
+)
 from ecg_photo.export import (
     ExportNotAllowed,
     export_csv,
@@ -10,6 +19,8 @@ from ecg_photo.export import (
     export_wfdb,
 )
 from ecg_photo.fixtures import write_fixture_revision
+from ecg_photo.grid import estimate_grid
+from ecg_photo.ingest import IngestRejected, ingest
 from ecg_photo.render import (
     PaperSpec,
     RenderNotAllowed,
@@ -98,6 +109,94 @@ def _cmd_run_demo(args: argparse.Namespace) -> int:
     return _do_export(root, out / "export", 300.0, 25.0, 10.0)
 
 
+def _cmd_ingest(args: argparse.Namespace) -> int:
+    out = Path(args.out)
+    try:
+        manifest = ingest(Path(args.file), out, render_dpi=args.render_dpi)
+    except IngestRejected as e:
+        print(json.dumps({"rejected": str(e.reason_code)}, ensure_ascii=False))
+        return 2
+    pages_summary: list[dict[str, object]] = []
+    summary: dict[str, object] = {
+        "study_id": manifest.study_id,
+        "pages": pages_summary,
+    }
+    for pg in manifest.pages:
+        raster = out / pg.raster_path
+        img = np.asarray(Image.open(raster))
+        grid = estimate_grid(img)
+        grid_path = out / "pages" / f"{pg.page_id}.grid.json"
+        grid_path.write_text(
+            json.dumps(
+                {
+                    "px_per_mm_x": grid.px_per_mm_x,
+                    "px_per_mm_y": grid.px_per_mm_y,
+                    "minor_period_px_x": grid.minor_period_px_x,
+                    "minor_period_px_y": grid.minor_period_px_y,
+                    "major_period_px_x": grid.major_period_px_x,
+                    "major_period_px_y": grid.major_period_px_y,
+                    "residual_rel_x": grid.residual_rel_x,
+                    "residual_rel_y": grid.residual_rel_y,
+                    "method": grid.method,
+                    "limitations": grid.limitations,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        pg = pg.model_copy(update={"grid_estimate_path": f"pages/{pg.page_id}.grid.json"})
+        manifest.pages[pg.index] = pg
+        pages_summary.append(
+            {
+                "page_id": pg.page_id,
+                "extraction": str(pg.extraction),
+                "size_px": [pg.width_px, pg.height_px],
+                "exif_orientation": pg.exif_orientation,
+                "px_per_mm_x": grid.px_per_mm_x,
+                "px_per_mm_y": grid.px_per_mm_y,
+            }
+        )
+    dump_json(manifest, out / "manifest.json")
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _cmd_calibrate(args: argparse.Namespace) -> int:
+    root = Path(args.dir)
+    manifest = load_manifest(root / "manifest.json")
+    cal_path = root / "calibration.json"
+    entries: list[dict] = json.loads(cal_path.read_text()) if cal_path.exists() else []
+    for quantity, value, unit in (
+        ("speed_mm_s", args.speed, "mm/s"),
+        ("gain_mm_mV", args.gain, "mm/mV"),
+    ):
+        if value is None:
+            continue
+        ev = CalibrationEvidence(
+            evidence_id=f"manual-{uuid.uuid4().hex[:12]}",
+            kind="manual",
+            quantity=quantity,  # type: ignore[arg-type]
+            value=value,
+            unit=unit,
+            region=None,
+            frame_id=args.page,
+            method="cli-calibrate",
+            limitations="manual operator value; not verified against raster",
+            author=args.author,
+            reason=args.reason,
+        )
+        entries.append(ev.model_dump(mode="json"))
+    cal_path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+    old_rev = manifest.revision
+    (root / f"manifest.rev{old_rev}.json").write_text(
+        (root / "manifest.json").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    manifest = manifest.model_copy(update={"revision": old_rev + 1})
+    dump_json(manifest, root / "manifest.json")
+    print(json.dumps({"revision": manifest.revision, "evidence_added": len(entries)}, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="ecg-photo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -124,6 +223,21 @@ def build_parser() -> argparse.ArgumentParser:
     d = sub.add_parser("run-demo")
     d.add_argument("--out", required=True)
     d.set_defaults(func=_cmd_run_demo)
+
+    i = sub.add_parser("ingest")
+    i.add_argument("file")
+    i.add_argument("--out", required=True)
+    i.add_argument("--render-dpi", type=float, default=300.0)
+    i.set_defaults(func=_cmd_ingest)
+
+    c = sub.add_parser("calibrate")
+    c.add_argument("dir")
+    c.add_argument("--page", required=True)
+    c.add_argument("--speed", type=float, default=None)
+    c.add_argument("--gain", type=float, default=None)
+    c.add_argument("--author", required=True)
+    c.add_argument("--reason", required=True)
+    c.set_defaults(func=_cmd_calibrate)
     return p
 
 

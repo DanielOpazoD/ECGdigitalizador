@@ -16,6 +16,7 @@ dependencies = [
     "matplotlib",
     "pyyaml",
     "pypdf",
+    "pypdfium2==5.13.0",
 ]
 
 [project.optional-dependencies]
