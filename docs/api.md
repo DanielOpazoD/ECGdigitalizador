@@ -77,7 +77,7 @@ El motor `fake` sólo existe con `ECG_PHOTO_ENABLE_FAKE_ENGINE=1` (tests).
 - Sin autenticación multiusuario (T46, pendiente F9).
 - Cancelación best-effort: se marca `cancel_requested` y se comprueba antes de
   empezar y antes de publicar; no interrumpe el subproceso del motor.
-- Sin interfaz de usuario.
+- Interfaz de revisión mínima (`/ui`); sin rotación coordinada ni multiusuario.
 - Multi-página: `page_id` fijable en config vía PATCH pero por defecto `page-1`.
 
 ## Interfaz de revisión

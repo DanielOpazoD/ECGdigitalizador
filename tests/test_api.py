@@ -334,7 +334,7 @@ def test_read_endpoints(tmp_path) -> None:
         assert client.get(f"/studies/{sid}/pages/page-9/raster").status_code == 404
 
         g = client.get(f"/studies/{sid}/pages/page-1/grid")
-        assert g.status_code == 404 or g.status_code == 200  # grid optional at ingest
+        assert g.status_code == 200 and "px_per_mm_x" in g.json()
 
         segs = client.get(f"/studies/{sid}/runs/{run_id}/segments")
         assert segs.status_code == 200
