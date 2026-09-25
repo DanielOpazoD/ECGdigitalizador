@@ -10,6 +10,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+import pypdfium2 as pdfium  # type: ignore[import-untyped]
 import yaml
 from PIL import Image
 from pypdf import PdfReader
@@ -144,8 +145,6 @@ def _embedded_raster_dpi(px_w: int, px_h: int, box_w_pt: float, box_h_pt: float)
 def _ingest_pdf(
     path: Path, pages_dir: Path, render_dpi: float
 ) -> list[tuple[Page, TransformChain]]:
-    import pypdfium2 as pdfium  # type: ignore[import-untyped]
-
     reader = PdfReader(str(path))
     pdfium_doc = pdfium.PdfDocument(str(path))
     out: list[tuple[Page, TransformChain]] = []

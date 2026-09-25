@@ -15,7 +15,7 @@ import numpy as np
 from ecg_photo.contracts import CalibrationEvidence, ReasonCode, ScaleStatus
 
 GRID_QUANTITIES = {"px_per_mm_x", "px_per_mm_y"}
-NONGIRD_ALLOWED = {"declared_text", "calibration_pulse", "manual"}
+NONGRID_ALLOWED = {"declared_text", "calibration_pulse", "manual"}
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ def _eligible(ev: CalibrationEvidence, quantity: str) -> bool:
         return False
     if quantity in GRID_QUANTITIES:
         return ev.kind in ("grid_period", "manual")
-    return ev.kind in NONGIRD_ALLOWED
+    return ev.kind in NONGRID_ALLOWED
 
 
 def resolve_scale(
