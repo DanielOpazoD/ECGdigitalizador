@@ -40,6 +40,7 @@ class ScaleStatus(StrEnum):
     confirmed = "confirmed"
     proposed = "proposed"
     manual = "manual"
+    review_required = "review_required"
     unknown = "unknown"
 
 
@@ -98,6 +99,12 @@ class ReasonCode(StrEnum):
     PACED_RHYTHM_UNVALIDATED = "PACED_RHYTHM_UNVALIDATED"
     POPULATION_UNSUPPORTED = "POPULATION_UNSUPPORTED"
     INPUT_REVISION_STALE = "INPUT_REVISION_STALE"
+    CALIBRATION_CONFLICT = "CALIBRATION_CONFLICT"
+    CALIBRATION_MISSING = "CALIBRATION_MISSING"
+    PIXEL_LIMIT = "PIXEL_LIMIT"
+    UNSUPPORTED_TYPE = "UNSUPPORTED_TYPE"
+    PAGE_LIMIT = "PAGE_LIMIT"
+    FILE_SIZE_LIMIT = "FILE_SIZE_LIMIT"
 
 
 REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
@@ -177,6 +184,30 @@ REASON_TEXT: dict[ReasonCode, tuple[str, str]] = {
         "Revisión de entrada obsoleta",
         "la configuración o entrada cambió desde que se lanzó el trabajo",
     ),
+    ReasonCode.CALIBRATION_CONFLICT: (
+        "Calibración contradictoria",
+        "las evidencias de calibración discrepan más allá de la tolerancia",
+    ),
+    ReasonCode.CALIBRATION_MISSING: (
+        "Calibración ausente",
+        "no hay evidencia registrada para la magnitud solicitada",
+    ),
+    ReasonCode.PIXEL_LIMIT: (
+        "Límite de píxeles excedido",
+        "la página supera max_pixels_per_page y se rechaza antes de decodificar",
+    ),
+    ReasonCode.UNSUPPORTED_TYPE: (
+        "Tipo no soportado",
+        "los bytes mágicos del archivo no corresponden a un tipo admitido",
+    ),
+    ReasonCode.PAGE_LIMIT: (
+        "Límite de páginas excedido",
+        "el PDF supera max_pdf_pages",
+    ),
+    ReasonCode.FILE_SIZE_LIMIT: (
+        "Límite de tamaño excedido",
+        "el archivo supera max_file_mib",
+    ),
 }
 
 
@@ -234,6 +265,57 @@ def _positive_finite(name: str, value: float | None) -> None:
         raise ValueError(f"{name} must be positive and finite")
 
 
+class TransformStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["exif_orientation", "crop", "rotate90", "affine", "homography"]
+    parameters: dict[str, float | int | str | list[float]]
+    input_size: tuple[int, int]
+    output_size: tuple[int, int]
+    procedure_version: str
+
+
+class TransformChain(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    transform_id: str
+    source_frame_id: str
+    target_frame_id: str
+    steps: list[TransformStep] = []
+
+
+class Page(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    page_id: str
+    index: int = Field(ge=0)
+    width_px: int
+    height_px: int
+    dpi_declared: float | None
+    raster_path: RelPath
+    exif_orientation: int | None
+    extraction: Literal["image_file", "pdf_embedded_raster", "pdf_rendered"]
+    render_dpi: float | None = None
+    grid_estimate_path: RelPath | None = None
+
+
+class CalibrationEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    evidence_id: str
+    kind: Literal["grid_period", "declared_text", "calibration_pulse", "manual"]
+    quantity: Literal["px_per_mm_x", "px_per_mm_y", "speed_mm_s", "gain_mm_mV"]
+    value: float | None
+    unit: str
+    region: list[tuple[float, float]] | None = None
+    frame_id: str
+    method: str
+    limitations: str
+    author: str | None = None
+    reason: str | None = None
+    previous_value: float | None = None
+
+
 class Segment(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -272,6 +354,9 @@ class Segment(BaseModel):
     observed_mask_path: RelPath | None = None
     valid_mask_path: RelPath | None = None
     gap_fill_mask_path: RelPath | None = None
+    calibration_evidence: list[CalibrationEvidence] = []
+    px_per_mm_x: float | None = None
+    px_per_mm_y: float | None = None
     processing: list[ProcessingStep] = []
 
     def measurements_allowed(self) -> bool:
@@ -389,6 +474,8 @@ class Manifest(BaseModel):
     config_hash: str | None
     source: Source
     segments: list[Segment]
+    pages: list[Page] = []
+    transforms: list[TransformChain] = []
 
     @model_validator(mode="after")
     def _check_manifest(self) -> "Manifest":
@@ -497,7 +584,15 @@ def _check_array_file(
 
 
 def validate_revision_dir(root: Path, manifest: Manifest, strict: bool = True) -> list[str]:
+    problems, _warnings = validate_revision_dir_report(root, manifest, strict=strict)
+    return problems
+
+
+def validate_revision_dir_report(
+    root: Path, manifest: Manifest, strict: bool = True
+) -> tuple[list[str], list[str]]:
     problems: list[str] = []
+    warnings: list[str] = []
     root = Path(root).resolve()
 
     def resolve(rel: str, label: str) -> Path | None:
@@ -524,6 +619,32 @@ def validate_revision_dir(root: Path, manifest: Manifest, strict: bool = True) -
     for seg in manifest.segments:
         sid = seg.segment_id
         n_samples = seg.n_samples
+
+    transform_ids = {t.transform_id for t in manifest.transforms}
+    if manifest.transforms:
+        for seg in manifest.segments:
+            if seg.transform_id not in transform_ids:
+                problems.append(
+                    f"{seg.segment_id}.transform_id: {seg.transform_id} not in manifest.transforms"
+                )
+    for page in manifest.pages:
+        resolve(page.raster_path, f"{page.page_id}.raster_path")
+        if page.grid_estimate_path is not None:
+            resolve(page.grid_estimate_path, f"{page.page_id}.grid_estimate_path")
+
+    for seg in manifest.segments:
+        sid = seg.segment_id
+        n_samples = seg.n_samples
+
+        if seg.time_known():
+            has_speed_evidence = any(
+                ev.quantity == "speed_mm_s" and (ev.kind == "manual" or ev.value is not None)
+                for ev in seg.calibration_evidence
+            )
+            if not has_speed_evidence and seg.calibration_evidence:
+                warnings.append(f"{sid}: speed_status known without speed_mm_s evidence")
+        if not seg.calibration_evidence:
+            warnings.append(f"{sid}: no calibration evidence recorded")
 
         raw_p = resolve(seg.raw_path, f"{sid}.raw_path")
         n_raw = 0
@@ -616,4 +737,4 @@ def validate_revision_dir(root: Path, manifest: Manifest, strict: bool = True) -
             except _LOAD_ERRORS as e:
                 problems.append(f"{sid}.{attr}: load failed: {e}")
 
-    return problems
+    return problems, warnings
