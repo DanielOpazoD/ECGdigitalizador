@@ -108,5 +108,5 @@ def test_ecg_digitiser_patch_check_before_weights(tmp_path) -> None:
         python_exe=tmp_path / "python",
         model_dir="models/M3",
     )
-    with pytest.raises(EngineNotReady, match="patch 0001 not applied"):
+    with pytest.raises(EngineNotReady, match="patches 0001/0002 not applied"):
         d.run(tmp_path / "img.png", tmp_path / "work")

@@ -11,14 +11,17 @@ import json
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 
+from ecg_photo.calibration import resolve_scale
 from ecg_photo.contracts import (
     CalibrationEvidence,
     LeadStatus,
     Manifest,
     ProcessingStep,
+    ReasonCode,
     RepresentationKind,
     ResolutionEvidence,
     ScaleStatus,
@@ -31,6 +34,7 @@ from ecg_photo.contracts import (
 )
 from ecg_photo.digitizers.base import Digitizer
 from ecg_photo.signal import grid_from_observed_duration
+from ecg_photo.transforms import apply_chain
 
 ZERO_RUN_MIN = 50
 
@@ -174,7 +178,16 @@ def digitize_page(
             continue
 
         seg_id = f"seg-{lead}-{page_id}"
-        raw = np.stack([np.arange(len(values), dtype=np.float64), values], axis=1)
+        geo = out.geometry.get(lead) if out.geometry else None
+        if geo is not None:
+            raw = np.stack([geo.x_px, values], axis=1)
+            raw_frame = geo.frame_id
+            (run_dir / "raw_paths" / f"{seg_id}-geometry.json").write_text(
+                json.dumps(geo.chain.model_dump(mode="json"), indent=2), encoding="utf-8"
+            )
+        else:
+            raw = np.stack([np.arange(len(values), dtype=np.float64), values], axis=1)
+            raw_frame = engine_frame
         np.save(run_dir / "raw_paths" / f"{seg_id}.npy", raw)
         np.savez_compressed(run_dir / "raw_paths" / f"{seg_id}-support.npz", support=support)
         trace = np.where(support, values, np.nan)
@@ -185,6 +198,20 @@ def digitize_page(
         else:
             rep_ev = "engine did not report layout; output is a continuous canonical strip"
         w, h = int(page.width_px), int(page.height_px)
+        source_region = [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)]
+        if geo is not None and len(geo.chain.steps) >= 2:
+            # ECG-Digitiser: the first affine step records the rotated-frame
+            # mask rectangle; map its corners to file coords via the rest of
+            # the chain (rotation about the centre).
+            p0 = geo.chain.steps[0].parameters
+            if "mask_x1" in p0:
+                mx1, my1 = float(p0["mask_x1"]), float(p0["mask_y1"])  # type: ignore[arg-type]
+                mw, mh = float(p0["mask_width"]), float(p0["mask_height"])  # type: ignore[arg-type]
+                corners = np.array(
+                    [[mx1, my1], [mx1 + mw, my1], [mx1 + mw, my1 + mh], [mx1, my1 + mh]]
+                )
+                tail_chain = geo.chain.model_copy(update={"steps": geo.chain.steps[1:]})
+                source_region = [tuple(pt) for pt in apply_chain(tail_chain, corners).tolist()]
         segments.append(
             Segment(
                 segment_id=seg_id,
@@ -197,10 +224,10 @@ def digitize_page(
                 ),
                 representation_kind=RepresentationKind.rhythm_segment,
                 representation_evidence=rep_ev,
-                source_region=[(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)],
+                source_region=source_region,
                 transform_id=transform_id,
                 raw_path=f"raw_paths/{seg_id}.npy",
-                raw_coordinate_frame=engine_frame,
+                raw_coordinate_frame=raw_frame,
                 raw_support_path=f"raw_paths/{seg_id}-support.npz",
                 time_relation=TimeRelation.simultaneous,
                 sync_group_id=f"{page_id}-{run_id}",
@@ -252,19 +279,83 @@ def _engine_assumption(seg: Segment, name: str) -> float:
     raise ValueError(f"{seg.segment_id}: no engine_inference step with {name}")
 
 
-def confirm_engine_scale(
+def _grid_evidence_for_page(run_dir: Path, page_id: str) -> list[CalibrationEvidence]:
+    """CalibrationEvidence from the page's grid estimate (refined px_per_mm)."""
+    grid_path = run_dir / "pages" / f"{page_id}.grid.json"
+    if not grid_path.exists():
+        return []
+    g = json.loads(grid_path.read_text(encoding="utf-8"))
+    out: list[CalibrationEvidence] = []
+    for q, key in (("px_per_mm_x", "px_per_mm_x"), ("px_per_mm_y", "px_per_mm_y")):
+        v = g.get(key)
+        if v is None:
+            continue
+        out.append(
+            CalibrationEvidence(
+                evidence_id=f"grid-{page_id}-{key}",
+                kind="grid_period",
+                quantity=q,  # type: ignore[arg-type]
+                value=float(v),
+                unit="px/mm",
+                frame_id="file",
+                method=g.get("method", "grid estimate"),
+                limitations=g.get("limitations", ""),
+            )
+        )
+    return out
+
+
+def _calibration_json_evidence(run_dir: Path) -> list[CalibrationEvidence]:
+    """Evidence recorded by `calibrate` in the study's calibration.json."""
+    for cand in (run_dir / "calibration.json", run_dir.parent.parent / "calibration.json"):
+        if cand.exists():
+            data = json.loads(cand.read_text(encoding="utf-8"))
+            return [CalibrationEvidence(**e) for e in data.get("evidence", [])]
+    return []
+
+
+def _contiguous_resample_t(
+    t_in: np.ndarray, values: np.ndarray, support: np.ndarray, fs_out: float, n_out: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """np.interp onto k/fs_out inside each contiguous supported block only."""
+    out = np.full(n_out, np.nan)
+    out_obs = np.zeros(n_out, dtype=np.bool_)
+    t_out = np.arange(n_out) / fs_out
+    n = len(values)
+    i = 0
+    while i < n:
+        if not support[i]:
+            i += 1
+            continue
+        j = i
+        while j < n and support[j]:
+            j += 1
+        lo, hi = t_in[i], t_in[j - 1]
+        sel = (t_out >= lo) & (t_out <= hi)
+        out[sel] = np.interp(t_out[sel], t_in[i:j], values[i:j])
+        out_obs[sel] = True
+        i = j
+    return out, out_obs
+
+
+def confirm_scale(
     run_dir: Path,
     *,
-    speed_mm_s: float,
     gain_mm_mV: float,
     author: str,
     reason: str,
+    speed_mm_s: float | None = None,
     fs_hz: float | None = None,
+    time_source: Literal["evidence", "engine"] = "evidence",
 ) -> RunPaths:
-    """New run dir whose segments become calibrated by manual confirmation.
+    """New run dir whose segments become calibrated.
 
-    Manual confirmation asserts the engine's assumed scale is correct for this
-    study; it does NOT derive scale from image evidence.
+    time_source="evidence" derives the time axis from image evidence (page grid
+    px/mm x resolved speed x engine trace pixel extent) and requires
+    raw_coordinate_frame "file" plus a resolved px_per_mm_x and speed; it never
+    falls back to the engine grid. "engine" keeps the old behaviour: the
+    engine's assumed duration, and --speed is required (manual confirmation of
+    the engine assumption). Gain is always manual (engine mV assumption).
     """
     run_dir = Path(run_dir)
     manifest = load_manifest(run_dir / "manifest.json")
@@ -275,6 +366,30 @@ def confirm_engine_scale(
         (new_dir / "pages").mkdir()
         for f in (run_dir / "pages").iterdir():
             (new_dir / "pages" / f.name).write_bytes(f.read_bytes())
+
+    # resolve shared evidence once: page grid + study calibration.json + CLI
+    page_ids = {s.page_id for s in manifest.segments}
+    grid_evs = [e for pid in page_ids for e in _grid_evidence_for_page(run_dir, pid)]
+    cal_evs = _calibration_json_evidence(run_dir)
+    cli_speed_ev = (
+        CalibrationEvidence(
+            evidence_id=f"manual-{uuid.uuid4().hex[:12]}",
+            kind="manual",
+            quantity="speed_mm_s",  # type: ignore[arg-type]
+            value=float(speed_mm_s),
+            unit="mm/s",
+            frame_id="file",
+            method="manual confirmation of engine assumption",
+            limitations="not derived from image evidence",
+            author=author,
+            reason=reason,
+        )
+        if speed_mm_s is not None
+        else None
+    )
+    all_ev = grid_evs + cal_evs + ([cli_speed_ev] if cli_speed_ev else [])
+    px_res = resolve_scale("px_per_mm_x", all_ev)
+    speed_res = resolve_scale("speed_mm_s", all_ev)
 
     segments: list[Segment] = []
     (new_dir / "signals").mkdir(exist_ok=True)
@@ -292,14 +407,82 @@ def confirm_engine_scale(
         with np.load(run_dir / seg.raw_support_path, allow_pickle=False) as z:
             support = z["support"]
 
-        grid = grid_from_observed_duration(engine_dur, target_fs)
-        if abs(target_fs - engine_fs) > 1e-12:
-            sig, observed = _contiguous_resample(
-                np.where(support, trace, 0.0), support, engine_fs, target_fs, grid.n_samples
+        time_steps: list[ProcessingStep] = []
+        seg_px: float | None = None
+        seg_speed: float | None = None
+        seg_speed_status = ScaleStatus.unknown
+        effective_dt_ms: float | None = None
+        if time_source == "evidence":
+            if seg.raw_coordinate_frame != "file":
+                raise ValueError(
+                    f"{seg.segment_id}: {ReasonCode.TIME_SCALE_UNKNOWN} - raw frame is "
+                    "engine-canonical, no page-pixel geometry"
+                )
+            if px_res.value is None:
+                raise ValueError(
+                    f"{seg.segment_id}: {ReasonCode.CALIBRATION_MISSING} - no px_per_mm_x "
+                    "evidence (page grid estimate)"
+                )
+            if speed_res.value is None:
+                raise ValueError(
+                    f"{seg.segment_id}: {ReasonCode.TIME_SCALE_UNKNOWN} - no speed_mm_s "
+                    "evidence or --speed"
+                )
+            raw = np.load(run_dir / seg.raw_path, allow_pickle=False)
+            x_px = raw[:, 0]
+            support = support & np.isfinite(x_px)
+            idx = np.nonzero(support)[0]
+            scale_fac = px_res.value * speed_res.value  # px per second
+            t = (x_px - x_px[idx[0]]) / scale_fac
+            dts = np.diff(t[support])
+            dt_med = float(np.median(dts)) if len(dts) else 0.0
+            observed_duration = float(t[idx[-1]]) + dt_med
+            grid = grid_from_observed_duration(observed_duration, target_fs)
+            sig, observed = _contiguous_resample_t(
+                t, np.where(support, trace, 0.0), support, target_fs, grid.n_samples
+            )
+            seg_px = px_res.value
+            seg_speed = speed_res.value
+            seg_speed_status = speed_res.status
+            effective_dt_ms = 1000.0 / scale_fac
+            time_steps.append(
+                ProcessingStep(
+                    stage="time_axis_from_image_evidence",
+                    implementation="ecg_photo.pipeline",
+                    parameters={
+                        "px_per_mm_x": float(px_res.value),
+                        "speed_mm_s": float(speed_res.value),
+                        "x_first": float(x_px[idx[0]]),
+                        "x_last": float(x_px[idx[-1]]),
+                        "extent_px": float(x_px[idx[-1]] - x_px[idx[0]]),
+                        "observed_duration_s": observed_duration,
+                    },
+                )
             )
         else:
-            observed = support[: grid.n_samples]
-            sig = np.where(observed, trace[: grid.n_samples], np.nan)
+            if speed_mm_s is None:
+                raise ValueError("--speed required when --time-source engine")
+            grid = grid_from_observed_duration(engine_dur, target_fs)
+            if abs(target_fs - engine_fs) > 1e-12:
+                sig, observed = _contiguous_resample(
+                    np.where(support, trace, 0.0), support, engine_fs, target_fs, grid.n_samples
+                )
+            else:
+                observed = support[: grid.n_samples]
+                sig = np.where(observed, trace[: grid.n_samples], np.nan)
+            seg_speed = float(speed_mm_s)
+            seg_speed_status = ScaleStatus.manual
+            time_steps.append(
+                ProcessingStep(
+                    stage="manual_scale_confirmation",
+                    implementation="ecg_photo.pipeline",
+                    parameters={
+                        "author": author,
+                        "reason": reason,
+                        "time_axis": "engine grid assumed (engine_duration_s)",
+                    },
+                )
+            )
 
         sid = seg.segment_id
         np.save(new_dir / "signals" / f"{sid}.npy", sig)
@@ -313,19 +496,11 @@ def confirm_engine_scale(
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_bytes((run_dir / rel).read_bytes())
 
-        evidence = [
-            CalibrationEvidence(
-                evidence_id=f"manual-{uuid.uuid4().hex[:12]}",
-                kind="manual",
-                quantity="speed_mm_s",  # type: ignore[arg-type]
-                value=float(speed_mm_s),
-                unit="mm/s",
-                frame_id=seg.raw_coordinate_frame,
-                method="manual confirmation of engine assumption",
-                limitations="not derived from image evidence",
-                author=author,
-                reason=reason,
-            ),
+        evidence = []
+        if cli_speed_ev is not None:
+            evidence.append(cli_speed_ev)
+        evidence.extend(e for e in grid_evs if e.quantity == "px_per_mm_x")
+        evidence.append(
             CalibrationEvidence(
                 evidence_id=f"manual-{uuid.uuid4().hex[:12]}",
                 kind="manual",
@@ -337,28 +512,29 @@ def confirm_engine_scale(
                 limitations="not derived from image evidence",
                 author=author,
                 reason=reason,
-            ),
-        ]
-        steps = list(seg.processing) + [
-            ProcessingStep(
-                stage="manual_scale_confirmation",
-                implementation="ecg_photo.pipeline",
-                parameters={
-                    "author": author,
-                    "reason": reason,
-                    "previous_speed_status": "unknown",
-                    "previous_gain_status": "unknown",
-                    "speed_mm_s": float(speed_mm_s),
-                    "gain_mm_mV": float(gain_mm_mV),
-                    "valid_mask": "copied from observed; no extra QC applied",
-                },
             )
-        ]
+        )
+        steps = list(seg.processing) + time_steps
+        if time_source == "evidence":
+            steps.append(
+                ProcessingStep(
+                    stage="manual_scale_confirmation",
+                    implementation="ecg_photo.pipeline",
+                    parameters={
+                        "author": author,
+                        "reason": reason,
+                        "previous_speed_status": "unknown",
+                        "previous_gain_status": "unknown",
+                        "gain_mm_mV": float(gain_mm_mV),
+                        "valid_mask": "copied from observed; no extra QC applied",
+                    },
+                )
+            )
         segments.append(
             seg.model_copy(
                 update={
-                    "speed_mm_s": float(speed_mm_s),
-                    "speed_status": ScaleStatus.manual,
+                    "speed_mm_s": seg_speed,
+                    "speed_status": seg_speed_status,
                     "gain_mm_mV": float(gain_mm_mV),
                     "gain_status": ScaleStatus.manual,
                     "units": "mV",
@@ -373,8 +549,9 @@ def confirm_engine_scale(
                     "observed_mask_path": f"masks/{sid}-observed.npy",
                     "valid_mask_path": f"masks/{sid}-valid.npy",
                     "gap_fill_mask_path": f"masks/{sid}-gapfill.npy",
-                    "effective_dt_ms": None,
+                    "effective_dt_ms": effective_dt_ms,
                     "effective_dv_mV": None,
+                    "px_per_mm_x": seg_px,
                     "resolution_evidence": ResolutionEvidence(
                         source_frame_id=seg.raw_coordinate_frame,
                         method="none",

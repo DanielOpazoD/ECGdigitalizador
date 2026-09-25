@@ -5,7 +5,7 @@ from typing import Protocol
 
 import numpy as np
 
-from ecg_photo.contracts import sha256_file
+from ecg_photo.contracts import TransformChain, sha256_file
 
 
 class EngineNotReady(RuntimeError):
@@ -28,6 +28,16 @@ class EngineSpec:
     patches: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class LeadGeometry:
+    frame_id: str  # page frame the x values live in: "file" (original raster pixels)
+    x_px: np.ndarray  # page x (float64) for every canonical sample, len == n samples
+    y_ref_px: float | None  # not used for time; keep None unless trivially available
+    chain: TransformChain  # provenance: engine-canonical -> file
+    method: str
+    limitations: str
+
+
 @dataclass
 class EngineOutput:
     engine_id: str
@@ -40,6 +50,7 @@ class EngineOutput:
     layout_detected: str | None = None
     extra: dict[str, str | float | int | bool | None] = field(default_factory=dict)
     wall_time_s: float = 0.0
+    geometry: dict[str, LeadGeometry] | None = None
 
 
 class Digitizer(Protocol):

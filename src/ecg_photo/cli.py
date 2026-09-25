@@ -263,16 +263,21 @@ def _cmd_digitize(args: argparse.Namespace) -> int:
 
 
 def _cmd_confirm_scale(args: argparse.Namespace) -> int:
-    from ecg_photo.pipeline import confirm_engine_scale
+    from ecg_photo.pipeline import confirm_scale
 
-    paths = confirm_engine_scale(
-        Path(args.dir),
-        speed_mm_s=args.speed,
-        gain_mm_mV=args.gain,
-        author=args.author,
-        reason=args.reason,
-        fs_hz=args.fs,
-    )
+    try:
+        paths = confirm_scale(
+            Path(args.dir),
+            gain_mm_mV=args.gain,
+            author=args.author,
+            reason=args.reason,
+            speed_mm_s=args.speed,
+            fs_hz=args.fs,
+            time_source=args.time_source,
+        )
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        return 1
     print(json.dumps({"run_dir": str(paths.run_dir)}))
     return 0
 
@@ -335,11 +340,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     cs = sub.add_parser("confirm-scale")
     cs.add_argument("dir")
-    cs.add_argument("--speed", type=float, required=True)
+    cs.add_argument("--speed", type=float, default=None)
     cs.add_argument("--gain", type=float, required=True)
     cs.add_argument("--author", required=True)
     cs.add_argument("--reason", required=True)
     cs.add_argument("--fs", type=float, default=None)
+    cs.add_argument("--time-source", choices=["evidence", "engine"], default="evidence")
     cs.set_defaults(func=_cmd_confirm_scale)
     return p
 

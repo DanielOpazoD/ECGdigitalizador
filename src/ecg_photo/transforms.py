@@ -171,6 +171,25 @@ def exif_to_steps(orientation: int, w: int, h: int) -> list[TransformStep]:
     return [_step("rotate90", {"k": 1}, (w, h), (h, w))]
 
 
+def homography_from_points(src: np.ndarray, dst: np.ndarray) -> np.ndarray:
+    """DLT homography mapping 4+ point correspondences src -> dst.
+
+    Both args are (N,2) arrays of (x,y) pixel coordinates, N >= 4.
+    Returns the 3x3 matrix H such that dst ~ H @ [x, y, 1].
+    """
+    src = np.asarray(src, dtype=np.float64)
+    dst = np.asarray(dst, dtype=np.float64)
+    if src.shape != dst.shape or src.ndim != 2 or src.shape[1] != 2 or len(src) < 4:
+        raise ValueError("src and dst must be (N,2) arrays with N >= 4")
+    a_rows: list[list[float]] = []
+    for (x, y), (u, v) in zip(src, dst, strict=True):
+        a_rows.append([-x, -y, -1.0, 0.0, 0.0, 0.0, u * x, u * y, u])
+        a_rows.append([0.0, 0.0, 0.0, -x, -y, -1.0, v * x, v * y, v])
+    _, _, vh = np.linalg.svd(np.asarray(a_rows, dtype=np.float64))
+    H = vh[-1].reshape(3, 3)
+    return H / H[2, 2]
+
+
 def homography_folds(H: np.ndarray, size: tuple[int, int]) -> bool:
     """True if the homography folds the image (Jacobian determinant sign change).
 
