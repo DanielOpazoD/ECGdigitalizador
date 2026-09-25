@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ecg_photo.contracts import (
     CalibrationEvidence,
@@ -28,7 +28,14 @@ from ecg_photo.contracts import (
     validate_revision_dir,
 )
 from ecg_photo.digitizers.base import EngineSpec, load_engine_specs
-from ecg_photo.ingest import SupportedInputs, admit, escape_filename, ingest, safe_study_id
+from ecg_photo.ingest import (
+    SupportedInputs,
+    admit,
+    escape_filename,
+    estimate_page_grids,
+    ingest,
+    safe_study_id,
+)
 
 
 class StoreError(RuntimeError):
@@ -77,6 +84,23 @@ class RunConfig(BaseModel):
     page_id: str = "page-1"
 
 
+_ALLOWED_LEAD_LABELS = {
+    "I",
+    "II",
+    "III",
+    "aVR",
+    "aVL",
+    "aVF",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "unknown",
+}
+
+
 class StudyPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -88,6 +112,20 @@ class StudyPatch(BaseModel):
     fs_hz: float | None = None
     layout_profile: str | None = None
     page_id: str | None = None
+    lead_labels: dict[str, str] | None = None
+
+    @field_validator("lead_labels")
+    @classmethod
+    def _check_lead_labels(cls, v: dict[str, str] | None) -> dict[str, str] | None:
+        if v is None:
+            return v
+        for seg_id, label in v.items():
+            if label not in _ALLOWED_LEAD_LABELS:
+                raise ValueError(
+                    f"invalid lead label {label!r} for segment {seg_id!r}; "
+                    f"allowed: {sorted(_ALLOWED_LEAD_LABELS)}"
+                )
+        return v
 
 
 class StudyState(BaseModel):
@@ -254,7 +292,7 @@ class Store:
         sdir = self._study_dir(study_id)
         rev_dir = sdir / "rev1"
         rev_dir.mkdir(parents=True)
-        ingest(upload_path, rev_dir)
+        estimate_page_grids(rev_dir, ingest(upload_path, rev_dir))
 
         config = self._default_config(default_engine)
         if options is not None:
@@ -326,6 +364,37 @@ class Store:
     def config_for(self, study_id: str, revision: int) -> RunConfig:
         return self._read_config(study_id, revision)
 
+    def _published_lead_labels(self, study_id: str, state: StudyState) -> dict[str, str]:
+        """Current lead labels of the published run, for corrections previous_label."""
+        out: dict[str, str] = {}
+        if state.published_run_id is None:
+            return out
+        mp = self.run_dir(study_id, state.published_run_id) / "result" / "manifest.json"
+        if mp.exists():
+            for s in load_manifest(mp).segments:
+                out[s.segment_id] = s.lead_label
+        return out
+
+    def corrections_for(self, study_id: str, revision: int) -> dict:
+        p = self._rev_dir(study_id, revision) / "corrections.json"
+        if p.exists():
+            return json.loads(p.read_text())
+        return {}
+
+    def list_jobs(self, study_id: str) -> list[Job]:
+        runs_dir = self._study_dir(study_id) / "runs"
+        jobs: list[Job] = []
+        if runs_dir.exists():
+            for d in runs_dir.iterdir():
+                job = self._read_job(study_id, d.name)
+                if job is not None:
+                    jobs.append(job)
+        jobs.sort(key=lambda j: j.created_at)
+        return jobs
+
+    def rev_dir(self, study_id: str, revision: int) -> Path:
+        return self._rev_dir(study_id, revision)
+
     def published_result_stale(self, study_id: str) -> bool:
         state = self._read_state(study_id)
         if state is None or state.published_run_id is None:
@@ -393,7 +462,12 @@ class Store:
                 cal_path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
 
             cfg = prev.model_copy(
-                update={k: v for k, v in changes.model_dump(exclude_unset=True).items()}
+                update={
+                    k: v
+                    for k, v in changes.model_dump(
+                        exclude_unset=True, exclude={"lead_labels"}
+                    ).items()
+                }
             )
             specs = load_engine_specs()
             if changes.engine is not None:
@@ -408,6 +482,21 @@ class Store:
                 )
             cfg_hash = _config_hash(cfg)
             (dst / "config.json").write_text(cfg.model_dump_json(indent=2), encoding="utf-8")
+
+            if changes.lead_labels:
+                corr_path = dst / "corrections.json"
+                corr: dict = json.loads(corr_path.read_text()) if corr_path.exists() else {}
+                labels = corr.setdefault("lead_labels", {})
+                prev_labels = self._published_lead_labels(study_id, state)
+                for seg_id, label in changes.lead_labels.items():
+                    labels[seg_id] = {
+                        "label": label,
+                        "author": author,
+                        "reason": reason,
+                        "previous_label": prev_labels.get(seg_id),
+                        "revision": new_rev,
+                    }
+                corr_path.write_text(json.dumps(corr, indent=2), encoding="utf-8")
 
             state = state.model_copy(
                 update={
@@ -543,7 +632,7 @@ class Store:
                     study_id=study_id,
                     run_id=run_id,
                     revision=revision,
-                    filename_safe=f"{study_id}-{run_id[:8]}-{path.name}",
+                    filename_safe=path.name,
                     mime=MIME_BY_EXT.get(ext, "application/octet-stream"),
                     path_rel=str(path.relative_to(self._study_dir(study_id))),
                     sha256=sha256_file(path),

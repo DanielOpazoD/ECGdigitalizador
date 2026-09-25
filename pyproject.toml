@@ -36,6 +36,7 @@ ecg-photo = "ecg_photo.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ecg_photo"]
+artifacts = ["src/ecg_photo/ui/*.html"]
 
 [tool.ruff]
 line-length = 100

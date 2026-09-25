@@ -4,12 +4,14 @@ Admission is decided by magic bytes and declared dimensions only — a payload
 is never fully decoded before the pixel/page/size limits are checked.
 """
 
+import json
 import re
 import shutil
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import numpy as np
 import pypdfium2 as pdfium  # type: ignore[import-untyped]
 import yaml
 from PIL import Image
@@ -27,6 +29,7 @@ from ecg_photo.contracts import (
     dump_json,
     sha256_file,
 )
+from ecg_photo.grid import GridEstimate, estimate_grid
 from ecg_photo.transforms import exif_to_steps
 
 EXIF_ORIENTATION_TAG = 0x0112
@@ -278,3 +281,23 @@ def ImageOps_safe_transpose(img: Image.Image) -> Image.Image:
     if orientation == 1:
         return img.copy()
     return ImageOps.exif_transpose(img)
+
+
+def estimate_page_grids(out_dir: Path, manifest: Manifest) -> tuple[Manifest, list[GridEstimate]]:
+    """Estimate the grid of every page raster, write `pages/<page>.grid.json`,
+    record `grid_estimate_path` and rewrite `manifest.json`. A null estimate is
+    still written (with its limitations) so the absence of evidence is explicit."""
+    grids: list[GridEstimate] = []
+    pages: list[Page] = []
+    for pg in manifest.pages:
+        img = np.asarray(Image.open(out_dir / pg.raster_path))
+        grid = estimate_grid(img)
+        rel = f"pages/{pg.page_id}.grid.json"
+        (out_dir / rel).write_text(
+            json.dumps(asdict(grid), indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        pages.append(pg.model_copy(update={"grid_estimate_path": rel}))
+        grids.append(grid)
+    manifest = manifest.model_copy(update={"pages": pages})
+    dump_json(manifest, out_dir / "manifest.json")
+    return manifest, grids

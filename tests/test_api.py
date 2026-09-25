@@ -44,6 +44,28 @@ def _wait_job(client: TestClient, run_id: str, timeout: float = 30.0) -> dict:
     raise AssertionError("job did not finish")
 
 
+def _wait_status(client: TestClient, run_id: str, status: str, timeout: float = 30.0) -> dict:
+    """Poll until the job reaches an exact status ('completed' is transient:
+    the worker then publishes or flips to completed_unpublished)."""
+    deadline = time.time() + timeout
+    last: dict = {}
+    while time.time() < deadline:
+        last = client.get(f"/runs/{run_id}").json()
+        if last["status"] == status:
+            return last
+        time.sleep(0.05)
+    raise AssertionError(f"job never reached {status}: {last}")
+
+
+def _wait_published(client: TestClient, sid: str, run_id: str, timeout: float = 15.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if client.get(f"/studies/{sid}").json()["published_run_id"] == run_id:
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"run {run_id} was not published")
+
+
 def _patch_engine(client: TestClient, sid: str, rev: int) -> dict:
     r = client.patch(
         f"/studies/{sid}",
@@ -118,6 +140,7 @@ def test_patch_run_publish_export(tmp_path) -> None:
         run_id = r.json()["run_id"]
         job = _wait_job(client, run_id)
         assert job["status"] == "completed", job
+        _wait_published(client, sid, run_id)
 
         g = client.get(f"/studies/{sid}").json()
         assert g["published_run_id"] == run_id
@@ -168,7 +191,7 @@ def test_t40_patch_during_run_keeps_old_result(tmp_path) -> None:
             time.sleep(0.02)
         _patch_engine(client, sid, 2)
         release.set()
-        job = _wait_job(client, run_id)
+        job = _wait_status(client, run_id, "completed_unpublished")
         assert job["status"] == "completed_unpublished"
         g = client.get(f"/studies/{sid}").json()
         assert g["published_run_id"] != run_id
@@ -191,8 +214,9 @@ def test_retry_only_last_selected_publishes(tmp_path) -> None:
                 json={"expected_revision": 2, "config_hash": st2["config_hash"]},
             )
             runs.append(r.json()["run_id"])
-        for run_id in runs:
-            _wait_job(client, run_id)
+        # 'completed' is transient (publish or flip follows); wait for outcomes
+        _wait_status(client, runs[0], "completed_unpublished")
+        _wait_published(client, sid, runs[1])
         jobs = {r: client.get(f"/runs/{r}").json()["status"] for r in runs}
         assert jobs[runs[1]] == "completed"
         assert jobs[runs[0]] == "completed_unpublished"
@@ -305,5 +329,211 @@ def test_upload_options_applied_to_rev1(tmp_path) -> None:
         # a study without options gets a different hash
         st2 = _upload(client, tmp_path / "b")
         assert st2["config_hash"] != st["config_hash"]
+    finally:
+        worker.shutdown()
+
+
+def _run_and_publish(client: TestClient, tmp_path: Path) -> tuple[str, str]:
+    st = _upload(client, tmp_path)
+    sid = st["study_id"]
+    st2 = _patch_engine(client, sid, 1)
+    r = client.post(
+        f"/studies/{sid}/runs",
+        json={"expected_revision": 2, "config_hash": st2["config_hash"]},
+    )
+    run_id = r.json()["run_id"]
+    job = _wait_job(client, run_id)
+    assert job["status"] == "completed", job
+    _wait_published(client, sid, run_id)
+    return sid, run_id
+
+
+def test_read_endpoints(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        sid, run_id = _run_and_publish(client, tmp_path)
+
+        r = client.get(f"/studies/{sid}/pages/page-1/raster")
+        assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+        assert r.headers.get("cache-control") == "no-store"
+        assert client.get(f"/studies/{sid}/pages/page-9/raster").status_code == 404
+
+        g = client.get(f"/studies/{sid}/pages/page-1/grid")
+        assert g.status_code == 200 and "px_per_mm_x" in g.json()
+
+        segs = client.get(f"/studies/{sid}/runs/{run_id}/segments")
+        assert segs.status_code == 200
+        seg_list = segs.json()["segments"]
+        assert seg_list and "lead_label" in seg_list[0] and "has_geometry" in seg_list[0]
+        assert client.get(f"/studies/{sid}/runs/run-nope/segments").status_code == 404
+
+        seg_id = seg_list[0]["segment_id"]
+        tr = client.get(f"/studies/{sid}/runs/{run_id}/segments/{seg_id}/trace")
+        assert tr.status_code == 200, tr.text
+        body = tr.json()
+        assert body["units"] == "mV" and body["t_s"] is not None
+        assert body["observed"] and body["x_px"] is None  # engine frame, no geometry
+        assert (
+            client.get(f"/studies/{sid}/runs/{run_id}/segments/seg-nope/trace").status_code == 404
+        )
+
+        runs = client.get(f"/studies/{sid}/runs")
+        assert runs.status_code == 200
+        assert [j["run_id"] for j in runs.json()["runs"]] == [run_id]
+        assert "created_at" in runs.json()["runs"][0]
+    finally:
+        worker.shutdown()
+
+
+def test_trace_decimation_and_null_gaps(tmp_path) -> None:
+    from ecg_photo.digitizers.base import EngineOutput
+
+    n = 45000
+    sig = np.sin(np.linspace(0, 20, n))
+    sig[1000:5000] = np.nan
+    v1 = np.sin(np.linspace(0, 12, n))
+    v1[20000:25000] = np.nan
+
+    def _big_output(rc) -> EngineOutput:
+        return EngineOutput(
+            engine_id="fake",
+            engine_commit="c" * 40,
+            weights_sha256=(),
+            config_hash="h" * 64,
+            fs_hz=500.0,
+            leads={"II": sig, "V1": v1},
+            observed={"II": np.isfinite(sig), "V1": np.isfinite(v1)},
+            layout_detected=None,
+        )
+
+    client, _store, worker = _client(
+        tmp_path,
+        engines={"fake": lambda rc: FakeDigitizer(_big_output(rc))},
+    )
+    try:
+        st = _upload(client, tmp_path)
+        sid = st["study_id"]
+        st2 = client.patch(
+            f"/studies/{sid}",
+            json={
+                "expected_revision": 1,
+                "changes": {
+                    "engine": "fake",
+                    "engine_duration_s": 90,
+                    "gain_mm_mV": 10,
+                    "speed_mm_s": 25,
+                    "time_source": "engine",
+                },
+                "author": "t",
+                "reason": "r",
+            },
+        ).json()
+        r = client.post(
+            f"/studies/{sid}/runs",
+            json={"expected_revision": 2, "config_hash": st2["config_hash"]},
+        )
+        run_id = r.json()["run_id"]
+        assert _wait_job(client, run_id)["status"] == "completed"
+        _wait_published(client, sid, run_id)
+        segs = client.get(f"/studies/{sid}/runs/{run_id}/segments").json()["segments"]
+        seg_id = segs[0]["segment_id"]
+        tr = client.get(f"/studies/{sid}/runs/{run_id}/segments/{seg_id}/trace").json()
+        assert tr.get("decimation") == 3  # ceil(45000/20000)
+        assert len(tr["values"]) == len(sig[::3])
+        # NaN gaps -> nulls in values, False in observed; never 0
+        assert any(v is None for v in tr["values"])
+        assert any(o is False for o in tr["observed"])
+        # V1 has NaN gaps -> nulls in values, False in observed
+        v1 = next(s for s in segs if s["lead_label"] == "V1")
+        tv1 = client.get(f"/studies/{sid}/runs/{run_id}/segments/{v1['segment_id']}/trace").json()
+        assert any(v is None for v in tv1["values"])
+        assert any(o is False for o in tv1["observed"])
+    finally:
+        worker.shutdown()
+
+
+def test_lead_label_corrections(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        sid, run_id = _run_and_publish(client, tmp_path)
+        segs = client.get(f"/studies/{sid}/runs/{run_id}/segments").json()["segments"]
+        v1 = next(s for s in segs if s["lead_label"] == "V1")
+        # invalid label -> 422
+        bad = client.patch(
+            f"/studies/{sid}",
+            json={
+                "expected_revision": 2,
+                "changes": {"lead_labels": {v1["segment_id"]: "BOGUS"}},
+                "author": "t",
+                "reason": "r",
+            },
+        )
+        assert bad.status_code == 422
+        # valid correction -> rev3 + corrections.json
+        st3 = client.patch(
+            f"/studies/{sid}",
+            json={
+                "expected_revision": 2,
+                "changes": {"lead_labels": {v1["segment_id"]: "aVR"}},
+                "author": "t",
+                "reason": "mislabelled",
+            },
+        )
+        assert st3.status_code == 200 and st3.json()["revision"] == 3
+        g = client.get(f"/studies/{sid}").json()
+        corr = g["corrections"]["lead_labels"][v1["segment_id"]]
+        assert corr["label"] == "aVR" and corr["previous_label"] == "V1"
+        # next run applies it
+        r = client.post(
+            f"/studies/{sid}/runs",
+            json={"expected_revision": 3, "config_hash": st3.json()["config_hash"]},
+        )
+        run2 = r.json()["run_id"]
+        job = _wait_job(client, run2)
+        assert job["status"] == "completed", job
+        _wait_published(client, sid, run2)
+        segs2 = client.get(f"/studies/{sid}/runs/{run2}/segments").json()["segments"]
+        fixed = next(s for s in segs2 if s["segment_id"] == v1["segment_id"])
+        assert fixed["lead_label"] == "aVR" and fixed["lead_status"] == "confirmed"
+    finally:
+        worker.shutdown()
+
+
+def test_ui_grid_and_study_config_keys(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        st = _upload(client, tmp_path)
+        sid = st["study_id"]
+        # ingest now estimates page grids -> file exists in store
+        assert (_store.root / sid / "rev1" / "pages" / "page-1.grid.json").exists()
+        g = client.get(f"/studies/{sid}/pages/page-1/grid")
+        assert g.status_code == 200 and "px_per_mm_x" in g.json()
+
+        root = client.get("/", follow_redirects=False)
+        assert root.status_code == 307 and root.headers["location"] == "/ui"
+        ui = client.get("/ui")
+        assert ui.status_code == 200
+        assert "text/html" in ui.headers["content-type"]
+        assert "<title" in ui.text
+
+        body = client.get(f"/studies/{sid}").json()
+        assert "config" in body and "corrections" in body
+        assert body["config"]["engine"] is None
+    finally:
+        worker.shutdown()
+
+
+def test_artifact_filename_safe_is_basename(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        sid, run_id = _run_and_publish(client, tmp_path)
+        ex = client.post(
+            f"/studies/{sid}/exports",
+            json={"revision": 2, "run_id": run_id, "formats": ["csv"]},
+        )
+        assert ex.status_code == 201
+        for art in ex.json()["artifacts"]:
+            assert art["filename_safe"] == art["path_rel"].split("/")[-1]
+            assert art["filename_safe"].count(sid) == 1
     finally:
         worker.shutdown()

@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECG Foto → Señal · revisión</title>
+<style>
+  :root { --fg:#1b1b1b; --muted:#5d6470; --bg:#fafafa; --panel:#fff; --line:#d9dde3; --accent:#0b5fa5; --warn:#8a5a00; --bad:#a11; --ok:#176b2c; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:var(--fg); background:var(--bg); }
+  header { display:flex; gap:12px; align-items:center; padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0 8px 0 0; }
+  main { display:grid; grid-template-columns: 1fr 340px; gap:10px; padding:10px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:10px; }
+  section h2 { font-size:14px; margin:0 0 8px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-top:6px; }
+  input, select, button, textarea { font:inherit; }
+  input[type=text], input[type=number], select, textarea { width:100%; padding:5px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+  button { padding:6px 10px; border:1px solid var(--accent); color:var(--accent); background:#fff; border-radius:4px; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:6px; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:1; }
+  #viewer { position:relative; overflow:hidden; background:#eee; border:1px solid var(--line); height:46vh; touch-action:none; outline:none; }
+  #viewer:focus { box-shadow:0 0 0 2px var(--accent); }
+  #viewer canvas { position:absolute; left:0; top:0; }
+  #plot { width:100%; height:200px; display:block; background:#fff; border:1px solid var(--line); }
+  .status { display:inline-block; padding:1px 6px; border-radius:10px; border:1px solid var(--line); font-size:12px; }
+  .s-confirmed, .s-manual, .s-completed, .s-ok { border-color:var(--ok); color:var(--ok); }
+  .s-proposed, .s-review_required, .s-running, .s-queued { border-color:var(--warn); color:var(--warn); }
+  .s-unknown, .s-failed, .s-cancelled, .s-completed_unpublished { border-color:var(--bad); color:var(--bad); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  td, th { text-align:left; padding:3px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr.sel td { background:#eaf2fb; }
+  #msg { min-height:1.4em; color:var(--muted); }
+  #msg.err { color:var(--bad); }
+  .hint { font-size:12px; color:var(--muted); }
+  ul.arts { padding-left:16px; margin:4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ECG Foto → Señal</h1>
+  <form id="upload" class="row" style="flex:2">
+    <input type="file" id="file" accept="image/png,image/jpeg,application/pdf" aria-label="Archivo ECG">
+    <button type="submit" class="primary">Cargar</button>
+  </form>
+  <div class="row" style="flex:2">
+    <input type="text" id="studyId" placeholder="study-…" aria-label="Identificador de estudio">
+    <button id="open">Abrir</button>
+  </div>
+  <div id="msg" role="status" aria-live="polite"></div>
+</header>
+
+<main>
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <section>
+      <h2>Original <span class="hint">(zoom: rueda / + −, desplazar: arrastrar / flechas, 0 = ajustar)</span></h2>
+      <div class="row">
+        <div><label>Página</label><select id="pageSel"></select></div>
+        <div><label>Derivación</label><select id="segSel"></select></div>
+        <div><label>Opacidad marcadores</label><input type="range" id="alpha" min="0" max="1" step="0.05" value="0.6" aria-label="Opacidad de marcadores"></div>
+        <div><label>&nbsp;</label><label style="margin:0"><input type="checkbox" id="showRegion" checked> región del segmento</label></div>
+      </div>
+      <div id="viewer" tabindex="0" aria-label="Visor de imagen original con zoom coordinado">
+        <canvas id="cvImg"></canvas>
+        <canvas id="cvOv"></canvas>
+      </div>
+      <div id="geomNote" class="hint"></div>
+    </section>
+    <section>
+      <h2>Reconstrucción <span id="plotUnits" class="hint"></span></h2>
+      <canvas id="plot" aria-label="Señal reconstruida del segmento seleccionado"></canvas>
+      <div class="hint">El eje x del trazo se alinea con el píxel de página cuando el segmento tiene geometría (marca <code>file</code>). Los huecos no observados se dejan vacíos, nunca se rellenan. Sin geometría vertical por muestra: la superposición sobre la tinta es sólo horizontal.</div>
+    </section>
+    <section>
+      <h2>Segmentos del resultado publicado</h2>
+      <table id="segTable"><thead><tr><th>Segmento</th><th>Etiqueta</th><th>Estado etiqueta</th><th>Tiempo</th><th>Ganancia</th><th>Muestras</th><th>Corregir etiqueta</th></tr></thead><tbody></tbody></table>
+    </section>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <section>
+      <h2>Estudio</h2>
+      <div id="state" class="hint">—</div>
+    </section>
+    <section>
+      <h2>Configuración congelada (nueva revisión)</h2>
+      <div class="row">
+        <div><label>Motor</label><select id="engine"><option value="">— ninguno —</option><option>ahus</option><option>ecg-digitiser</option><option>fake</option></select></div>
+        <div><label>Duración asumida por el motor (s)</label><input type="number" id="dur" step="0.1"></div>
+      </div>
+      <div class="row">
+        <div><label>Velocidad (mm/s)</label><input type="number" id="speed" step="0.1"></div>
+        <div><label>Ganancia (mm/mV)</label><input type="number" id="gain" step="0.1"></div>
+        <div><label>Eje temporal</label><select id="tsrc"><option value="evidence">evidencia (rejilla × velocidad)</option><option value="engine">rejilla del motor (asumida)</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Autor</label><input type="text" id="author"></div>
+      </div>
+      <label>Motivo</label><textarea id="reason" rows="2"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="patch">Guardar como revisión nueva</button>
+        <button id="run" class="primary">Ejecutar trabajo</button>
+      </div>
+      <div class="hint">Se envía <code>expected_revision</code>; si otra corrección se interpuso, el servidor responde 409 y nada se sobrescribe.</div>
+    </section>
+    <section>
+      <h2>Trabajos</h2>
+      <table id="runs"><thead><tr><th>run_id</th><th>rev</th><th>estado</th><th></th></tr></thead><tbody></tbody></table>
+    </section>
+    <section>
+      <h2>Exportar (revisión y run publicados)</h2>
+      <div class="row">
+        <label><input type="checkbox" class="fmt" value="png" checked> PNG</label>
+        <label><input type="checkbox" class="fmt" value="pdf"> PDF</label>
+        <label><input type="checkbox" class="fmt" value="csv" checked> CSV</label>
+        <label><input type="checkbox" class="fmt" value="wfdb" checked> WFDB</label>
+        <label><input type="checkbox" class="fmt" value="json" checked> JSON</label>
+      </div>
+      <button id="export" style="margin-top:6px">Generar artefactos</button>
+      <ul id="arts" class="arts"></ul>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const msg = (t, err=false) => { const m=$('msg'); m.textContent=t; m.className = err ? 'err' : ''; };
+  const S = { id:null, study:null, page:null, img:null, segs:[], seg:null, trace:null, grid:null,
+              view:{scale:1, tx:0, ty:0}, drag:null, pollTimer:null };
+
+  async function api(method, path, body, isForm=false) {
+    const opt = { method, headers:{} };
+    if (body !== undefined) {
+      if (isForm) opt.body = body; else { opt.headers['Content-Type']='application/json'; opt.body = JSON.stringify(body); }
+    }
+    const r = await fetch(path, opt);
+    if (r.status === 204) return null;
+    const ct = r.headers.get('content-type') || '';
+    const data = ct.includes('json') ? await r.json() : await r.text();
+    if (!r.ok) {
+      const d = data && data.detail;
+      const text = d && d.message ? `${r.status} ${d.code}: ${d.message}` : `${r.status}: ${JSON.stringify(data).slice(0,200)}`;
+      throw new Error(text);
+    }
+    return data;
+  }
+  const badge = (s) => `<span class="status s-${s}">${s}</span>`;
+
+  // ---------- upload / open ----------
+  $('upload').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = $('file').files[0]; if (!f) { msg('Selecciona un archivo.', true); return; }
+    const fd = new FormData(); fd.append('file', f, f.name);
+    try {
+      msg('Cargando…');
+      const r = await api('POST', '/studies', fd, true);
+      $('studyId').value = r.study_id; await openStudy(r.study_id);
+      msg(`Estudio creado: ${r.study_id} (rev ${r.revision}).`);
+    } catch (err) { msg(err.message, true); }
+  });
+  $('open').addEventListener('click', () => openStudy($('studyId').value.trim()));
+
+  async function openStudy(id) {
+    if (!id) return;
+    try {
+      S.id = id; S.study = await api('GET', `/studies/${id}`);
+      history.replaceState(null, '', `#${id}`);
+      renderState(); await renderPages(); await renderRuns(); await loadSegments();
+      fillConfigFromRev();
+    } catch (err) { msg(err.message, true); }
+  }
+
+  function renderState() {
+    const s = S.study;
+    $('state').innerHTML =
+      `<div><b>${s.study_id}</b></div>
+       <div>revisión activa: <b>${s.active_revision}</b> · config_hash <code>${s.config_hash.slice(0,12)}…</code></div>
+       <div>selected_run_id: <code>${s.selected_run_id || '—'}</code></div>
+       <div>published_run_id: <code>${s.published_run_id || '—'}</code> ${s.published_result_stale ? badge('review_required')+' resultado de una revisión anterior' : ''}</div>
+       <div>archivo original: <span>${s.original_filename || ''}</span></div>`;
+  }
+
+  async function fillConfigFromRev() {
+    // The active revision's frozen config is exposed via GET /studies (config) when present.
+    const c = S.study.config || {};
+    $('engine').value = c.engine || '';
+    $('dur').value = c.engine_duration_s ?? '';
+    $('speed').value = c.speed_mm_s ?? '';
+    $('gain').value = c.gain_mm_mV ?? '';
+    $('tsrc').value = c.time_source || 'evidence';
+  }
+
+  // ---------- pages & viewer ----------
+  async function renderPages() {
+    const sel = $('pageSel'); sel.innerHTML = '';
+    for (const p of S.study.pages) { const o = document.createElement('option'); o.value = p.page_id; o.textContent = `${p.page_id} (${p.width_px}×${p.height_px}, ${p.extraction})`; sel.appendChild(o); }
+    if (S.study.pages.length) await loadPage(S.study.pages[0].page_id);
+  }
+  $('pageSel').addEventListener('change', (e) => loadPage(e.target.value));
+
+  async function loadPage(pageId) {
+    S.page = S.study.pages.find(p => p.page_id === pageId);
+    S.grid = null;
+    try { S.grid = await api('GET', `/studies/${S.id}/pages/${pageId}/grid`); } catch (_) {}
+    const img = new Image();
+    img.onload = () => { S.img = img; fitView(); draw(); };
+    img.src = `/studies/${S.id}/pages/${pageId}/raster?ts=${Date.now()}`;
+    const g = S.grid;
+    $('geomNote').textContent = g && g.px_per_mm_x ? `rejilla estimada: ${g.px_per_mm_x.toFixed(3)} px/mm (x), ${g.px_per_mm_y ? g.px_per_mm_y.toFixed(3) : '—'} px/mm (y); método: ${g.method}` : 'sin estimación de rejilla para esta página';
+  }
+
+  const viewer = $('viewer'), cvImg = $('cvImg'), cvOv = $('cvOv');
+  function sizeCanvases() {
+    const w = viewer.clientWidth, h = viewer.clientHeight;
+    for (const c of [cvImg, cvOv]) { c.width = w * devicePixelRatio; c.height = h * devicePixelRatio; c.style.width = w+'px'; c.style.height = h+'px'; }
+  }
+  function fitView() {
+    if (!S.img) return; sizeCanvases();
+    const w = viewer.clientWidth, h = viewer.clientHeight;
+    S.view.scale = Math.min(w / S.img.width, h / S.img.height);
+    S.view.tx = (w - S.img.width * S.view.scale) / 2; S.view.ty = (h - S.img.height * S.view.scale) / 2;
+  }
+  const toScreen = (x, y) => [x * S.view.scale + S.view.tx, y * S.view.scale + S.view.ty];
+  function draw() {
+    if (!S.img) return;
+    const dpr = devicePixelRatio, ctx = cvImg.getContext('2d'), ov = cvOv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0); ov.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cvImg.width,cvImg.height); ov.clearRect(0,0,cvOv.width,cvOv.height);
+    ctx.imageSmoothingEnabled = S.view.scale < 1;
+    ctx.drawImage(S.img, S.view.tx, S.view.ty, S.img.width*S.view.scale, S.img.height*S.view.scale);
+    const a = parseFloat($('alpha').value);
+    ov.globalAlpha = a;
+    if (S.seg && $('showRegion').checked && S.seg.source_region) {
+      ov.strokeStyle = '#0b5fa5'; ov.lineWidth = 2; ov.beginPath();
+      S.seg.source_region.forEach(([x,y],i) => { const [sx,sy]=toScreen(x,y); i? ov.lineTo(sx,sy): ov.moveTo(sx,sy); });
+      ov.closePath(); ov.stroke();
+    }
+    if (S.trace && S.trace.x_px) {
+      const xs = S.trace.x_px.filter(v => v !== null);
+      if (xs.length) {
+        const [x0] = toScreen(Math.min(...xs), 0), [x1] = toScreen(Math.max(...xs), 0);
+        ov.fillStyle = '#0b5fa5'; ov.fillRect(x0, 0, Math.max(1,x1-x0), 4);
+        // vertical guides at observed-gap boundaries
+        ov.strokeStyle = '#a11'; ov.lineWidth = 1;
+        const obs = S.trace.observed;
+        for (let i=1;i<obs.length;i++) if (obs[i]!==obs[i-1] && S.trace.x_px[i]!==null) { const [sx]=toScreen(S.trace.x_px[i],0); ov.beginPath(); ov.moveTo(sx,0); ov.lineTo(sx,viewer.clientHeight); ov.stroke(); }
+      }
+    }
+    ov.globalAlpha = 1;
+    drawPlot();
+  }
+  function zoomAt(factor, cx, cy) {
+    const ns = Math.min(40, Math.max(0.05, S.view.scale * factor));
+    S.view.tx = cx - (cx - S.view.tx) * (ns / S.view.scale);
+    S.view.ty = cy - (cy - S.view.ty) * (ns / S.view.scale);
+    S.view.scale = ns; draw();
+  }
+  viewer.addEventListener('wheel', (e) => { e.preventDefault(); const r = viewer.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.15 : 1/1.15, e.clientX - r.left, e.clientY - r.top); }, {passive:false});
+  viewer.addEventListener('pointerdown', (e) => { S.drag = {x:e.clientX, y:e.clientY}; viewer.setPointerCapture(e.pointerId); });
+  viewer.addEventListener('pointermove', (e) => { if (!S.drag) return; S.view.tx += e.clientX - S.drag.x; S.view.ty += e.clientY - S.drag.y; S.drag = {x:e.clientX, y:e.clientY}; draw(); });
+  viewer.addEventListener('pointerup', () => { S.drag = null; });
+  viewer.addEventListener('keydown', (e) => {
+    const c = [viewer.clientWidth/2, viewer.clientHeight/2];
+    if (e.key === '+' || e.key === '=') zoomAt(1.25, ...c);
+    else if (e.key === '-') zoomAt(0.8, ...c);
+    else if (e.key === '0') { fitView(); draw(); }
+    else if (e.key === 'ArrowLeft') { S.view.tx += 40; draw(); }
+    else if (e.key === 'ArrowRight') { S.view.tx -= 40; draw(); }
+    else if (e.key === 'ArrowUp') { S.view.ty += 40; draw(); }
+    else if (e.key === 'ArrowDown') { S.view.ty -= 40; draw(); }
+    else return; e.preventDefault();
+  });
+  window.addEventListener('resize', () => { fitView(); draw(); });
+  $('alpha').addEventListener('input', draw); $('showRegion').addEventListener('change', draw);
+
+  // ---------- plot (x coordinated with image when geometry exists) ----------
+  function drawPlot() {
+    const cv = $('plot'); const W = cv.clientWidth, H = 200; cv.width = W*devicePixelRatio; cv.height = H*devicePixelRatio;
+    const g = cv.getContext('2d'); g.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); g.clearRect(0,0,W,H);
+    const t = S.trace; if (!t) { g.fillStyle='#888'; g.fillText('sin segmento seleccionado', 8, 16); return; }
+    const vals = t.values, n = vals.length; const xs = t.x_px;
+    const finite = vals.filter(v => v !== null); if (!finite.length) { g.fillText('sin muestras observadas', 8, 16); return; }
+    const vmin = Math.min(...finite), vmax = Math.max(...finite), pad = (vmax - vmin || 1) * 0.1;
+    const yOf = v => H - 20 - (v - vmin + pad) / ((vmax - vmin) + 2*pad) * (H - 30);
+    let xOf;
+    if (xs) { xOf = i => xs[i] === null ? null : xs[i] * S.view.scale + S.view.tx; }
+    else { xOf = i => 8 + i / (n-1) * (W-16); }
+    g.strokeStyle = '#ddd'; g.beginPath(); g.moveTo(0, yOf(0)); g.lineTo(W, yOf(0)); g.stroke();
+    g.strokeStyle = '#0b5fa5'; g.lineWidth = 1.2; g.beginPath(); let pen = false;
+    for (let i=0;i<n;i++) { const v = vals[i], x = xOf(i); if (v === null || x === null) { pen = false; continue; } const y = yOf(v); if (pen) g.lineTo(x,y); else { g.moveTo(x,y); pen = true; } }
+    g.stroke();
+    g.fillStyle = '#333'; g.font = '11px system-ui';
+    g.fillText(`${vmax.toFixed(2)} ${t.units}`, 4, 12); g.fillText(`${vmin.toFixed(2)} ${t.units}`, 4, H-6);
+    if (t.t_s) { g.fillText(`t: 0 … ${(t.t_s[t.t_s.length-1]).toFixed(3)} s · dt ${t.effective_dt_ms ? t.effective_dt_ms.toFixed(3)+' ms' : '—'}`, W-260, H-6); }
+    else g.fillText('sin escala temporal confirmada (unidades arbitrarias)', W-300, H-6);
+    $('plotUnits').textContent = `· tiempo: ${t.speed_status} · ganancia: ${t.gain_status}${t.decimation ? ' · decimado ×'+t.decimation+' (sólo presentación)' : ''}`;
+  }
+
+  // ---------- segments ----------
+  const LEADS = ['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6','unknown'];
+  async function loadSegments() {
+    S.segs = []; S.seg = null; S.trace = null;
+    const run = S.study.published_run_id;
+    if (run) { try { S.segs = (await api('GET', `/studies/${S.id}/runs/${run}/segments`)).segments; } catch (err) { msg(err.message, true); } }
+    const tb = $('segTable').querySelector('tbody'); tb.innerHTML = '';
+    const sel = $('segSel'); sel.innerHTML = '';
+    for (const s of S.segs) {
+      const tr = document.createElement('tr'); tr.dataset.id = s.segment_id;
+      const opts = LEADS.map(l => `<option ${l===s.lead_label?'selected':''}>${l}</option>`).join('');
+      tr.innerHTML = `<td>${s.segment_id}</td><td><b>${s.lead_label}</b></td><td>${badge(s.lead_status)}</td><td>${badge(s.speed_status)}</td><td>${badge(s.gain_status)}</td><td>${s.n_samples ?? '—'}${s.working_fs_hz ? ' @ '+s.working_fs_hz+' Hz' : ''}</td>
+        <td><select data-seg="${s.segment_id}" aria-label="Etiqueta corregida para ${s.segment_id}">${opts}</select></td>`;
+      tr.addEventListener('click', (e) => { if (e.target.tagName !== 'SELECT') selectSeg(s.segment_id); });
+      tb.appendChild(tr);
+      const o = document.createElement('option'); o.value = s.segment_id; o.textContent = `${s.lead_label} (${s.segment_id})`; sel.appendChild(o);
+    }
+    if (S.segs.length) selectSeg(S.segs[0].segment_id); else drawPlot();
+  }
+  $('segSel').addEventListener('change', (e) => selectSeg(e.target.value));
+  async function selectSeg(id) {
+    S.seg = S.segs.find(s => s.segment_id === id); $('segSel').value = id;
+    document.querySelectorAll('#segTable tbody tr').forEach(tr => tr.classList.toggle('sel', tr.dataset.id === id));
+    try { S.trace = await api('GET', `/studies/${S.id}/runs/${S.study.published_run_id}/segments/${id}/trace`); } catch (err) { S.trace = null; msg(err.message, true); }
+    draw();
+  }
+  function collectLeadLabels() {
+    const out = {}; let any = false;
+    document.querySelectorAll('#segTable select').forEach(sel => { const s = S.segs.find(x => x.segment_id === sel.dataset.seg); if (s && sel.value !== s.lead_label) { out[sel.dataset.seg] = sel.value; any = true; } });
+    return any ? out : null;
+  }
+
+  // ---------- patch / run ----------
+  const numOrNull = (id) => { const v = $(id).value; return v === '' ? null : parseFloat(v); };
+  $('patch').addEventListener('click', async () => {
+    if (!S.study) return;
+    const changes = { engine: $('engine').value || null, engine_duration_s: numOrNull('dur'), speed_mm_s: numOrNull('speed'), gain_mm_mV: numOrNull('gain'), time_source: $('tsrc').value };
+    const ll = collectLeadLabels(); if (ll) changes.lead_labels = ll;
+    const author = $('author').value.trim(), reason = $('reason').value.trim();
+    if (!author || !reason) { msg('Autor y motivo son obligatorios para crear una revisión.', true); return; }
+    try {
+      const r = await api('PATCH', `/studies/${S.id}`, { expected_revision: S.study.active_revision, changes, author, reason });
+      msg(`Revisión ${r.active_revision} creada.`); await openStudy(S.id);
+    } catch (err) { msg(err.message, true); if (err.message.startsWith('409')) await openStudy(S.id); }
+  });
+  $('run').addEventListener('click', async () => {
+    if (!S.study) return;
+    try {
+      const r = await api('POST', `/studies/${S.id}/runs`, { expected_revision: S.study.active_revision, config_hash: S.study.config_hash });
+      msg(`Trabajo ${r.run_id} encolado.`); await renderRuns(); pollRuns();
+    } catch (err) { msg(err.message, true); }
+  });
+
+  async function renderRuns() {
+    const tb = $('runs').querySelector('tbody'); tb.innerHTML = '';
+    let runs = []; try { runs = (await api('GET', `/studies/${S.id}/runs`)).runs; } catch (_) {}
+    let active = false;
+    for (const j of runs) {
+      active = active || j.status === 'queued' || j.status === 'running';
+      const tr = document.createElement('tr');
+      const pub = S.study.published_run_id === j.run_id ? ' · publicado' : '';
+      tr.innerHTML = `<td><code>${j.run_id.slice(0,12)}</code></td><td>${j.input_revision}</td><td>${badge(j.status)}${pub}${j.error ? '<div class="hint">'+j.error+'</div>' : ''}</td>
+        <td>${(j.status==='queued'||j.status==='running') ? `<button data-cancel="${j.run_id}">Cancelar</button>` : ''}</td>`;
+      tb.appendChild(tr);
+    }
+    tb.querySelectorAll('button[data-cancel]').forEach(b => b.addEventListener('click', async () => { try { await api('POST', `/runs/${b.dataset.cancel}/cancel`); await renderRuns(); } catch (err) { msg(err.message, true); } }));
+    return active;
+  }
+  function pollRuns() {
+    clearTimeout(S.pollTimer);
+    S.pollTimer = setTimeout(async () => {
+      const before = S.study.published_run_id;
+      S.study = await api('GET', `/studies/${S.id}`); renderState();
+      const active = await renderRuns();
+      if (S.study.published_run_id !== before) { await loadSegments(); msg('Resultado publicado.'); }
+      if (active) pollRuns();
+    }, 1500);
+  }
+
+  // ---------- exports ----------
+  $('export').addEventListener('click', async () => {
+    if (!S.study || !S.study.published_run_id) { msg('No hay resultado publicado que exportar.', true); return; }
+    const formats = [...document.querySelectorAll('.fmt:checked')].map(c => c.value);
+    const job = (await api('GET', `/runs/${S.study.published_run_id}`));
+    try {
+      const r = await api('POST', `/studies/${S.id}/exports`, { revision: job.input_revision, run_id: S.study.published_run_id, formats });
+      const ul = $('arts'); ul.innerHTML = '';
+      for (const a of (r.artifacts || r)) { const li = document.createElement('li'); li.innerHTML = `<a href="/studies/${S.id}/artifacts/${a.artifact_id}" download="${a.filename_safe}">${a.filename_safe}</a> <span class="hint">${a.mime}</span>`; ul.appendChild(li); }
+      msg(`${(r.artifacts || r).length} artefactos registrados (rev ${job.input_revision}, run ${S.study.published_run_id.slice(0,12)}).`);
+    } catch (err) { msg(err.message, true); }
+  });
+
+  if (location.hash.length > 1) { $('studyId').value = location.hash.slice(1); openStudy(location.hash.slice(1)); }
+})();
+</script>
+</body>
+</html>

@@ -4,9 +4,6 @@ import sys
 import uuid
 from pathlib import Path
 
-import numpy as np
-from PIL import Image
-
 from ecg_photo.contracts import (
     CalibrationEvidence,
     dump_json,
@@ -20,8 +17,7 @@ from ecg_photo.export import (
     export_wfdb,
 )
 from ecg_photo.fixtures import write_fixture_revision
-from ecg_photo.grid import estimate_grid
-from ecg_photo.ingest import IngestRejected, ingest
+from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest
 from ecg_photo.render import (
     PaperSpec,
     RenderNotAllowed,
@@ -156,36 +152,8 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
         "study_id": manifest.study_id,
         "pages": pages_summary,
     }
-    for pg in manifest.pages:
-        raster = out / pg.raster_path
-        img = np.asarray(Image.open(raster))
-        grid = estimate_grid(img)
-        grid_path = out / "pages" / f"{pg.page_id}.grid.json"
-        grid_path.write_text(
-            json.dumps(
-                {
-                    "px_per_mm_x": grid.px_per_mm_x,
-                    "px_per_mm_y": grid.px_per_mm_y,
-                    "minor_period_px_x": grid.minor_period_px_x,
-                    "minor_period_px_y": grid.minor_period_px_y,
-                    "major_period_px_x": grid.major_period_px_x,
-                    "major_period_px_y": grid.major_period_px_y,
-                    "residual_rel_x": grid.residual_rel_x,
-                    "residual_rel_y": grid.residual_rel_y,
-                    "method": grid.method,
-                    "limitations": grid.limitations,
-                    "refine_method": grid.refine_method,
-                    "refine_n_lines_x": grid.refine_n_lines_x,
-                    "refine_n_lines_y": grid.refine_n_lines_y,
-                    "refine_rms_px_x": grid.refine_rms_px_x,
-                    "refine_rms_px_y": grid.refine_rms_px_y,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
-        pg = pg.model_copy(update={"grid_estimate_path": f"pages/{pg.page_id}.grid.json"})
-        manifest.pages[pg.index] = pg
+    manifest, grids = estimate_page_grids(out, manifest)
+    for pg, grid in zip(manifest.pages, grids, strict=True):
         pages_summary.append(
             {
                 "page_id": pg.page_id,
@@ -196,7 +164,6 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
                 "px_per_mm_y": grid.px_per_mm_y,
             }
         )
-    dump_json(manifest, out / "manifest.json")
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 

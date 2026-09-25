@@ -464,6 +464,13 @@ def confirm_scale(
             if speed_mm_s is None:
                 raise ValueError("--speed required when --time-source engine")
             grid = grid_from_observed_duration(engine_dur, target_fs)
+            expected_n = grid_from_observed_duration(engine_dur, engine_fs).n_samples
+            if trace.shape[0] != expected_n:
+                raise ValueError(
+                    f"{seg.segment_id}: engine trace has {trace.shape[0]} samples but engine grid "
+                    f"({engine_dur} s @ {engine_fs} Hz) implies {expected_n}; "
+                    "check engine_duration_s"
+                )
             if abs(target_fs - engine_fs) > 1e-12:
                 sig, observed = _contiguous_resample(
                     np.where(support, trace, 0.0), support, engine_fs, target_fs, grid.n_samples
@@ -572,3 +579,31 @@ def confirm_scale(
     if problems:
         raise RuntimeError(f"confirmed run dir failed validation: {problems}")
     return RunPaths(run_dir=new_dir, manifest=new_dir / "manifest.json")
+
+
+def apply_lead_corrections(manifest: Manifest, corrections: dict) -> Manifest:
+    """Pure: apply rev<N>/corrections.json lead-label overrides to a manifest."""
+    labels = (corrections or {}).get("lead_labels") or {}
+    if not labels:
+        return manifest
+    segments = []
+    for seg in manifest.segments:
+        entry = labels.get(seg.segment_id)
+        if entry is None:
+            segments.append(seg)
+            continue
+        prev = entry.get("previous_label") or seg.lead_label
+        segments.append(
+            seg.model_copy(
+                update={
+                    "lead_label": entry["label"],
+                    "lead_status": LeadStatus.confirmed,
+                    "lead_evidence": (
+                        f"manual correction by {entry.get('author', '?')} "
+                        f"(rev {entry.get('revision', '?')}): {entry.get('reason', '')}; "
+                        f"engine proposed {prev}"
+                    ),
+                }
+            )
+        )
+    return manifest.model_copy(update={"segments": segments})

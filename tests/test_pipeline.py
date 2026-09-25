@@ -370,3 +370,23 @@ def test_digitiser_rotation_chain_round_trip() -> None:
     # sanity: forward torchvision map moves (cx+30, cy) to (cx+30cos, cy-30sin)
     rot_pt = np.array([[cx + 30 * c, cy - 30 * s]])
     np.testing.assert_allclose(apply_chain(chain, rot_pt), [[cx + 30, cy]], atol=1e-6)
+
+
+def test_engine_duration_mismatch_raises(tmp_path) -> None:
+    rev = tmp_path / "rev"
+    m = write_fixture_revision(rev, "calibrated")
+    truth = np.load(rev / m.segments[0].signal_path)
+    study = _study(tmp_path)
+
+    paths = digitize_page(
+        study, "page-1", FakeDigitizer(_fake_output(truth)), engine_duration_s=10.0
+    )
+    with pytest.raises(ValueError, match="check engine_duration_s"):
+        confirm_scale(
+            paths.run_dir,
+            speed_mm_s=25.0,
+            gain_mm_mV=10.0,
+            author="t",
+            reason="r",
+            time_source="engine",
+        )

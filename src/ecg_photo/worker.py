@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from ecg_photo.digitizers.base import Digitizer
-from ecg_photo.pipeline import confirm_scale, digitize_page
+from ecg_photo.pipeline import apply_lead_corrections, confirm_scale, digitize_page
 from ecg_photo.store import QueueFull, RunConfig, Store, _now
 
 EngineFactory = Callable[[RunConfig], Digitizer]
@@ -146,6 +146,15 @@ class Worker(threading.Thread):
             engine_duration_s=float(cfg.engine_duration_s or 10.0),
             runs_root=work_root,
         )
+        # apply rev<N>/corrections.json (lead-label overrides) before confirm_scale
+        corr = store.corrections_for(study_id, job.input_revision)
+        if corr.get("lead_labels"):
+            from ecg_photo.contracts import dump_json as _dump
+            from ecg_photo.contracts import load_manifest as _load
+
+            m = _load(paths.manifest)
+            _dump(apply_lead_corrections(m, corr), paths.manifest)
+
         final = paths
         if cfg.gain_mm_mV is not None:
             job.stage = "confirm_scale"
