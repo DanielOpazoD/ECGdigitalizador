@@ -221,7 +221,11 @@ def estimate_grid(
     limitations = LIMITATIONS
     if ref_x is not None or ref_y is not None:
         method = METHOD + " + major refined by line-position least squares"
-    missing = [ax for ax, r in (("x", ref_x), ("y", ref_y)) if major_x is not None and r is None]
+    missing = [
+        ax
+        for ax, r, maj in (("x", ref_x, major_x), ("y", ref_y, major_y))
+        if maj is not None and r is None
+    ]
     if missing:
         limitations += f"; no line refinement on {','.join(missing)} (coarse kept)"
 
