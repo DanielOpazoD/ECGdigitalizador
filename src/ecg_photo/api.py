@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from ecg_photo.contracts import load_manifest
@@ -25,6 +25,7 @@ from ecg_photo.store import (
 from ecg_photo.worker import Worker
 
 _ID_RE = re.compile(r"^[a-z0-9-]{1,64}$")
+_UI_INDEX = Path(__file__).parent / "ui" / "index.html"
 
 _REASON_TO_STATUS = {
     "UNSUPPORTED_TYPE": 415,
@@ -86,6 +87,16 @@ def create_app(store: Store, worker: Worker) -> FastAPI:
     def health() -> dict:
         return {"status": "ok"}
 
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse("/ui", status_code=307)
+
+    @app.get("/ui", include_in_schema=False)
+    def ui() -> FileResponse:
+        return FileResponse(
+            _UI_INDEX, media_type="text/html", headers={"Cache-Control": "no-store"}
+        )
+
     @app.post("/studies", status_code=201)
     def create_study(
         file: UploadFile = File(...),  # noqa: B008 - FastAPI idiom
@@ -139,6 +150,7 @@ def create_app(store: Store, worker: Worker) -> FastAPI:
             **state.model_dump(mode="json"),
             "pages": pages,
             "segments": segments,
+            "config": store.config_for(study_id, state.active_revision).model_dump(mode="json"),
             "corrections": store.corrections_for(study_id, state.active_revision),
             "published_result_stale": store.published_result_stale(study_id),
         }

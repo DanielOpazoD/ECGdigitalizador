@@ -79,3 +79,13 @@ El motor `fake` sólo existe con `ECG_PHOTO_ENABLE_FAKE_ENGINE=1` (tests).
   empezar y antes de publicar; no interrumpe el subproceso del motor.
 - Sin interfaz de usuario.
 - Multi-página: `page_id` fijable en config vía PATCH pero por defecto `page-1`.
+
+## Interfaz de revisión
+
+`ecg-photo serve` levanta también una UI estática mínima en `GET /ui`
+(`GET /` redirige con 307; `Cache-Control: no-store`). Muestra el original de la
+página con overlay de la región fuente de cada segmento, la reconstrucción de la
+traza con los huecos como `null` (nunca 0), y permite: corregir etiquetas de
+derivación vía `PATCH` con `expected_revision`, lanzar/cancelar runs, y exportar
+sólo el run publicado. `GET /studies/{id}` devuelve además `config`
+(RunConfig congelado de la revisión activa) y `corrections`.

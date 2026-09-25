@@ -28,7 +28,14 @@ from ecg_photo.contracts import (
     validate_revision_dir,
 )
 from ecg_photo.digitizers.base import EngineSpec, load_engine_specs
-from ecg_photo.ingest import SupportedInputs, admit, escape_filename, ingest, safe_study_id
+from ecg_photo.ingest import (
+    SupportedInputs,
+    admit,
+    escape_filename,
+    estimate_page_grids,
+    ingest,
+    safe_study_id,
+)
 
 
 class StoreError(RuntimeError):
@@ -285,7 +292,7 @@ class Store:
         sdir = self._study_dir(study_id)
         rev_dir = sdir / "rev1"
         rev_dir.mkdir(parents=True)
-        ingest(upload_path, rev_dir)
+        estimate_page_grids(rev_dir, ingest(upload_path, rev_dir))
 
         config = self._default_config(default_engine)
         if options is not None:
@@ -625,7 +632,7 @@ class Store:
                     study_id=study_id,
                     run_id=run_id,
                     revision=revision,
-                    filename_safe=f"{study_id}-{run_id[:8]}-{path.name}",
+                    filename_safe=path.name,
                     mime=MIME_BY_EXT.get(ext, "application/octet-stream"),
                     path_rel=str(path.relative_to(self._study_dir(study_id))),
                     sha256=sha256_file(path),

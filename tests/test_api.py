@@ -469,3 +469,43 @@ def test_lead_label_corrections(tmp_path) -> None:
         assert fixed["lead_label"] == "aVR" and fixed["lead_status"] == "confirmed"
     finally:
         worker.shutdown()
+
+
+def test_ui_grid_and_study_config_keys(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        st = _upload(client, tmp_path)
+        sid = st["study_id"]
+        # ingest now estimates page grids -> file exists in store
+        assert (_store.root / sid / "rev1" / "pages" / "page-1.grid.json").exists()
+        g = client.get(f"/studies/{sid}/pages/page-1/grid")
+        assert g.status_code == 200 and "px_per_mm_x" in g.json()
+
+        root = client.get("/", follow_redirects=False)
+        assert root.status_code == 307 and root.headers["location"] == "/ui"
+        ui = client.get("/ui")
+        assert ui.status_code == 200
+        assert "text/html" in ui.headers["content-type"]
+        assert "<title" in ui.text
+
+        body = client.get(f"/studies/{sid}").json()
+        assert "config" in body and "corrections" in body
+        assert body["config"]["engine"] is None
+    finally:
+        worker.shutdown()
+
+
+def test_artifact_filename_safe_is_basename(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        sid, run_id = _run_and_publish(client, tmp_path)
+        ex = client.post(
+            f"/studies/{sid}/exports",
+            json={"revision": 2, "run_id": run_id, "formats": ["csv"]},
+        )
+        assert ex.status_code == 201
+        for art in ex.json()["artifacts"]:
+            assert art["filename_safe"] == art["path_rel"].split("/")[-1]
+            assert art["filename_safe"].count(sid) == 1
+    finally:
+        worker.shutdown()

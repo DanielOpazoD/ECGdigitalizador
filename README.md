@@ -54,6 +54,7 @@ ecg-photo confirm-scale estudio/runs/run-XXX --gain 10 \
     [--time-source evidence|engine]
 ecg-photo export estudio/runs/run-YYY --out export_dir
 ecg-photo serve --store STORE_DIR [--port 8000]   # API local 127.0.0.1 + worker único
+# luego abrir http://127.0.0.1:8000/ui para la revisión local
 ```
 
 ## Reglas no negociables

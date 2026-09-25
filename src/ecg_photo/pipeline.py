@@ -464,6 +464,13 @@ def confirm_scale(
             if speed_mm_s is None:
                 raise ValueError("--speed required when --time-source engine")
             grid = grid_from_observed_duration(engine_dur, target_fs)
+            expected_n = grid_from_observed_duration(engine_dur, engine_fs).n_samples
+            if trace.shape[0] != expected_n:
+                raise ValueError(
+                    f"{seg.segment_id}: engine trace has {trace.shape[0]} samples but engine grid "
+                    f"({engine_dur} s @ {engine_fs} Hz) implies {expected_n}; "
+                    "check engine_duration_s"
+                )
             if abs(target_fs - engine_fs) > 1e-12:
                 sig, observed = _contiguous_resample(
                     np.where(support, trace, 0.0), support, engine_fs, target_fs, grid.n_samples
