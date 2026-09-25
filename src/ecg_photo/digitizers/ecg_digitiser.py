@@ -120,7 +120,7 @@ class EcgDigitiserDigitizer:
             if not matches:
                 raise EngineNotReady(f"{name} not found under {model_dir_abs}")
             h.update(matches[0].read_bytes())
-        h.update(" ".join(cmd).encode("utf-8"))
+        h.update(str(self.model_dir).encode("utf-8"))
         config_hash = h.hexdigest()
 
         record_name = image_path.stem
