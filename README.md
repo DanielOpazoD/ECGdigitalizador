@@ -49,8 +49,9 @@ ecg-photo digitize estudio --page page-1 --engine ahus --duration 10 \
     --ahus-root ... --ahus-python ... --ahus-config ... [--runs-root DIR]
 ecg-photo digitize estudio --page page-1 --engine ecg-digitiser --duration 10 \
     --digitiser-root ... --digitiser-python ... [--digitiser-model models/M3]
-ecg-photo confirm-scale estudio/runs/run-XXX --speed 25 --gain 10 \
-    --author NOMBRE --reason "..." [--fs 500]
+ecg-photo confirm-scale estudio/runs/run-XXX --gain 10 \
+    --author NOMBRE --reason "..." [--speed 25] [--fs 500] \
+    [--time-source evidence|engine]
 ecg-photo export estudio/runs/run-YYY --out export_dir
 ```
 

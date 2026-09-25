@@ -104,3 +104,30 @@ motor. F4-c derivará la duración desde evidencia de imagen (px/mm de
 rejilla × velocidad confirmada × extensión medida de la traza).
 **Seguimiento:** no usar r@lag como gate hasta fijar la ventana en el bench
 (pendiente; el bench no se modifica en F4-b).
+
+## F4-c: eje temporal desde evidencia de imagen
+
+Los parches `ahus-0001`/`ecg-digitiser-0002` hacen que cada motor escriba
+`*_geometry.json`, lo que permite mapear índice de muestra canónica → píxel de
+página por derivación (`LeadGeometry`, `raw_coordinate_frame="file"`,
+`raw_paths/seg-*-geometry.json` con la cadena afín/homografía). Con
+`confirm-scale --time-source evidence` (defecto) el eje temporal se deriva de
+`t = (x_px − x_first)/(px_per_mm_x · speed)` usando nuestra rejilla refinada y
+la velocidad resuelta — nunca la rejilla del motor. Exige geometría presente,
+`px_per_mm_x` (grid json) y velocidad (evidencia o `--speed`); si falta algo
+→ `ValueError` con `TIME_SCALE_UNKNOWN`/`CALIBRATION_MISSING`, sin fallback
+silencioso. `--time-source engine` conserva el comportamiento anterior para
+comparar.
+
+Resultado sobre imgkit seed7 con ahus (sintético, una sola imagen, no es
+validación; geometría guardada en
+`benchmarks/results/f4c_ahus_seed7_geometry.json`):
+
+| time-source | r@lag 10 s | best_lag | rr_est | observed_duration_s | coverage |
+|---|---|---|---|---|---|
+| evidence | **0.998** | 90 ms | 1.001 s | 9.913 | 1.000 |
+| engine | 0.654 | 39 ms | 1.008 s | 10.000 (asumida) | 0.998 |
+
+El eje temporal por evidencia elimina casi toda la deriva de escala temporal
+del motor (~0.8 %): la duración medida (9.913 s desde la extensión de la traza
+en píxeles) queda a <1 % de la verdad en rr_est.
