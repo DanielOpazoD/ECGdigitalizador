@@ -130,7 +130,7 @@ class EcgDigitiserDigitizer:
         record_name = image_path.stem
         leads, observed, fs_hz, extra = parse_wfdb_output(out_dir, record_name)
         n_samples = len(next(iter(leads.values())))
-        geometry = parse_digitiser_geometry(out_dir, record_name, n_samples, set(leads))
+        geometry = parse_digitiser_geometry(out_dir, record_name, n_samples, set(leads), fs_hz)
         return EngineOutput(
             engine_id=self.spec.engine_id,
             engine_commit=self.spec.commit,
@@ -169,16 +169,18 @@ def parse_wfdb_output(
 
 
 def parse_digitiser_geometry(
-    out_dir: Path, record_name: str, n_samples: int, lead_names: set[str]
+    out_dir: Path, record_name: str, n_samples: int, lead_names: set[str], fs_hz: float
 ) -> dict[str, LeadGeometry] | None:
     """Build sample-index -> page-pixel-x geometry from <record>_geometry.json.
 
-    Per lead: sample i -> rotated column x1+i (one output sample per mask
-    column), then rotated -> original by the inverse of torchvision's
-    rotate(angle) about the image centre (forward map verified empirically:
-    p_rot = c + [[cos, sin], [-sin, cos]] . (p - c) in pixel coords for a
-    counter-clockwise image rotation of `angle` degrees). Padded samples
-    beyond the mask width carry NaN x — they carry no geometry.
+    The engine resamples each lead mask's columns onto its canonical fs_hz grid
+    using its assumed sec_per_pixel (2.5 s per 2.5-s slot width), so canonical
+    sample i -> rotated column x1 + (i/fs_hz)/sec_per_pixel, then rotated ->
+    original by the inverse of torchvision's rotate(angle) about the image
+    centre (forward map verified empirically: p_rot = c + [[cos, sin],
+    [-sin, cos]] . (p - c) in pixel coords for a counter-clockwise image
+    rotation of `angle` degrees). Samples whose mapped column falls beyond the
+    mask width are padding and carry NaN x — they carry no geometry.
     """
     out_dir = Path(out_dir)
     geo_path = out_dir / f"{record_name}_geometry.json"
@@ -186,6 +188,7 @@ def parse_digitiser_geometry(
         return None
     g = json.loads(geo_path.read_text(encoding="utf-8"))
     rot_deg = float(g["rot_angle"])
+    spp = float(g["sec_per_pixel_engine_assumed"])
     rw, rh = (int(v) for v in g["rotated_shape"])
     ow, oh = (int(v) for v in g["original_shape"])
     cx, cy = rw / 2.0, rh / 2.0
@@ -199,10 +202,10 @@ def parse_digitiser_geometry(
         x1, y1 = float(box["x1"]), float(box["y1"])
         w, h = float(box["width"]), float(box["height"])
         y_mid = y1 + h / 2.0
-        x_rot = x1 + np.arange(int(w), dtype=np.float64)
+        px_per_sample = 1.0 / (fs_hz * spp)
+        x_rot = x1 + np.arange(n_samples, dtype=np.float64) * px_per_sample
         x_file = c * (x_rot - cx) - s * (y_mid - cy) + cx
-        x_px = np.full(n_samples, np.nan, dtype=np.float64)
-        x_px[: len(x_file)] = x_file
+        x_px = np.where(x_rot < x1 + w, x_file, np.nan)
 
         chain = TransformChain(
             transform_id=f"engine-geometry-ecg-digitiser-{lead}",
@@ -212,11 +215,13 @@ def parse_digitiser_geometry(
                 TransformStep(
                     kind="affine",
                     parameters={
-                        "matrix": [1.0, 0.0, x1, 0.0, 0.0, y_mid],
+                        "matrix": [px_per_sample, 0.0, x1, 0.0, 0.0, y_mid],
                         "mask_x1": x1,
                         "mask_y1": y1,
                         "mask_width": w,
                         "mask_height": h,
+                        "sec_per_pixel_engine_assumed": spp,
+                        "engine_fs_hz": fs_hz,
                     },
                     input_size=(n_samples, 1),
                     output_size=(rw, rh),
@@ -247,14 +252,15 @@ def parse_digitiser_geometry(
             y_ref_px=None,
             chain=chain,
             method=(
-                "sample i -> rotated col x1+i (one sample per mask column) -> "
+                "sample i -> rotated col x1 + (i/fs)/sec_per_pixel (engine "
+                "resamples mask columns onto its canonical grid) -> "
                 "original px via inverse rotation about image centre"
             ),
             limitations=(
                 "x evaluated at the mask's vertical centre row; the true signal "
                 "row varies per column, so x carries a small residual error "
-                "proportional to rot_angle; samples beyond the mask width are "
-                "padding with no geometry; sec_per_pixel is engine-assumed"
+                "proportional to rot_angle; samples mapping beyond the mask "
+                "width are padding with no geometry"
             ),
         )
     return out or None

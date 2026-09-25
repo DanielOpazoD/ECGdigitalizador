@@ -57,6 +57,8 @@ ecg-photo serve --store STORE_DIR [--port 8000]   # API local 127.0.0.1 + worker
 # luego abrir http://127.0.0.1:8000/ui para la revisión local
 ```
 
+Benchmarks: `docs/evaluation.md` (F6-a: PTB-XL real -> imágenes sintéticas -> pipeline; señal real, imagen sintética — no fotos, no validación clínica).
+
 ## Reglas no negociables
 Sin escala temporal no hay señal temporal; sin ganancia no hay mV; los huecos no se rellenan;
 `representative_beat` no sirve para FC/RR; ningún valor por defecto de velocidad/ganancia.
