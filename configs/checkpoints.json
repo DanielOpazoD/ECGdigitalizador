@@ -1,99 +1,69 @@
 {
- "schema_version": "1.0.0",
- "note": "Inventario F0. Ningun peso ha sido descargado, ejecutado ni evaluado. Los sha256 son los OIDs declarados por Git LFS en el commit fijado (git lfs ls-files -l); deben verificarse tras 'git lfs pull'.",
- "engines": [
-  {
-   "engine_id": "ahus",
-   "repo": "https://github.com/Ahus-AIM/Open-ECG-Digitizer",
-   "commit": "97a15087d4abcda843da8c58ee74b1d8f47e6f9a",
-   "license": "CC-BY-SA-4.0",
-   "local_path": "external/ahus",
-   "status": "evaluated_synthetic_smoke",
-   "patches": [
-    "patches/ahus-0001-write-geometry.patch"
-   ],
-   "weights": [
+  "schema_version": "1.0.0",
+  "note": "Inventario F0. Ningun peso ha sido descargado, ejecutado ni evaluado. Los sha256 son los OIDs declarados por Git LFS en el commit fijado (git lfs ls-files -l); deben verificarse tras 'git lfs pull'.",
+  "engines": [
     {
-     "path": "weights/unet_weights_07072025.pt",
-     "sha256": "17fe7071ef270102631306127262fc08c250d79d4e3aeb572ab1719dd34d320b",
-     "size_bytes_approx": 94371840,
-     "downloaded": false
+      "engine_id": "ahus",
+      "repo": "https://github.com/Ahus-AIM/Open-ECG-Digitizer",
+      "commit": "97a15087d4abcda843da8c58ee74b1d8f47e6f9a",
+      "license": "CC-BY-SA-4.0",
+      "local_path": "external/ahus",
+      "status": "evaluated_synthetic_smoke",
+      "patches": ["patches/ahus-0001-write-geometry.patch"],
+      "weights": [
+        {"path": "weights/unet_weights_07072025.pt", "sha256": "17fe7071ef270102631306127262fc08c250d79d4e3aeb572ab1719dd34d320b", "size_bytes_approx": 94371840, "downloaded": false},
+        {"path": "weights/lead_name_unet_weights_07072025.pt", "sha256": "840bd6bf2433ee6c22db67f57c861d9d427f29e10a32eeb334f0bcf061b175a2", "size_bytes_approx": 24117248, "downloaded": false}
+      ]
     },
     {
-     "path": "weights/lead_name_unet_weights_07072025.pt",
-     "sha256": "840bd6bf2433ee6c22db67f57c861d9d427f29e10a32eeb334f0bcf061b175a2",
-     "size_bytes_approx": 24117248,
-     "downloaded": false
+      "engine_id": "ecg_digitiser",
+      "repo": "https://github.com/felixkrones/ECG-Digitiser",
+      "commit": "e6f62aa776f105e4c7b04f21669da4d4f0df370b",
+      "license": "BSD-2-Clause",
+      "local_path": "external/ecg-digitiser",
+      "status": "evaluated_synthetic_smoke",
+      "patches": ["patches/ecg-digitiser-0001-rotate-float-angle.patch", "patches/ecg-digitiser-0002-write-geometry.patch"],
+      "weights_source_note": "LFS budget exceeded on proxy; downloaded via media.githubusercontent.com and verified sha256",
+      "weights": [
+        {"path": "models/M1/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_0/checkpoint_final.pth", "sha256": "d0e0d4c578d457367d3f78ae3739cf86a8d8524cd4f669c24140184e8cce5355", "size_bytes_approx": 498073600, "downloaded": false},
+        {"path": "models/M3/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_all/checkpoint_best.pth", "sha256": "60020c47840f95e0574952c161ae3d19f2f8aeb9a5dc440a01c6ea4b927f255b", "size_bytes_approx": 498073600, "downloaded": false},
+        {"path": "models/M3/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_all/checkpoint_final.pth", "sha256": "8e4bae0b568b91ee26bc29841ba2a1d9eb5571149f19a009459c85342375cffb", "size_bytes_approx": 498073600, "downloaded": false}
+      ]
+    },
+    {
+      "engine_id": "kaggle_dang",
+      "repo": "https://github.com/dangnh0611/kaggle_ecg_digitization",
+      "commit": "8358d5b09a5b9519275e9b54c11716da5752a9d6",
+      "license": "MIT (code); weights on Kaggle dataset dangnh0611/ecg-checkpoints, terms not verified",
+      "local_path": "external/kaggle-dang",
+      "status": "blocked_weights_external",
+      "weights": []
+    },
+    {
+      "engine_id": "ecg_image_kit",
+      "repo": "https://github.com/alphanumericslab/ecg-image-kit",
+      "commit": "27b90f56896c9fc78b05a83ca14844ea2637aa0b",
+      "license": "BSD-3-Clause",
+      "local_path": "external/ecg-image-kit",
+      "status": "inventoried_synthetic_generator",
+      "weights": []
+    },
+    {
+      "engine_id": "ecgminer",
+      "repo": "https://github.com/adofersan/ecg-miner",
+      "commit": "369b014eca4318dab3247d135da421b77f05bd64",
+      "license": "MIT",
+      "local_path": "external/ecgminer",
+      "status": "reference_ui_only",
+      "weights": []
     }
-   ]
-  },
-  {
-   "engine_id": "ecg_digitiser",
-   "repo": "https://github.com/felixkrones/ECG-Digitiser",
-   "commit": "e6f62aa776f105e4c7b04f21669da4d4f0df370b",
-   "license": "BSD-2-Clause",
-   "local_path": "external/ecg-digitiser",
-   "status": "evaluated_synthetic_smoke",
-   "patches": [
-    "patches/ecg-digitiser-0001-rotate-float-angle.patch",
-    "patches/ecg-digitiser-0002-write-geometry.patch"
-   ],
-   "weights_source_note": "LFS budget exceeded on proxy; downloaded via media.githubusercontent.com and verified sha256",
-   "weights": [
-    {
-     "path": "models/M1/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_0/checkpoint_final.pth",
-     "sha256": "d0e0d4c578d457367d3f78ae3739cf86a8d8524cd4f669c24140184e8cce5355",
-     "size_bytes_approx": 498073600,
-     "downloaded": false
-    },
-    {
-     "path": "models/M3/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_all/checkpoint_best.pth",
-     "sha256": "60020c47840f95e0574952c161ae3d19f2f8aeb9a5dc440a01c6ea4b927f255b",
-     "size_bytes_approx": 498073600,
-     "downloaded": false
-    },
-    {
-     "path": "models/M3/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_all/checkpoint_final.pth",
-     "sha256": "8e4bae0b568b91ee26bc29841ba2a1d9eb5571149f19a009459c85342375cffb",
-     "size_bytes_approx": 498073600,
-     "downloaded": false
-    }
-   ]
-  },
-  {
-   "engine_id": "kaggle_dang",
-   "repo": "https://github.com/dangnh0611/kaggle_ecg_digitization",
-   "commit": "8358d5b09a5b9519275e9b54c11716da5752a9d6",
-   "license": "MIT (code); weights on Kaggle dataset dangnh0611/ecg-checkpoints, terms not verified",
-   "local_path": "external/kaggle-dang",
-   "status": "blocked_weights_external",
-   "weights": []
-  },
-  {
-   "engine_id": "ecg_image_kit",
-   "repo": "https://github.com/alphanumericslab/ecg-image-kit",
-   "commit": "27b90f56896c9fc78b05a83ca14844ea2637aa0b",
-   "license": "BSD-3-Clause",
-   "local_path": "external/ecg-image-kit",
-   "status": "inventoried_synthetic_generator",
-   "weights": []
-  },
-  {
-   "engine_id": "ecgminer",
-   "repo": "https://github.com/adofersan/ecg-miner",
-   "commit": "369b014eca4318dab3247d135da421b77f05bd64",
-   "license": "MIT",
-   "local_path": "external/ecgminer",
-   "status": "reference_ui_only",
-   "weights": []
+  ],
+  "f6a_bench": {
+    "scope": "real 12-lead signals (PTB-XL), synthetic ECG-Image-Kit renders; not real photographs; not clinical validation",
+    "dataset": "PTB-XL 1.0.3 records500/00000 records 00001-00010",
+    "license": "CC BY 4.0",
+    "script": "benchmarks/f6_ptbxl_bench.py",
+    "results": "benchmarks/results/f6_ptbxl_two_engines_2026-09-24.json",
+    "status": "bench_run_done"
   }
- ],
- "f6a_bench": {
-  "scope": "real 12-lead signals (PTB-XL), synthetic ECG-Image-Kit renders; not real photographs; not clinical validation",
-  "dataset": "PTB-XL 1.0.3 records500/00000 records 00001-00010",
-  "license": "CC BY 4.0",
-  "script": "benchmarks/f6_ptbxl_bench.py",
-  "results": "benchmarks/results/f6_ptbxl_two_engines_2026-09-24.json",
-  "status": "bench_run_done"
- }
 }
