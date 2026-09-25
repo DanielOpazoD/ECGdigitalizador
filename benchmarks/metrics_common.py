@@ -35,6 +35,7 @@ def segment_metrics(
         "offset_err_s": None,
         "rmse_mV": math.nan,
         "amp_ratio": math.nan,
+        "snr_db": math.nan,
     }
     if n_obs < 10:
         out["status"] = "no_signal"
@@ -86,6 +87,11 @@ def segment_metrics(
         if expected_window_s < t_truth[-1]
         else None
     )
+    # competition-style SNR (not the official metric): best lag, both means removed
+    t_c = truth_on_est - truth_on_est.mean()
+    noise = t_c - (e_obs - e_obs.mean())
+    p_noise = float(np.sum(noise**2))
+    snr_db = 10.0 * math.log10(float(np.sum(t_c**2)) / p_noise) if p_noise > 0 else None
     p95e, p5e = np.percentile(e_obs, [95, 5])
     p95t, p5t = np.percentile(np.interp(t_est[finite] + best_lag_s, t_truth, truth), [95, 5])
     out.update(
@@ -96,6 +102,7 @@ def segment_metrics(
             "offset_err_s": offset_err,
             "rmse_mV": float(np.sqrt(np.mean(resid**2))),
             "amp_ratio": float((p95e - p5e) / (p95t - p5t)) if (p95t - p5t) > 0 else math.nan,
+            "snr_db": snr_db,
         }
     )
     return out

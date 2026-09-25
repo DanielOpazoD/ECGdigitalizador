@@ -83,3 +83,4 @@ Ubuntu/Debian con CUDA.
 | B-06 | Licencia CC BY-SA 4.0 de Ahus (pesos y código) | Redistribución del motor | Uso local de evaluación; decisión legal pendiente del usuario |
 | B-07 | Discrepancia r@lag 0.954 (bench 3 s) vs 0.654 (pipeline 10 s) | Comparabilidad de métricas | Resuelto: es la ventana — r@lag 0.957/0.882/0.654 a 3/5/10 s; refleja el error temporal acumulado del motor (docs/pipeline.md) |
 | B-08 | Pesos Kaggle requieren cuenta y aceptación de términos | Evaluar candidato Đăng | Se documenta; no se descarga |
+| B-09 | Red del entorno cloud sin acceso a `kaggle.com` (403 del proxy) | Banco F6-b con imágenes reales de la competición | Scripts F6-b preparados; motores instalables con `benchmarks/setup_engines.sh` (GitHub y PyPI sí accesibles) |

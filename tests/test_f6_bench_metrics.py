@@ -73,3 +73,17 @@ def test_segment_metrics_no_signal() -> None:
         expected_window_s=2.5,
     )
     assert m["status"] == "no_signal"
+
+
+def test_segment_metrics_snr_ignores_vertical_offset() -> None:
+    fs = 500.0
+    t = np.arange(int(10 * fs)) / fs
+    truth = np.sin(2 * np.pi * 1.2 * t)
+    est = truth[1250:2500] + 0.7  # baseline offset only -> removed
+    rng = np.random.default_rng(0)
+    noisy = est + rng.normal(0, 0.1, len(est))  # noise power 0.01 vs signal ~0.5
+    obs = np.ones(len(est), dtype=bool)
+    clean = segment_metrics(truth, est, obs, fs, fs, 2.5, 2.5)
+    m = segment_metrics(truth, noisy, obs, fs, fs, 2.5, 2.5)
+    assert clean["snr_db"] is None or clean["snr_db"] > 60
+    assert 14.0 < m["snr_db"] < 20.0

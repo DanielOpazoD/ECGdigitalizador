@@ -101,3 +101,69 @@ corrección, mediana r@lag 0.986 en el humo).
   delineadas.
 - Cubrir el caso `no_signal` con más detalle (por qué el motor no produjo
   traza), y aVR/aVL/aVF en otros layouts.
+
+# Evaluación F6-b: imágenes reales (Kaggle PhysioNet ECG Image Digitization)
+
+Alcance previsto: **impresiones, escaneos y fotos reales de señales reales**
+(split `train` de la competición Kaggle `physionet-ecg-image-digitization`).
+Sigue sin ser validación clínica ni datos de los equipos locales (B-01/B-03).
+
+## Estado
+
+Preparado, **pendiente de ejecución con datos**: el entorno de la sesión en
+que se escribió no tenía salida de red a `kaggle.com`. Los motores sí se
+instalaron y probaron en CPU con `benchmarks/setup_engines.sh`.
+
+## Requisitos
+
+1. Credenciales en variables de entorno del entorno de ejecución (nunca en el
+   repo): `KAGGLE_USERNAME` + `KAGGLE_KEY`, o `KAGGLE_API_TOKEN`. Una clave
+   nueva `KGAT_…` en `KAGGLE_KEY` se reenvía como `KAGGLE_API_TOKEN`.
+2. Red permitida hacia `www.kaggle.com`, `api.kaggle.com`, `kaggle.com`
+   (las descargas redirigen a `storage.googleapis.com`).
+3. Reglas de la competición aceptadas en kaggle.com (si no, 403).
+
+## Protocolo
+
+```bash
+bash benchmarks/setup_engines.sh          # motores fijados + parches + pesos verificados
+pip install kaggle
+python benchmarks/f6b_fetch_kaggle.py --list          # verificar estructura remota
+python benchmarks/f6b_fetch_kaggle.py --dest runs/f6b/kaggle --n-records 10
+python benchmarks/f6b_kaggle_bench.py --data runs/f6b/kaggle --work runs/f6b/bench
+```
+
+- Selección determinista de registros (semilla fija sobre `train.csv`);
+  sha256 de cada archivo en `fetch_manifest.json`. Nada se versiona.
+- Por registro, variante de imagen (`<id>-<NNNN>.png`) y motor: `ingest →
+  estimate_page_grids → digitize_page(10 s) → confirm_scale` en **dos ejes
+  temporales** sobre la misma pasada del motor: `evidence` (rejilla propia) y
+  `engine` (rejilla canónica del motor). Velocidad 25 mm/s y ganancia
+  10 mm/mV entran como evidencia manual; `fs`/`sig_len` del registro sólo se
+  usan para puntuar.
+- Métricas por derivación sólo sobre muestras observadas: r@lag, RMSE, razón
+  de amplitud, error de duración y **SNR estilo competición** (lag óptimo,
+  medias restadas; no es la métrica oficial exacta). Si la verdad trae NaN
+  fuera de la ventana mostrada, se recorta a su tramo finito.
+- Los fallos son casos, no se descartan: `ingest_rejected`, `engine_error`,
+  `time_scale_unknown` (sin evidencia de rejilla el eje `evidence` se niega),
+  `no_signal`. Agregados por motor × eje × variante de imagen.
+- Cada (registro, variante, motor) terminado se añade a `cases.jsonl`: un
+  banco interrumpido se reanuda sin repetir trabajo.
+
+La correspondencia entre código de variante (`0001`…`0012`) y tipo de imagen
+(original, escaneo color/BN, foto de impresión, foto de pantalla, manchas,
+daño, moho…) se tomará de la descripción de la competición al descargar; no
+se fija aquí sin verificarla.
+
+## Verificación de la cadena (no es evaluación)
+
+Imagen sintética propia con la estructura de la competición (3x4 + tira II,
+25 mm/s, 10 mm/mV, 200 dpi, registro `999001`) más una variante rotada 3°,
+desenfocada y con ruido, en CPU x86 de 4 núcleos: rejilla estimada
+7.8743 px/mm (exacto 7.874); Ahus recorre el pipeline completo (80 s, 12/12
+derivaciones `ok` en ambos ejes). La primera pasada de ECG-Digitiser expuso un
+`IndexError` en `confirm_scale` (derivación con muestras observadas pero sin
+`x_px` finito), ya corregido: esa derivación queda sin confirmar en vez de
+tumbar la corrida. Sirve sólo para comprobar el script; los números reales
+saldrán del banco.
