@@ -5,6 +5,23 @@ import math
 import numpy as np
 
 
+def trim_to_observed(
+    est: np.ndarray, observed: np.ndarray, est_fs: float
+) -> tuple[np.ndarray, np.ndarray, float | None]:
+    """Drop the unobserved head/tail of a canvas estimate.
+
+    Engines disagree on where a short lead sits on their canonical time axis
+    (Ahus: at its page slot; ECG-Digitiser: from t=0), so a slot-cropped truth
+    can only be compared placement-agnostically. Returns the trimmed estimate,
+    its mask and the start (s) of the first observed sample on the canvas, or
+    None if nothing is observed."""
+    idx = np.nonzero(observed & np.isfinite(est))[0]
+    if len(idx) == 0:
+        return est[:0], observed[:0], None
+    a, b = int(idx[0]), int(idx[-1]) + 1
+    return est[a:b], observed[a:b], a / est_fs
+
+
 def segment_metrics(
     truth: np.ndarray,
     est: np.ndarray,
@@ -78,6 +95,12 @@ def segment_metrics(
         if np.isfinite(r) and r > best_r:
             best_r, best_lag = r, lag
 
+    if not np.isfinite(best_r):
+        # no lag gives >= 10 overlapping samples with variance: interpolating
+        # truth outside its span would clamp to a constant (zero power)
+        out["status"] = "no_valid_lag"
+        return out
+
     best_lag_s = best_lag / fs
     truth_on_est = np.interp(t_est[finite] + best_lag_s, t_truth, truth)
     resid = truth_on_est - e_obs
@@ -91,7 +114,8 @@ def segment_metrics(
     t_c = truth_on_est - truth_on_est.mean()
     noise = t_c - (e_obs - e_obs.mean())
     p_noise = float(np.sum(noise**2))
-    snr_db = 10.0 * math.log10(float(np.sum(t_c**2)) / p_noise) if p_noise > 0 else None
+    p_sig = float(np.sum(t_c**2))
+    snr_db = 10.0 * math.log10(p_sig / p_noise) if p_noise > 0 and p_sig > 0 else None
     p95e, p5e = np.percentile(e_obs, [95, 5])
     p95t, p5t = np.percentile(np.interp(t_est[finite] + best_lag_s, t_truth, truth), [95, 5])
     out.update(

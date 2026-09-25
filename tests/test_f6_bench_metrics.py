@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks"))
-from metrics_common import segment_metrics
+from metrics_common import segment_metrics, trim_to_observed
 
 
 def test_segment_metrics_lag_and_amplitude() -> None:
@@ -87,3 +87,41 @@ def test_segment_metrics_snr_ignores_vertical_offset() -> None:
     m = segment_metrics(truth, noisy, obs, fs, fs, 2.5, 2.5)
     assert clean["snr_db"] is None or clean["snr_db"] > 60
     assert 14.0 < m["snr_db"] < 20.0
+
+
+def _slot_case() -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+    """Kaggle layout: truth defined only in its 2.5 s slot (starting at 2.5 s);
+    estimate on the engine's 10 s page canvas, observed only in that slot."""
+    fs = 1000.0
+    t = np.arange(int(10 * fs)) / fs
+    page = np.sin(2 * np.pi * 1.2 * t) + 0.2 * np.sin(2 * np.pi * 5 * t)
+    truth_slot = page[2500:5000].copy()
+    est = np.full(len(page), np.nan)
+    est[2500:5000] = page[2500:5000]
+    return truth_slot, est, np.isfinite(est), fs
+
+
+def test_segment_metrics_no_overlap_is_a_case_not_a_crash() -> None:
+    # real failure (F6-b, record 1512936796, ahus, engine axis): no lag overlapped,
+    # truth was clamped to a constant and log10(0) raised "math domain error"
+    truth_slot, est, obs, fs = _slot_case()
+    m = segment_metrics(truth_slot, est, obs, fs, fs, 10.0, 2.5)
+    assert m["status"] == "no_valid_lag"
+    assert np.isnan(m["r_at_lag"])
+
+
+def test_trim_to_observed_is_placement_agnostic() -> None:
+    truth_slot, est, _obs, fs = _slot_case()
+    # Ahus-like: lead at its page slot (2.5 s); ECG-Digitiser-like: from t=0
+    at_zero = np.full(len(est), np.nan)
+    at_zero[:2500] = est[2500:5000]
+    for canvas, placed in ((est, 2.5), (at_zero, 0.0)):
+        e, o, start = trim_to_observed(canvas, np.isfinite(canvas), fs)
+        assert len(e) == 2500 and bool(o.all()) and start == placed
+        m = segment_metrics(truth_slot, e, o, fs, fs, None, 2.5)
+        assert m["status"] == "ok"
+        assert m["r_at_lag"] > 0.999
+        assert m["best_lag_s"] == 0.0
+        assert m["duration_err_pct"] is None
+    empty = np.full(100, np.nan)
+    assert trim_to_observed(empty, np.zeros(100, bool), fs)[2] is None

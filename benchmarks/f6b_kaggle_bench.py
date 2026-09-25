@@ -34,7 +34,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from metrics_common import segment_metrics
+from metrics_common import segment_metrics, trim_to_observed
 
 from ecg_photo.contracts import load_manifest
 from ecg_photo.digitizers.base import Digitizer
@@ -131,8 +131,14 @@ def score_run(run_dir: Path, truth: dict[str, np.ndarray], fs: float, rhythm: st
         full = len(t_sig) == len(truth[lead])
         expected = (ENGINE_DURATION_S if lead == rhythm else 2.5) if full else len(t_sig) / fs
         est_fs = float(seg.working_fs_hz or fs)
-        # measured extent of the observed samples, identical in both arms (the
-        # engine arm's segment duration is the engine canvas, not the trace)
+        if not full and len(sig) / est_fs > expected + 0.5:
+            # canvas estimate (engine time axis) vs slot-cropped truth: engines
+            # place short leads differently, so compare the observed span only
+            sig, observed, placed_s = trim_to_observed(sig, observed, est_fs)
+            base["trimmed_to_observed"] = True
+            base["engine_placement_s"] = placed_s
+        # measured extent of the observed samples, same definition in both arms
+        # (a segment's own duration on the engine arm is the assumed page canvas)
         obs_idx = np.nonzero(observed)[0]
         extent_s = (obs_idx[-1] - obs_idx[0] + 1) / est_fs if len(obs_idx) else None
         m = segment_metrics(
