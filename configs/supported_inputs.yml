@@ -1,0 +1,14 @@
+# F0 — Entradas admitidas. Solo se admite lo declarado; el resto se rechaza con LAYOUT_UNSUPPORTED.
+# Ningun perfil de equipo ha sido confirmado (bloqueo B-03). Ningun valor de este archivo
+# se aplica a una imagen sin evidencia: speed/gain por defecto NO se asumen.
+schema_version: "1.0.0"
+mime_types: [image/jpeg, image/png, application/pdf]
+max_file_mib: 25
+max_pdf_pages: 10
+max_pixels_per_page: 40000000
+layout_profiles:
+  confirmed: []          # se rellena solo con perfiles validados sobre ejemplos reales
+  proposed: []
+default_speed_mm_s: null   # nunca se asume
+default_gain_mm_mV: null   # nunca se asume
+representation_kinds_allowed_for_rhythm: [rhythm_segment]

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ecg-photo"
+version = "0.1.0"
+description = "ECG Foto a Senal: digitize photographed ECGs into calibrated signals"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pillow",
+    "pydantic",
+    "wfdb",
+    "matplotlib",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+    "pypdf",
+]
+
+[project.scripts]
+ecg-photo = "ecg_photo.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ecg_photo"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

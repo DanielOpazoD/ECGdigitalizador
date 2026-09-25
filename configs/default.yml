@@ -1,0 +1,33 @@
+# Configuracion inicial propuesta (cap. 20 de la especificacion). Son valores de configuracion,
+# no datos detectados de ninguna imagen. digitization.engine es un placeholder hasta superar F2.
+schema_version: "1.0.0"
+ingest:
+  allowed_types: [image/jpeg, image/png, application/pdf]
+  max_file_mib: 25
+  max_pdf_pages: 10
+  max_pixels_per_page: 40000000
+digitization:
+  engine: null                    # ningun motor seleccionado (F2 pendiente)
+  checkpoint_manifest: configs/checkpoints.json
+  layout_profile: confirmed_profile_only
+  experimental_dewarping: false
+calibration:
+  require_evidence_for_speed: true
+  require_evidence_for_gain: true
+  allow_manual_override: true
+signal:
+  calibrated_units: mV
+  working_fs_hz: 500
+  allow_partial_calibration: true
+  preserve_raw_paths: true
+  preserve_missing: true
+  fill_occluded_regions: false
+analysis:
+  per_measure_eligibility: true
+  qtc_formulas: [bazett, fridericia]
+  wide_qrs_repolarization: review_required
+  diagnostics_enabled: []
+execution:
+  max_active_jobs: 1
+  max_pending_jobs: 5
+  public_network_binding: false
