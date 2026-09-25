@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 import uuid
 from pathlib import Path
 
@@ -197,6 +198,80 @@ def _cmd_calibrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_digitize(args: argparse.Namespace) -> int:
+    from ecg_photo.digitizers.base import Digitizer
+
+    digitizer: Digitizer
+    if args.engine == "ahus":
+        missing = [
+            a for a in ("ahus_root", "ahus_python", "ahus_config") if getattr(args, a) is None
+        ]
+        if missing:
+            print(json.dumps({"error": f"missing args: {missing}"}))
+            return 2
+        from ecg_photo.digitizers.ahus import AhusDigitizer
+
+        digitizer = AhusDigitizer(
+            ahus_root=args.ahus_root.resolve(),
+            python_exe=args.ahus_python.absolute(),
+            base_config=args.ahus_config.resolve(),
+            duration_s=args.duration,
+            device="cpu",
+        )
+    else:
+        missing = [a for a in ("digitiser_root", "digitiser_python") if getattr(args, a) is None]
+        if missing:
+            print(json.dumps({"error": f"missing args: {missing}"}))
+            return 2
+        from ecg_photo.digitizers.ecg_digitiser import EcgDigitiserDigitizer
+
+        digitizer = EcgDigitiserDigitizer(
+            root=args.digitiser_root.resolve(),
+            python_exe=args.digitiser_python.absolute(),
+            model_dir=args.digitiser_model,
+        )
+    from ecg_photo.pipeline import digitize_page
+
+    try:
+        paths = digitize_page(
+            Path(args.dir),
+            args.page,
+            digitizer,
+            engine_duration_s=args.duration,
+            runs_root=args.runs_root,
+        )
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        return 1
+    report = json.loads((paths.run_dir / "run_report.json").read_text())
+    print(
+        json.dumps(
+            {
+                "run_dir": str(paths.run_dir),
+                "leads_written": report["leads_written"],
+                "skipped": report["skipped_leads"],
+                "layout": report["layout_detected"],
+            }
+        )
+    )
+    return 0
+
+
+def _cmd_confirm_scale(args: argparse.Namespace) -> int:
+    from ecg_photo.pipeline import confirm_engine_scale
+
+    paths = confirm_engine_scale(
+        Path(args.dir),
+        speed_mm_s=args.speed,
+        gain_mm_mV=args.gain,
+        author=args.author,
+        reason=args.reason,
+        fs_hz=args.fs,
+    )
+    print(json.dumps({"run_dir": str(paths.run_dir)}))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="ecg-photo")
     sub = p.add_subparsers(dest="command", required=True)
@@ -238,6 +313,29 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--author", required=True)
     c.add_argument("--reason", required=True)
     c.set_defaults(func=_cmd_calibrate)
+
+    dg = sub.add_parser("digitize")
+    dg.add_argument("dir")
+    dg.add_argument("--page", required=True)
+    dg.add_argument("--engine", choices=["ahus", "ecg-digitiser"], required=True)
+    dg.add_argument("--duration", type=float, required=True)
+    dg.add_argument("--ahus-root", type=Path)
+    dg.add_argument("--ahus-python", type=Path)
+    dg.add_argument("--ahus-config", type=Path)
+    dg.add_argument("--digitiser-root", type=Path)
+    dg.add_argument("--digitiser-python", type=Path)
+    dg.add_argument("--digitiser-model", type=Path, default=Path("models/M3"))
+    dg.add_argument("--runs-root", type=Path, default=None)
+    dg.set_defaults(func=_cmd_digitize)
+
+    cs = sub.add_parser("confirm-scale")
+    cs.add_argument("dir")
+    cs.add_argument("--speed", type=float, required=True)
+    cs.add_argument("--gain", type=float, required=True)
+    cs.add_argument("--author", required=True)
+    cs.add_argument("--reason", required=True)
+    cs.add_argument("--fs", type=float, default=None)
+    cs.set_defaults(func=_cmd_confirm_scale)
     return p
 
 

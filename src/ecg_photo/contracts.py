@@ -397,8 +397,6 @@ class Segment(BaseModel):
                 "observed_duration_s": self.observed_duration_s,
                 "discarded_tail_s": self.discarded_tail_s,
                 "signal_path": self.signal_path,
-                "temporal_trace_path": self.temporal_trace_path,
-                "temporal_trace_units": self.temporal_trace_units,
                 "observed_mask_path": self.observed_mask_path,
                 "valid_mask_path": self.valid_mask_path,
                 "gap_fill_mask_path": self.gap_fill_mask_path,
@@ -446,11 +444,10 @@ class Segment(BaseModel):
             raise ValueError("units 'mV' iff signal_path present")
         if not gain_known and self.effective_dv_mV is not None:
             raise ValueError("effective_dv_mV requires known gain")
-        if self.temporal_trace_path is not None:
-            if self.temporal_trace_units is None:
-                raise ValueError("temporal_trace_units required with temporal_trace_path")
-            if not time_known:
-                raise ValueError("temporal_trace_path requires known time scale")
+        if self.temporal_trace_path is not None and self.temporal_trace_units is None:
+            raise ValueError("temporal_trace_units required with temporal_trace_path")
+            # an arbitrary/px trace is allowed while time is unknown; it only
+            # becomes temporal evidence after an explicit scale confirmation
 
         if (
             time_known
