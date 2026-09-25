@@ -21,6 +21,8 @@ Estado: **una sola ejecución de humo** sobre imágenes sintéticas de ecg-image
 
 Observaciones: La tira de ritmo (II) alcanza ~99.8 % de cobertura; las demás derivaciones ocupan su hueco de 2.5 s (~25 %). El ratio de amplitud es ~0.95–0.99 en todos los casos, pero la correlación de Pearson es baja (~0.07 en II, ~0.18 en III, ~0 en V4) y la SNR es negativa en esta comparación: las métricas se calcularon contra la verdad tiled sin verificar alineación temporal fina ni signo por derivación. Los resultados son idénticos entre semillas dentro de ~0.01 en todas las métricas (la imagen generada es 2200×1700 a 200 dpi, x_grid=y_grid=39.37 px/cm).
 
+Análisis posterior de la semilla 7, derivación II (`runs/f2`, script ad hoc, no incluido en el banco): los picos R de la verdad caen en 0.62, 1.62, 2.62… s; los del motor en 0.553, 1.561, 2.569, 3.577… s. Es decir, hay un **desfase inicial de ≈−65 ms** y un **RR estimado de 1.008 s frente a 1.000 s** (error de escala temporal ≈0.8 %, acumulativo a lo largo de la tira). Con un desplazamiento fijo de 35 ms la correlación sube a r≈0.68; el resto se explica por la deriva de escala. Amplitud R ≈0.90 mV frente a 1.01 mV de verdad (≈−10 %). Conclusión operativa para F3/F4: la rejilla canónica de Ahus (`target_num_samples` sobre el ancho detectado) **no** puede tomarse como escala temporal confirmada; la calibración horizontal debe derivarse de nuestra propia detección de rejilla o de evidencia explícita, y el desfase inicial exige registrar `study_start_s` por segmento.
+
 ## ECG-Digitiser (Krones), Kaggle (Đăng)
 No ejecutados en F2-a. Pesos ECG-Digitiser 3×475 MB (LFS) pendientes; Kaggle requiere cuenta. Bloqueos B-05/B-06 vigentes.
 
