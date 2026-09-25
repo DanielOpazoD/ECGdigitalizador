@@ -68,8 +68,11 @@ def safe_study_id(original_filename: str) -> str:
 
 
 def escape_filename(name: str) -> str:
+    """Metadata-safe filename: control chars out, HTML escaped (T44)."""
+    import html
+
     cleaned = re.sub(r"[\x00-\x1f\x7f]", "", name)
-    return cleaned[:255]
+    return html.escape(cleaned)[:255]
 
 
 def sniff_kind(path: Path) -> SourceKind:

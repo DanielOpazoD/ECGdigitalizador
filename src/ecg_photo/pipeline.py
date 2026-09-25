@@ -310,7 +310,8 @@ def _calibration_json_evidence(run_dir: Path) -> list[CalibrationEvidence]:
     for cand in (run_dir / "calibration.json", run_dir.parent.parent / "calibration.json"):
         if cand.exists():
             data = json.loads(cand.read_text(encoding="utf-8"))
-            return [CalibrationEvidence(**e) for e in data.get("evidence", [])]
+            entries = data if isinstance(data, list) else data.get("evidence", [])
+            return [CalibrationEvidence(**e) for e in entries]
     return []
 
 

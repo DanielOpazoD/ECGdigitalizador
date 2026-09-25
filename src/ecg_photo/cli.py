@@ -103,6 +103,40 @@ def _cmd_export(args: argparse.Namespace) -> int:
     return _do_export(Path(args.dir), Path(args.out), args.dpi, args.speed, args.gain)
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    import ipaddress
+
+    from ecg_photo.api import create_app
+    from ecg_photo.ingest import load_supported_inputs
+    from ecg_photo.store import Store, load_execution_limits
+    from ecg_photo.worker import Worker, default_engines
+
+    host = args.host
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = host in ("localhost",)
+    if not loopback and not args.allow_non_loopback:
+        print(
+            json.dumps(
+                {"error": "refusing non-loopback host; pass --allow-non-loopback to override (F9)"}
+            )
+        )
+        return 2
+    store = Store(
+        Path(args.store),
+        load_supported_inputs(),
+        load_execution_limits(),
+    )
+    worker = Worker(store, default_engines())
+    worker.start()
+    app = create_app(store, worker)
+    import uvicorn
+
+    uvicorn.run(app, host=host, port=args.port)
+    return 0
+
+
 def _cmd_run_demo(args: argparse.Namespace) -> int:
     out = Path(args.out)
     root = out / "revision"
@@ -347,6 +381,17 @@ def build_parser() -> argparse.ArgumentParser:
     cs.add_argument("--fs", type=float, default=None)
     cs.add_argument("--time-source", choices=["evidence", "engine"], default="evidence")
     cs.set_defaults(func=_cmd_confirm_scale)
+
+    sv = sub.add_parser("serve")
+    sv.add_argument("--store", required=True, help="store directory")
+    sv.add_argument("--port", type=int, default=8000)
+    sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument(
+        "--allow-non-loopback",
+        action="store_true",
+        help="permitir bind fuera de loopback (F9; desactivado por defecto)",
+    )
+    sv.set_defaults(func=_cmd_serve)
     return p
 
 

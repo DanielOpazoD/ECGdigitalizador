@@ -203,3 +203,67 @@ def readback_csv(csv_path: Path) -> dict[str, np.ndarray]:
         else:
             out[h] = np.array([float(v) for v in vals], dtype=np.float64)
     return out
+
+
+def export_revision_outputs(
+    root: Path,
+    manifest: Manifest,
+    formats: list[str],
+    out_dir: Path,
+    *,
+    study_id: str = "study",
+    run_id: str = "run",
+) -> list[Path]:
+    """Export selected formats for all segments of a run result; returns paths."""
+    from ecg_photo.render import (
+        PaperSpec,
+        RenderNotAllowed,
+        render_segment_pdf,
+        render_segment_png,
+    )
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    produced: list[Path] = []
+    prefix = f"{study_id}-{run_id[:8]}"
+
+    if "json" in formats:
+        p = out_dir / f"{prefix}-manifest.json"
+        export_json(manifest, p)
+        produced.append(p)
+    first = manifest.segments[0] if manifest.segments else None
+    paper = PaperSpec(
+        speed_mm_s=float(first.speed_mm_s) if first and first.speed_mm_s else 25.0,
+        gain_mm_mV=float(first.gain_mm_mV) if first and first.gain_mm_mV else 10.0,
+        dpi=300.0,
+    )
+    for seg in manifest.segments:
+        if "csv" in formats:
+            try:
+                p = out_dir / f"{prefix}-{seg.segment_id}.csv"
+                export_csv(root, seg, p)
+                produced.append(p)
+            except ExportNotAllowed:
+                pass
+        for fmt, fn in (
+            ("png", render_segment_png),
+            ("pdf", render_segment_pdf),
+        ):
+            if fmt in formats:
+                try:
+                    p = out_dir / f"{prefix}-{seg.segment_id}.{fmt}"
+                    fn(root, seg, p, paper)
+                    produced.append(p)
+                except RenderNotAllowed:
+                    pass
+        if "wfdb" in formats:
+            try:
+                base = out_dir / f"{prefix}-{seg.segment_id}"
+                export_wfdb(root, manifest, [seg.segment_id], out_dir, base.name)
+                for ext in (".hea", ".dat"):
+                    p = out_dir / f"{base.name}{ext}"
+                    if p.exists():
+                        produced.append(p)
+            except ExportNotAllowed:
+                continue
+    return produced
