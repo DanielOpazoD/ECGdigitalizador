@@ -75,6 +75,23 @@ def percentile(a: list, q: float) -> float | None:
     return float(np.percentile(v, q)) if v else None
 
 
+def short_error(e: BaseException, head: int = 120, tail: int = 1200) -> str:
+    """Error text for a case row: engines put progress bars at the start of
+    stderr and the exception at the end, so keep both ends."""
+    msg = f"{type(e).__name__}: {e}"
+    return msg if len(msg) <= head + tail else f"{msg[:head]} [...] {msg[-tail:]}"
+
+
+def with_missing_leads(cases: list[dict]) -> list[dict]:
+    """Per-lead cases of one (image, engine, arm) plus a `lead_missing` case for
+    every standard lead the engine did not return (a failure, not a skip).
+    Per-image failure rows (no `lead` key) are returned unchanged."""
+    if not cases or not all("lead" in c for c in cases):
+        return cases
+    seen = {c["lead"] for c in cases}
+    return cases + [{"lead": ld, "status": "lead_missing"} for ld in LEADS if ld not in seen]
+
+
 def git_rev(path: Path) -> str | None:
     r = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, text=True, check=False
@@ -197,9 +214,7 @@ def run_one(
     except Exception as e:  # noqa: BLE001 - recorded as a case
         out["wall_s"] = time.monotonic() - t0
         for arm in ARMS:
-            out["arms"][arm] = [
-                {"status": "engine_error", "error": f"{type(e).__name__}: {e}"[:400]}
-            ]
+            out["arms"][arm] = [{"status": "engine_error", "error": short_error(e)}]
         return out
     out["wall_s"] = time.monotonic() - t0
     for arm in ARMS:
@@ -218,7 +233,7 @@ def run_one(
                 (c for c in ("TIME_SCALE_UNKNOWN", "CALIBRATION_MISSING") if c in msg), "ERROR"
             )
             status = "time_scale_unknown" if code != "ERROR" else "confirm_error"
-            out["arms"][arm] = [{"status": status, "reason": code, "error": msg[:400]}]
+            out["arms"][arm] = [{"status": status, "reason": code, "error": short_error(e)}]
             continue
         out["arms"][arm] = score_run(done.run_dir, truth, fs, rhythm)
     return out
@@ -319,7 +334,7 @@ def main() -> int:
     groups: dict[str, list[dict]] = {}
     for r in records:
         for arm, cs in r["arms"].items():
-            for c in cs:
+            for c in with_missing_leads(cs):
                 groups.setdefault(f"{r['engine']}|{arm}|ALL", []).append(c)
                 groups.setdefault(f"{r['engine']}|{arm}|{r['image_type']}", []).append(c)
     aggregates = {k: aggregate(v) for k, v in sorted(groups.items())}
