@@ -160,10 +160,36 @@ se fija aquí sin verificarla.
 
 Imagen sintética propia con la estructura de la competición (3x4 + tira II,
 25 mm/s, 10 mm/mV, 200 dpi, registro `999001`) más una variante rotada 3°,
-desenfocada y con ruido, en CPU x86 de 4 núcleos: rejilla estimada
-7.8743 px/mm (exacto 7.874); Ahus recorre el pipeline completo (80 s, 12/12
-derivaciones `ok` en ambos ejes). La primera pasada de ECG-Digitiser expuso un
-`IndexError` en `confirm_scale` (derivación con muestras observadas pero sin
-`x_px` finito), ya corregido: esa derivación queda sin confirmar en vez de
-tumbar la corrida. Sirve sólo para comprobar el script; los números reales
-saldrán del banco.
+desenfocada y con ruido (`0005`), en CPU x86 de 4 núcleos. Sirve sólo para
+comprobar el script; los números reales saldrán del banco. Expuso dos fallos
+propios, corregidos con pruebas que los reproducen:
+
+1. **Rejilla 5× en la imagen desenfocada.** El desenfoque borró las líneas de
+   1 mm; el estimador tomó el periodo de 5 mm (39.38 px) como 1 mm y el eje
+   por evidencia salió 5× corto sin avisar (Ahus r@lag 0.997 → 0.22,
+   duración −80 %). Ahora un periodo sólo se acepta como 1 mm si la
+   estructura menor/mayor lo confirma (pico de autocorrelación en 5P sobre
+   4P ≥ 0.15; observado +0.19…+0.46 en rejillas reales, −0.04 desenfocada,
+   −0.28 líneas uniformes); si no, `px_per_mm = None` con
+   `ambiguous_period_px_*` registrado, y el eje por evidencia se niega
+   (`time_scale_unknown`). También cubre un pico fuerte múltiplo (2–5×) de
+   uno débil (líneas menores tenues), antes tomado como 1 mm.
+2. **`confirm_scale` (evidence) con una derivación sin `x_px` finito** en sus
+   muestras observadas (ECG-Digitiser): `IndexError` que tumbaba la corrida;
+   ahora esa derivación queda sin confirmar.
+
+Tras las correcciones, Ahus (≈70 s por imagen):
+
+| variante | eje | ok/filas | r@lag med | SNR dB med | err dur % |
+|---|---|---|---|---|---|
+| 0001 limpia | evidence | 12/12 | 0.997 | 21.3 | 0.04 |
+| 0001 limpia | engine | 12/12 | 0.990 | 17.0 | 0.00 |
+| 0005 degradada | evidence | 0/1 (`time_scale_unknown`) | – | – | – |
+| 0005 degradada | engine | 12/12 | 0.989 | 16.1 | 0.00 |
+
+ECG-Digitiser (≈550 s por imagen en esta CPU) recuperó sólo 7 derivaciones
+con r@lag ≤ 0.74 en esta imagen propia (no generada con ECG-Image-Kit, con
+el que se entrenó y con el que F6-a dio 0.988); no se interpreta hasta ver
+imágenes de la competición. Coste a planificar: ≈10 min por imagen y motor
+para ambos motores → 10 registros × 12 variantes ≈ 20 h; empezar por un
+subconjunto de variantes.

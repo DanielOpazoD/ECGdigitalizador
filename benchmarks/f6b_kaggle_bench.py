@@ -130,13 +130,18 @@ def score_run(run_dir: Path, truth: dict[str, np.ndarray], fs: float, rhythm: st
         t_sig, t_start = truth_window(truth[lead], fs)
         full = len(t_sig) == len(truth[lead])
         expected = (ENGINE_DURATION_S if lead == rhythm else 2.5) if full else len(t_sig) / fs
+        est_fs = float(seg.working_fs_hz or fs)
+        # measured extent of the observed samples, identical in both arms (the
+        # engine arm's segment duration is the engine canvas, not the trace)
+        obs_idx = np.nonzero(observed)[0]
+        extent_s = (obs_idx[-1] - obs_idx[0] + 1) / est_fs if len(obs_idx) else None
         m = segment_metrics(
             t_sig,
             sig,
             observed,
-            est_fs=float(seg.working_fs_hz or fs),
+            est_fs=est_fs,
             truth_fs=fs,
-            observed_duration_s=seg.observed_duration_s,
+            observed_duration_s=extent_s,
             expected_window_s=expected,
         )
         if not full and m.get("best_lag_s") is not None:

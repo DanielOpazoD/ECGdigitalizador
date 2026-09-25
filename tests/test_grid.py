@@ -7,17 +7,53 @@ from ecg_photo.grid import estimate_grid
 from ecg_photo.render import PaperSpec, render_segment_png
 
 
+def _paper(h: int, w: int, px: float, py: float, *, minor: bool = True) -> np.ndarray:
+    """ECG paper: thin lines every px/py, thick darker line every 5th."""
+    img = np.full((h, w), 240, dtype=np.uint8)
+    for k, x in enumerate(np.arange(0, w, px)):
+        if k % 5 == 0:
+            img[:, max(0, round(x) - 1) : round(x) + 2] = 40
+        elif minor:
+            img[:, min(w - 1, round(x))] = 150
+    for k, y in enumerate(np.arange(0, h, py)):
+        if k % 5 == 0:
+            img[max(0, round(y) - 1) : round(y) + 2, :] = 40
+        elif minor:
+            img[min(h - 1, round(y)), :] = 150
+    return img
+
+
 def test_synthetic_period() -> None:
     period = 9.3
-    img = np.full((400, 600), 240, dtype=np.uint8)
-    xs = np.clip(np.round(np.arange(0, 600, period)).astype(int), 0, 599)
-    ys = np.clip(np.round(np.arange(0, 400, period)).astype(int), 0, 399)
-    img[:, xs] = 60
-    img[ys, :] = 60
-    est = estimate_grid(img, min_period_px=3, max_period_px=60)
+    est = estimate_grid(_paper(800, 1200, period, period), min_period_px=3, max_period_px=60)
     assert est.minor_period_px_x == pytest.approx(period, abs=0.5)
     assert est.minor_period_px_y == pytest.approx(period, abs=0.5)
     assert est.px_per_mm_x == pytest.approx(period, abs=0.5)
+    assert est.ambiguous_period_px_x is None
+
+
+def test_single_period_is_ambiguous_not_guessed() -> None:
+    # uniform lines: nothing says whether the step is 1 mm or 5 mm
+    period = 9.3
+    img = np.full((400, 600), 240, dtype=np.uint8)
+    img[:, np.clip(np.round(np.arange(0, 600, period)).astype(int), 0, 599)] = 60
+    img[np.clip(np.round(np.arange(0, 400, period)).astype(int), 0, 399), :] = 60
+    est = estimate_grid(img, min_period_px=3, max_period_px=60)
+    assert est.px_per_mm_x is None and est.px_per_mm_y is None
+    assert est.ambiguous_period_px_x == pytest.approx(period, abs=0.5)
+    assert "cannot be decided" in est.limitations
+
+
+def test_minor_lines_blurred_away_gives_no_estimate() -> None:
+    # F6-b smoke: blur erased the 1 mm lines; the 5 mm period used to be
+    # reported as 1 mm (39.4 px/mm instead of 7.874, time axis 5x short)
+    from scipy.ndimage import gaussian_filter
+
+    img = _paper(1700, 2200, 7.874, 7.874).astype(np.float64)
+    img = gaussian_filter(img, 2.5)
+    est = estimate_grid(np.clip(img, 0, 255).astype(np.uint8))
+    assert est.px_per_mm_x is None and est.px_per_mm_y is None
+    assert est.ambiguous_period_px_x == pytest.approx(39.37, rel=0.02)
 
 
 def test_noise_returns_none() -> None:
@@ -53,10 +89,7 @@ def test_synthetic_aa_grid_subpixel() -> None:
 
 def test_x_only_stretched() -> None:
     px, py = 12.0, 6.0
-    img = np.full((300, 400), 240, dtype=np.uint8)
-    img[:, np.round(np.arange(0, 400, px)).astype(int)] = 60
-    img[np.round(np.arange(0, 300, py)).astype(int), :] = 60
-    est = estimate_grid(img, min_period_px=3, max_period_px=60)
+    est = estimate_grid(_paper(900, 1200, px, py), min_period_px=3, max_period_px=60)
     assert est.px_per_mm_x == pytest.approx(px, abs=1.0)
     assert est.px_per_mm_y == pytest.approx(py, abs=1.0)
     assert est.px_per_mm_x != est.px_per_mm_y
