@@ -53,6 +53,10 @@ def _signal_and_units(root: Path, seg: Segment) -> tuple[np.ndarray, np.ndarray,
     raise ExportNotAllowed(ReasonCode.TIME_SCALE_UNKNOWN)
 
 
+def _null(v: float | None) -> str:
+    return "null" if v is None else repr(v)
+
+
 def export_csv(root: Path, seg: Segment, out_path: Path) -> None:
     values, observed, units = _signal_and_units(root, seg)
     assert seg.working_fs_hz is not None
@@ -82,9 +86,9 @@ def export_csv(root: Path, seg: Segment, out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(f"# segment_id={seg.segment_id}\n")
-        f.write(f"# working_fs_hz={seg.working_fs_hz}\n")
-        f.write(f"# speed_mm_s={seg.speed_mm_s}\n")
-        f.write(f"# gain_mm_mV={seg.gain_mm_mV}\n")
+        f.write(f"# working_fs_hz={_null(seg.working_fs_hz)}\n")
+        f.write(f"# speed_mm_s={_null(seg.speed_mm_s)}\n")
+        f.write(f"# gain_mm_mV={_null(seg.gain_mm_mV)}\n")
         f.write("sample_index,t_s,value,units,observed,valid,gap_fill\n")
         for k in range(seg.n_samples):
             v = "" if not observed[k] or not np.isfinite(values[k]) else repr(float(values[k]))
