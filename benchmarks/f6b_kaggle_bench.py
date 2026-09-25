@@ -34,7 +34,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from metrics_common import segment_metrics
+from metrics_common import crop_to_window, segment_metrics
 
 from ecg_photo.contracts import load_manifest
 from ecg_photo.digitizers.base import Digitizer
@@ -130,13 +130,22 @@ def score_run(run_dir: Path, truth: dict[str, np.ndarray], fs: float, rhythm: st
         t_sig, t_start = truth_window(truth[lead], fs)
         full = len(t_sig) == len(truth[lead])
         expected = (ENGINE_DURATION_S if lead == rhythm else 2.5) if full else len(t_sig) / fs
+        est_fs = float(seg.working_fs_hz or fs)
+        if not full and len(sig) / est_fs > expected + 0.5:
+            # page-canvas estimate (engine time axis) vs slot-cropped truth:
+            # cut the estimate to the truth's slot so both share t=0
+            sig, observed = crop_to_window(sig, observed, est_fs, t_start, expected)
+            base["cropped_to_slot"] = True
+            obs_dur = None  # the engine arm's duration is the assumed page, not this lead's
+        else:
+            obs_dur = seg.observed_duration_s
         m = segment_metrics(
             t_sig,
             sig,
             observed,
-            est_fs=float(seg.working_fs_hz or fs),
+            est_fs=est_fs,
             truth_fs=fs,
-            observed_duration_s=seg.observed_duration_s,
+            observed_duration_s=obs_dur,
             expected_window_s=expected,
         )
         if not full and m.get("best_lag_s") is not None:

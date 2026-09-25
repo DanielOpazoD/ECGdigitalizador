@@ -5,6 +5,20 @@ import math
 import numpy as np
 
 
+def crop_to_window(
+    est: np.ndarray, observed: np.ndarray, est_fs: float, start_s: float, dur_s: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Cut a page-canvas estimate (t=0 at the page's first column) to one lead
+    slot [start_s, start_s + dur_s). Used when the truth is only defined in
+    that slot (NaN elsewhere) and the estimate lives on the engine's page time
+    axis; otherwise the two time origins differ and nothing overlaps."""
+    a = max(0, round(start_s * est_fs))
+    b = min(len(est), round((start_s + dur_s) * est_fs))
+    if b <= a:
+        return est[:0], observed[:0]
+    return est[a:b], observed[a:b]
+
+
 def segment_metrics(
     truth: np.ndarray,
     est: np.ndarray,
@@ -78,6 +92,12 @@ def segment_metrics(
         if np.isfinite(r) and r > best_r:
             best_r, best_lag = r, lag
 
+    if not np.isfinite(best_r):
+        # no lag gives >= 10 overlapping samples with variance: interpolating
+        # truth outside its span would clamp to a constant (zero power)
+        out["status"] = "no_valid_lag"
+        return out
+
     best_lag_s = best_lag / fs
     truth_on_est = np.interp(t_est[finite] + best_lag_s, t_truth, truth)
     resid = truth_on_est - e_obs
@@ -91,7 +111,8 @@ def segment_metrics(
     t_c = truth_on_est - truth_on_est.mean()
     noise = t_c - (e_obs - e_obs.mean())
     p_noise = float(np.sum(noise**2))
-    snr_db = 10.0 * math.log10(float(np.sum(t_c**2)) / p_noise) if p_noise > 0 else None
+    p_sig = float(np.sum(t_c**2))
+    snr_db = 10.0 * math.log10(p_sig / p_noise) if p_noise > 0 and p_sig > 0 else None
     p95e, p5e = np.percentile(e_obs, [95, 5])
     p95t, p5t = np.percentile(np.interp(t_est[finite] + best_lag_s, t_truth, truth), [95, 5])
     out.update(
