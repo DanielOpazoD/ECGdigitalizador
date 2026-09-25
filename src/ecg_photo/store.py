@@ -245,6 +245,7 @@ class Store:
         original_filename: str,
         *,
         default_engine: str | None = None,
+        options: StudyPatch | None = None,
     ) -> StudyState:
         admit(upload_path, self.limits)  # raises IngestRejected on limit breach
         study_id = safe_study_id(original_filename)
@@ -256,6 +257,41 @@ class Store:
         ingest(upload_path, rev_dir)
 
         config = self._default_config(default_engine)
+        if options is not None:
+            config = config.model_copy(
+                update={k: v for k, v in options.model_dump(exclude_unset=True).items()}
+            )
+            specs = load_engine_specs()
+            if config.engine is not None:
+                config.engine_spec = (
+                    self._engine_spec_dict(specs[config.engine]) if config.engine in specs else None
+                )
+            entries = []
+            for quantity, new_val, unit in (
+                ("speed_mm_s", options.speed_mm_s, "mm/s"),
+                ("gain_mm_mV", options.gain_mm_mV, "mm/mV"),
+            ):
+                if new_val is None:
+                    continue
+                entries.append(
+                    CalibrationEvidence(
+                        evidence_id=f"manual-{uuid.uuid4().hex[:12]}",
+                        kind="manual",
+                        quantity=quantity,  # type: ignore[arg-type]
+                        value=new_val,
+                        unit=unit,
+                        frame_id="study",
+                        method="initial options via API",
+                        limitations="manual operator value; not verified against raster",
+                        author="uploader",
+                        reason="initial options",
+                        previous_value=None,
+                    ).model_dump(mode="json")
+                )
+            if entries:
+                (rev_dir / "calibration.json").write_text(
+                    json.dumps(entries, indent=2), encoding="utf-8"
+                )
         cfg_hash = _config_hash(config)
         (rev_dir / "config.json").write_text(config.model_dump_json(indent=2), encoding="utf-8")
         state = StudyState(

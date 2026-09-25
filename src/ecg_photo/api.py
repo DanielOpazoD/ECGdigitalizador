@@ -104,10 +104,9 @@ def create_app(store: Store, worker: Worker) -> FastAPI:
                     if written > limit_bytes:
                         raise _err(413, "FILE_SIZE_LIMIT", "file exceeds max_file_mib")
                     fh.write(chunk)
-            if options.strip():
-                StudyPatch(**json.loads(options))  # validates keys; values applied via PATCH
+            patch = StudyPatch(**json.loads(options)) if options.strip() else None
             filename = file.filename or "upload"
-            state = store.create_study(tmp, filename)
+            state = store.create_study(tmp, filename, options=patch)
         finally:
             tmp.unlink(missing_ok=True)
         return {

@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 from pathlib import Path
@@ -278,3 +279,31 @@ class _Slow:
     def run(self, image_path, work_dir):
         self.release.wait(30)
         return _fake_output(np.sin(np.linspace(0, 9, 1500)))
+
+
+def test_upload_options_applied_to_rev1(tmp_path) -> None:
+    client, _store, worker = _client(tmp_path)
+    try:
+        png = _study(tmp_path / "src") / "pages" / "page-1.png"
+        with open(png, "rb") as fh:
+            r = client.post(
+                "/studies",
+                files={"file": ("ecg.png", fh, "image/png")},
+                data={
+                    "options": json.dumps({"engine": "fake", "gain_mm_mV": 10, "speed_mm_s": 25})
+                },
+            )
+        assert r.status_code == 201, r.text
+        st = r.json()
+        g = client.get(f"/studies/{st['study_id']}").json()
+        assert g["active_revision"] == 1
+        assert g["config_hash"] != "" and g["config_hash"] == st["config_hash"]
+        cfg = json.loads((_store.root / st["study_id"] / "rev1" / "config.json").read_text())
+        assert cfg["engine"] == "fake" and cfg["gain_mm_mV"] == 10
+        cal = json.loads((_store.root / st["study_id"] / "rev1" / "calibration.json").read_text())
+        assert any(e["quantity"] == "gain_mm_mV" and e["author"] == "uploader" for e in cal)
+        # a study without options gets a different hash
+        st2 = _upload(client, tmp_path / "b")
+        assert st2["config_hash"] != st["config_hash"]
+    finally:
+        worker.shutdown()
