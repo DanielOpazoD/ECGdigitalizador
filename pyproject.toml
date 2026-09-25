@@ -15,6 +15,7 @@ dependencies = [
     "wfdb",
     "matplotlib",
     "pyyaml",
+    "pypdf",
 ]
 
 [project.optional-dependencies]
@@ -22,7 +23,6 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
-    "pypdf",
 ]
 
 [project.scripts]
