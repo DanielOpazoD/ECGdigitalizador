@@ -23,6 +23,7 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
+    "types-PyYAML",
 ]
 
 [project.scripts]
