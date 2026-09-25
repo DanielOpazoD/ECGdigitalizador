@@ -25,6 +25,7 @@ class EngineSpec:
     commit: str
     license: str
     weights: tuple[WeightSpec, ...]
+    patches: tuple[str, ...] = ()
 
 
 @dataclass
@@ -57,6 +58,7 @@ def load_engine_specs(path: Path = Path("configs/checkpoints.json")) -> dict[str
             commit=e["commit"],
             license=e["license"],
             weights=tuple(WeightSpec(path=w["path"], sha256=w["sha256"]) for w in e["weights"]),
+            patches=tuple(e.get("patches", ())),
         )
     return specs
 

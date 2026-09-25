@@ -8,7 +8,7 @@
       "commit": "97a15087d4abcda843da8c58ee74b1d8f47e6f9a",
       "license": "CC-BY-SA-4.0",
       "local_path": "external/ahus",
-      "status": "inventoried_not_evaluated",
+      "status": "evaluated_synthetic_smoke",
       "weights": [
         {"path": "weights/unet_weights_07072025.pt", "sha256": "17fe7071ef270102631306127262fc08c250d79d4e3aeb572ab1719dd34d320b", "size_bytes_approx": 94371840, "downloaded": false},
         {"path": "weights/lead_name_unet_weights_07072025.pt", "sha256": "840bd6bf2433ee6c22db67f57c861d9d427f29e10a32eeb334f0bcf061b175a2", "size_bytes_approx": 24117248, "downloaded": false}
@@ -20,7 +20,9 @@
       "commit": "e6f62aa776f105e4c7b04f21669da4d4f0df370b",
       "license": "BSD-2-Clause",
       "local_path": "external/ecg-digitiser",
-      "status": "inventoried_not_evaluated",
+      "status": "evaluated_synthetic_smoke",
+      "patches": ["patches/ecg-digitiser-0001-rotate-float-angle.patch"],
+      "weights_source_note": "LFS budget exceeded on proxy; downloaded via media.githubusercontent.com and verified sha256",
       "weights": [
         {"path": "models/M1/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_0/checkpoint_final.pth", "sha256": "d0e0d4c578d457367d3f78ae3739cf86a8d8524cd4f669c24140184e8cce5355", "size_bytes_approx": 498073600, "downloaded": false},
         {"path": "models/M3/nnUNet_results/Dataset500_Signals/nnUNetTrainer__nnUNetPlans__2d/fold_all/checkpoint_best.pth", "sha256": "60020c47840f95e0574952c161ae3d19f2f8aeb9a5dc440a01c6ea4b927f255b", "size_bytes_approx": 498073600, "downloaded": false},

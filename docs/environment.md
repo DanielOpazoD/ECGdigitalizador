@@ -70,6 +70,7 @@ Ubuntu/Debian con CUDA.
 | D-03 | Máscara `gap_fill` siempre `false` en v1 | La política de relleno no está evaluada; nunca se puentea |
 | D-04 | Pesos fuera de git; sólo hashes en `configs/checkpoints.json` | Tamaño y licencias |
 | D-05 | WFDB sólo cuando hay mV + escala temporal + simultaneidad demostrada | Contrato cap. 14 |
+| D-06 | Parche `float(rot_angle)` en ECG-Digitiser (parche 0001, `patches/`) | `rotate` de torchvision rechaza `np.float32`; sin el parche `digitize.py:352` falla siempre |
 
 ## Bloqueos abiertos
 | ID | Bloqueo | Qué desbloquea | Qué se hace mientras |
@@ -78,5 +79,6 @@ Ubuntu/Debian con CUDA.
 | B-02 | Sin fotos/PDF reales | Perfiles de layout (F3), banco real (F4) | Sintéticos ecg-image-kit (F2) |
 | B-03 | Marca/modelo de ECG desconocidos | `supported_inputs.yml` con perfil confirmado | Perfiles `unknown`; medidas bloqueadas por LAYOUT_UNSUPPORTED |
 | B-04 | Sin CUDA | Tiempos de inferencia representativos | Ejecución CPU para funcionalidad, no rendimiento |
-| B-05 | Pesos Kaggle requieren cuenta y aceptación de términos | Evaluar candidato Đăng | Se documenta; no se descarga |
+| B-05 | Pesos LFS de ECG-Digitiser: `git lfs pull` falla por presupuesto LFS del proxy | Inferencia ECG-Digitiser | Resuelto: descarga directa vía `media.githubusercontent.com`, sha256 verificados contra `configs/checkpoints.json` |
 | B-06 | Licencia CC BY-SA 4.0 de Ahus (pesos y código) | Redistribución del motor | Uso local de evaluación; decisión legal pendiente del usuario |
+| B-07 | Pesos Kaggle requieren cuenta y aceptación de términos | Evaluar candidato Đăng | Se documenta; no se descarga |

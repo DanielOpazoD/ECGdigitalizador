@@ -1,0 +1,13 @@
+diff --git a/src/run/digitize.py b/src/run/digitize.py
+index 913a596..d05431a 100644
+--- a/src/run/digitize.py
++++ b/src/run/digitize.py
+@@ -349,7 +349,7 @@ def run(args):
+ 
+         # Rotate
+         rot_angle = get_rotation_angle(image.permute(1, 2, 0).numpy().astype(np.uint8))
+-        image_rotated = rotate(image, rot_angle)
++        image_rotated = rotate(image, float(rot_angle))
+ 
+         # Segment
+         mask_to_use = predict_mask_nnunet(image_rotated, DATASET_NAME, args.model_folder)

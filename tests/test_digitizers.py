@@ -1,13 +1,16 @@
 import numpy as np
 import pytest
+import wfdb
 
 from ecg_photo.digitizers import (
+    EngineNotReady,
     EngineSpec,
     WeightSpec,
     load_engine_specs,
     verify_weights,
 )
 from ecg_photo.digitizers.ahus import parse_ahus_output
+from ecg_photo.digitizers.ecg_digitiser import EcgDigitiserDigitizer, parse_wfdb_output
 
 
 def test_load_engine_specs() -> None:
@@ -58,3 +61,52 @@ def test_parse_ahus_output(tmp_path) -> None:
     assert leads["V6"][0] == pytest.approx(0.5)
     with pytest.raises(FileNotFoundError):
         parse_ahus_output(tmp_path / "empty", 10.0)
+
+
+def test_parse_wfdb_output(tmp_path) -> None:
+    sig = np.array(
+        [
+            [0.0, 0.1, 0.0],
+            [0.2, 0.2, 0.0],
+            [0.4, 0.0, 0.0],
+            [0.2, 0.3, 0.0],
+            [0.0, 0.4, 0.0],
+            [0.1, 0.0, 0.0],
+            [0.3, 0.2, 0.0],
+            [0.0, 0.1, 0.0],
+            [0.5, 0.3, 0.0],
+            [0.0, 0.0, 0.0],
+        ]
+    )
+    wfdb.wrsamp(
+        "rec",
+        fs=500.0,
+        units=["mV"] * 3,
+        sig_name=["I", "II", "V1"],
+        p_signal=sig,
+        fmt=["16"] * 3,
+        write_dir=str(tmp_path),
+    )
+    leads, observed, fs_hz, extra = parse_wfdb_output(tmp_path, "rec")
+    assert fs_hz == pytest.approx(500.0)
+    assert set(leads) == {"I", "II", "V1"}
+    assert all(o.all() for o in observed.values())
+    assert extra["missing_encoded_as_zero"] is True
+    assert extra["exact_zero_fraction_V1"] == pytest.approx(1.0)
+    assert extra["exact_zero_fraction_I"] == pytest.approx(0.4, abs=0.15)
+    assert leads["I"].dtype == np.float64
+
+
+def test_ecg_digitiser_patch_check_before_weights(tmp_path) -> None:
+    # Patch text is checked before weights, so a fake root with no weight
+    # files and a digitize.py lacking float(rot_angle) raises EngineNotReady.
+    root = tmp_path / "fake_root"
+    (root / "src/run").mkdir(parents=True)
+    (root / "src/run/digitize.py").write_text("image_rotated = rotate(image, rot_angle)\n")
+    d = EcgDigitiserDigitizer(
+        root=root,
+        python_exe=tmp_path / "python",
+        model_dir="models/M3",
+    )
+    with pytest.raises(EngineNotReady, match="patch 0001 not applied"):
+        d.run(tmp_path / "img.png", tmp_path / "work")
