@@ -35,17 +35,37 @@ y se declara en `limitations`. Para imágenes RGB se usa el canal de «rojez»
 mediana entre regiones (mínimo 3 regiones con valor, si no → `None`), y
 `residual_rel_*` = desviación estándar/mediana entre regiones.
 
+### Refinamiento por posiciones de línea (F4-b)
+
+El estimador grueso (autocorrelación) resultó **sesgado** sobre imgkit:
++0.8 % por cuantización del pico entero/interpolación parabólica. Tras la
+estimación gruesa se añade una etapa de refinamiento
+(`_refine_period_by_lines`): sobre el perfil completo de cada eje (mismo
+canal rojez/gris ya elegido, orientado para que las líneas sean máximos) se
+detectan picos con `find_peaks(distance=0.6·mayor_grueso, height=p90)`, se
+conservan los picos cuyo espaciado sucesivo cae dentro de ±15 % del período
+grueso (los huecos rechazados avanzan el índice k en `round(espaciado/mayor)`
+períodos, así una línea perdida no rompe el ajuste) y se ajusta
+`pos = a + b·k` por mínimos cuadrados; con ≥ 6 líneas, `b` = período mayor
+refinado, `px_per_mm = b/5`, y se reporta el residuo rms y el nº de líneas
+(`refine_*` en `GridEstimate`). Si el refinamiento falla en un eje se
+conserva el valor grueso y se indica en `limitations`.
+
 Verificación no-CI sobre `runs/f2/imgkit_seed{7,8,9}/tiled12-0.png`
 (verdad: 200 dpi → 7.874 px/mm, x_grid 39.37 px/5 mm):
 
-| imagen | px/mm x | px/mm y | residual x | residual y | mayor px |
-|---|---|---|---|---|---|
-| seed7 | 7.936 | 7.936 | 0.0006 | 0.0014 | 39.27 |
-| seed8 | 7.936 | 7.936 | 0.0006 | 0.0014 | 39.27 |
-| seed9 | 7.936 | 7.936 | 0.0006 | 0.0014 | 39.27 |
+| imagen | px/mm x | px/mm y | residual x | residual y | mayor px | líneas ref. x/y |
+|---|---|---|---|---|---|---|
+| seed7 | 7.8739 | 7.8744 | 0.0006 | 0.0014 | 39.37 | 56 / 43 |
+| seed8 | 7.8739 | 7.8744 | 0.0006 | 0.0014 | 39.37 | 56 / 43 |
+| seed9 | 7.8739 | 7.8744 | 0.0006 | 0.0014 | 39.37 | 56 / 43 |
 
-Error ≈ +0.8 % frente a 7.874; residuales inter-región < 0.15 %. Sobre el PNG
-propio de `render.py`: 11.81 px/mm a 300 dpi y 7.87 a 200 dpi (±2 %, en tests).
+Error < 0.01 % frente a 7.874 tras el refinamiento (antes ≈ +0.8 %);
+residuales rms de ajuste ≈ 0.29–0.32 px; residuales inter-región < 0.15 %.
+Sobre el PNG propio de `render.py`: 11.806–11.816 px/mm a 300 dpi y
+7.871–7.873 a 200 dpi (≤0.07 %, tolerancia de tests rel=0.003; matplotlib
+dibuja las líneas a posiciones fraccionales con antialiasing, así que el
+límite es la precisión de ajuste, no el redondeo entero).
 
 ## Resolución por evidencias (`calibration.py`)
 

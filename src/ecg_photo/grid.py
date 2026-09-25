@@ -26,6 +26,11 @@ class GridEstimate:
     residual_rel_y: float | None
     method: str
     limitations: str
+    refine_method: str | None
+    refine_n_lines_x: int | None
+    refine_n_lines_y: int | None
+    refine_rms_px_x: float | None
+    refine_rms_px_y: float | None
 
 
 METHOD = "autocorr-fft-grid-v1"
@@ -92,6 +97,49 @@ def _region_estimate(
     return first, major
 
 
+def _detrend(profile: np.ndarray, period_px: float) -> np.ndarray:
+    x = np.asarray(profile, dtype=np.float64)
+    base = uniform_filter1d(x, size=max(3, int(2 * period_px)), mode="nearest")
+    return x - base
+
+
+def _refine_period_by_lines(
+    profile: np.ndarray, coarse_major_px: float
+) -> tuple[float, float, int] | None:
+    """Refine a coarse major-grid period by least squares on detected line
+    positions. Returns (refined_period_px, rms_residual_px, n_lines) or None
+    when fewer than 6 lines survive the spacing-consistency filter."""
+    det = _detrend(profile, coarse_major_px)
+    thr = float(np.percentile(det, 90))
+    if thr <= 0:
+        return None
+    peaks, _ = find_peaks(det, distance=max(1, int(0.6 * coarse_major_px)), height=thr)
+    if len(peaks) < 6:
+        return None
+    # assign each surviving peak an integer line index; a rejected gap of g
+    # periods skips g indices so a missing line does not break the fit
+    keep = [0]
+    ks = [0]
+    k = 0
+    for i in range(1, len(peaks)):
+        spacing = float(peaks[i] - peaks[keep[-1]])
+        g = round(spacing / coarse_major_px)
+        if g < 1 or abs(spacing / g - coarse_major_px) > 0.15 * coarse_major_px:
+            continue
+        keep.append(i)
+        k += g
+        ks.append(k)
+    if len(keep) < 6:
+        return None
+    sel = peaks[keep].astype(np.float64)
+    kk = np.asarray(ks, dtype=np.float64)
+    a_mat = np.column_stack([np.ones_like(kk), kk])
+    (a0, b), *_ = np.linalg.lstsq(a_mat, sel, rcond=None)
+    resid = sel - (a0 + b * kk)
+    rms = float(np.sqrt(np.mean(resid**2)))
+    return float(b), rms, len(keep)
+
+
 def estimate_grid(
     img: np.ndarray,
     *,
@@ -101,12 +149,14 @@ def estimate_grid(
     max_period_px: float = 60.0,
 ) -> GridEstimate:
     a = np.asarray(img)
+    ink_bright = False  # True when lines are maxima in `a` (redness channel)
     if a.ndim == 3 and a.shape[2] >= 3:
         rgb = a[..., :3].astype(np.float64)
         # red-ish grid ink stands out in R - (G+B)/2; keeps traces dark
         redness = rgb[..., 0] - 0.5 * (rgb[..., 1] + rgb[..., 2])
         if float(redness.max()) > 8.0:
             a = np.clip(redness, 0.0, None)
+            ink_bright = True
         else:
             a = rgb.mean(axis=2)
     a = np.asarray(a, dtype=np.float64)
@@ -147,12 +197,33 @@ def estimate_grid(
     major_x, _ = agg(majors_x)
     major_y, _ = agg(majors_y)
 
+    # refinement: least squares on major-line positions over the full
+    # width/height profile, seeded by the aggregated coarse major period
+    col_full = a.mean(axis=0) if ink_bright else -a.mean(axis=0)
+    row_full = a.mean(axis=1) if ink_bright else -a.mean(axis=1)
+    ref_x = _refine_period_by_lines(col_full, major_x) if major_x is not None else None
+    ref_y = _refine_period_by_lines(row_full, major_y) if major_y is not None else None
+    if ref_x is not None:
+        major_x = ref_x[0]
+        minor_x = major_x / minor_major_ratio
+    if ref_y is not None:
+        major_y = ref_y[0]
+        minor_y = major_y / minor_major_ratio
+
     def px_per_mm(minor: float | None, major: float | None) -> float | None:
         if minor is not None:
             return minor / 1.0
         if major is not None:
             return major / minor_major_ratio
         return None
+
+    method = METHOD
+    limitations = LIMITATIONS
+    if ref_x is not None or ref_y is not None:
+        method = METHOD + " + major refined by line-position least squares"
+    missing = [ax for ax, r in (("x", ref_x), ("y", ref_y)) if major_x is not None and r is None]
+    if missing:
+        limitations += f"; no line refinement on {','.join(missing)} (coarse kept)"
 
     return GridEstimate(
         px_per_mm_x=px_per_mm(minor_x, major_x),
@@ -164,6 +235,13 @@ def estimate_grid(
         n_regions=rx * ry,
         residual_rel_x=res_x,
         residual_rel_y=res_y,
-        method=METHOD,
-        limitations=LIMITATIONS,
+        method=method,
+        limitations=limitations,
+        refine_method=(
+            "line-position least squares" if (ref_x is not None or ref_y is not None) else None
+        ),
+        refine_n_lines_x=ref_x[2] if ref_x is not None else None,
+        refine_n_lines_y=ref_y[2] if ref_y is not None else None,
+        refine_rms_px_x=ref_x[1] if ref_x is not None else None,
+        refine_rms_px_y=ref_y[1] if ref_y is not None else None,
     )

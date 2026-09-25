@@ -79,7 +79,8 @@ calibración (F3) o geometría.
 Ejecutado sobre `runs/f2/imgkit_seed7/tiled12-0.png` (verdad: 12 derivaciones,
 1 mV, RR 1.000 s):
 
-- `ingest` → estudio con estimación de rejilla 7.936 px/mm (verdad 7.874).
+- `ingest` → estudio con estimación de rejilla 7.874 px/mm tras el
+  refinamiento por líneas de F4-b (verdad 7.874).
 - `digitize --engine ahus --duration 10` → 12 derivaciones, sin saltadas,
   `layout=3x4+1R`, 3m31s en CPU; export de la corrida 1 se niega con
   `TIME_SCALE_UNKNOWN`/`GAIN_UNKNOWN` como se espera.
@@ -87,11 +88,19 @@ Ejecutado sobre `runs/f2/imgkit_seed7/tiled12-0.png` (verdad: 12 derivaciones,
   CSV/PNG/PDF/WFDB por derivación (WFDB multilead con NaN preservados).
 - Relectura WFDB `seg-II-page-1` vs verdad (`metrics_for_lead` de
   `benchmarks/f2_synthetic_bench.py`): coverage 0.998, best_lag 39 ms,
-  r@lag 0.654, rr_est 1.008 s (verdad 1.000), r_peak_amp_ratio 0.848,
-  amplitude_ratio 0.98. RR, amplitud y cobertura coinciden con el bench
-  F2; `r@lag` no (F2 informó 0.954 para la misma semilla). La señal
-  exportada y el CSV canónico guardado en `runs/f2/ahus_seed7` difieren
-  como máximo 0.07 mV y ambos dan r@lag 0.654 con el mismo procedimiento,
-  así que la discrepancia está en la comparación (o en una corrida distinta
-  del motor), no en el pipeline. Pendiente de reconciliar (B-07) antes de
-  usar r@lag como métrica de gate.
+  rr_est 1.008 s (verdad 1.000), r_peak_amp_ratio 0.848,
+  amplitude_ratio 0.98.
+
+### Reconciliación B-07 (r@lag vs la ventana de comparación)
+
+La discrepancia con el r@lag=0.954 del bench F2 se resolvió: la verdad de
+`metrics_for_lead` en F2 era el fixture de 3 s, así que r@lag solo cubría
+t ≤ 3 s. Comparando la exportación WFDB de 10 s contra el registro
+periódico de 10 s: r@lag = **0.957 (ventana 3 s), 0.882 (5 s), 0.654
+(10 s)**. La caída es el error de escala temporal acumulado del motor
+(~0.8 % → ~80 ms de deriva a 10 s), no un defecto del pipeline — confirma
+que la duración debe derivarse de evidencia propia, no de la rejilla del
+motor. F4-c derivará la duración desde evidencia de imagen (px/mm de
+rejilla × velocidad confirmada × extensión medida de la traza).
+**Seguimiento:** no usar r@lag como gate hasta fijar la ventana en el bench
+(pendiente; el bench no se modifica en F4-b).
