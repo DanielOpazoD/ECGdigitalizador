@@ -110,9 +110,13 @@ Sigue sin ser validación clínica ni datos de los equipos locales (B-01/B-03).
 
 ## Estado
 
-Preparado, **pendiente de ejecución con datos**: el entorno de la sesión en
-que se escribió no tenía salida de red a `kaggle.com`. Los motores sí se
-instalaron y probaron en CPU con `benchmarks/setup_engines.sh`.
+**Fase 1 ejecutada (2026-09-25)**: 10 registros × variantes `0001` (original),
+`0003` (escaneo color) y `0005` (foto móvil) × 2 motores × 2 ejes, en CPU
+x86 de 4 núcleos y 16 GB, sin GPU. Resultados:
+`benchmarks/results/f6b_kaggle_two_engines_2026-09-25_phase1.json` (sólo
+métricas, sha256 y metadatos; ni imágenes ni señales). Fase 2 (resto de
+variantes: Ahus en todas, ECG-Digitiser en los escaneos de los 10 registros
+y en las fotos de 3) en curso; se añadirá aquí al terminar.
 
 ## Requisitos
 
@@ -130,7 +134,14 @@ bash benchmarks/setup_engines.sh          # motores fijados + parches + pesos ve
 pip install kaggle
 python benchmarks/f6b_fetch_kaggle.py --list          # verificar estructura remota
 python benchmarks/f6b_fetch_kaggle.py --dest runs/f6b/kaggle --n-records 10
-python benchmarks/f6b_kaggle_bench.py --data runs/f6b/kaggle --work runs/f6b/bench
+python benchmarks/f6b_kaggle_bench.py --data runs/f6b/kaggle --work runs/f6b/bench \
+    --types 0001 0003 0005                            # subconjunto; reanudable
+# re-puntuar las corridas guardadas con el puntuador actual (sin re-ejecutar motores)
+python benchmarks/f6b_rescore.py --data runs/f6b/kaggle --work runs/f6b/bench \
+    --out runs/f6b/cases.rescored.jsonl
+python benchmarks/f6b_report.py --cases runs/f6b/cases.rescored.jsonl \
+    --meta runs/f6b/bench/f6b_results.json --types 0001 0003 0005 \
+    --out benchmarks/results/f6b_kaggle_two_engines_<fecha>_phase1.json
 ```
 
 - Selección determinista de registros (semilla fija sobre `train.csv`);
@@ -143,18 +154,130 @@ python benchmarks/f6b_kaggle_bench.py --data runs/f6b/kaggle --work runs/f6b/ben
   usan para puntuar.
 - Métricas por derivación sólo sobre muestras observadas: r@lag, RMSE, razón
   de amplitud, error de duración y **SNR estilo competición** (lag óptimo,
-  medias restadas; no es la métrica oficial exacta). Si la verdad trae NaN
-  fuera de la ventana mostrada, se recorta a su tramo finito.
+  medias restadas; no es la métrica oficial exacta: esa suma potencias de las
+  12 derivaciones por registro, aquí se da la mediana por derivación). La
+  verdad de Kaggle trae NaN fuera del tramo mostrado de cada derivación
+  (2.5 s; II completa 10 s): se recorta a su tramo finito.
+- **Alineación**: la estimación en el eje `engine` vive en el lienzo de 10 s
+  del motor y cada motor coloca las derivaciones cortas distinto (Ahus en su
+  hueco de la página, ECG-Digitiser desde t=0; `engine_placement_s` lo
+  registra), así que se recorta a su tramo observado. Se busca el lag en
+  **±0.2 s** alrededor del rango natural (`lag_slack_s`, como la alineación
+  de la métrica oficial) y sólo se puntúan las muestras solapadas.
 - Los fallos son casos, no se descartan: `ingest_rejected`, `engine_error`,
   `time_scale_unknown` (sin evidencia de rejilla el eje `evidence` se niega),
-  `no_signal`. Agregados por motor × eje × variante de imagen.
+  `no_signal`, `no_valid_lag` y **`lead_missing`** (derivación que el motor
+  no devolvió; cuenta en el denominador). Agregados por motor × eje × variante.
 - Cada (registro, variante, motor) terminado se añade a `cases.jsonl`: un
   banco interrumpido se reanuda sin repetir trabajo.
 
-La correspondencia entre código de variante (`0001`…`0012`) y tipo de imagen
-(original, escaneo color/BN, foto de impresión, foto de pantalla, manchas,
-daño, moho…) se tomará de la descripción de la competición al descargar; no
-se fija aquí sin verificarla.
+## Tipos de imagen (verificado)
+
+Tomado de la página *data description* de la competición (vía API de Kaggle,
+2026-09-25). Los códigos `0002`, `0007` y `0008` no existen en `train`
+(9 variantes por registro).
+
+| código | tipo |
+|---|---|
+| 0001 | imagen original en color generada con ECG-image-kit |
+| 0003 | impresa en color, escaneada en color |
+| 0004 | impresa en color, escaneada en blanco y negro |
+| 0005 | foto de móvil de la impresión en color |
+| 0006 | foto de móvil del ECG en la pantalla de un portátil |
+| 0009 | foto de móvil de impresiones manchadas y empapadas |
+| 0010 | foto de móvil de impresiones con daño extenso |
+| 0011 | escaneo en color de impresiones con moho |
+| 0012 | escaneo en blanco y negro de impresiones con moho |
+
+## Datos (fase 1)
+
+10 registros `train` elegidos con semilla fija (`20260925`): 1512936796,
+1561472702, 2338722083, 2806926781, 3203822582, 3406869873, 4079781180,
+4166392674, 946413478, 950071314. `fs` 256–1025 Hz (256, 500, 512, 1000,
+1025), siempre 10 s. 101 archivos, 835 MB, sha256 en el JSON. Imágenes:
+original 2200×1700; escaneos ≈2130×1650; fotos 4032×3024.
+
+## Resultados fase 1 (medianas por derivación; r@lag con IQR)
+
+| motor | eje | tipo | ok/filas | r@lag med [IQR] | SNR dB med | amp. med | no-ok |
+|---|---|---|---|---|---|---|---|
+| Ahus | evidence | 0001 | 120/120 | 0.993 [0.99–1.00] | 18.5 | 1.01 | |
+| Ahus | evidence | 0003 | 0/10 | – | – | – | `time_scale_unknown` 10 |
+| Ahus | evidence | 0005 | 0/10 | – | – | – | `time_scale_unknown` 9, `engine_error` 1* |
+| Ahus | engine | 0001 | 120/120 | 0.993 [0.99–1.00] | 18.1 | 1.01 | |
+| Ahus | engine | 0003 | 120/120 | 0.910 [0.75–0.97] | 7.5 | 1.01 | |
+| Ahus | engine | 0005 | 106/109 | 0.835 [0.66–0.95] | 4.6 | 1.02 | `engine_error` 1*, `lead_missing` 2 |
+| ECG-Digitiser | evidence | 0001 | 120/120 | 0.990 [0.97–0.99] | 17.0 | 1.00 | |
+| ECG-Digitiser | evidence | 0003 | 0/10 | – | – | – | `engine_error` 7, `time_scale_unknown` 3 |
+| ECG-Digitiser | evidence | 0005 | 0/10 | – | – | – | `time_scale_unknown` 8, `engine_error` 2* |
+| ECG-Digitiser | engine | 0001 | 120/120 | 0.989 [0.97–1.00] | 16.6 | 1.00 | |
+| ECG-Digitiser | engine | 0003 | 36/43 | 0.957 [0.91–0.98] | 10.7 | 1.02 | `engine_error` 7 |
+| ECG-Digitiser | engine | 0005 | 89/98 | 0.119 [0.05–0.26] | −15.5 | 7.22 | `lead_missing` 7, `engine_error` 2* |
+
+\* incluye `3203822582-0005`, fallido en **ambos** motores por una ejecución
+de diagnóstico mía concurrente (ver fallos); se repite en la fase 2.
+
+Tiempo de pared mediano por imagen: Ahus 39 s (0001), 39 s (0003), 64 s
+(0005); ECG-Digitiser 332 s, 336 s y 1041 s.
+
+Rejilla propia (eje `evidence`): 0001 → 7.874 px/mm en los 10 registros
+(200 dpi exactos); **0003 y 0005 → rechazada en 20/20** (`px_per_mm = None`).
+En el registro inspeccionado el periodo dominante era ambiguo (≈37.4 px en el
+escaneo, ≈55.5 px en la foto): el estimador ya no acepta un periodo como 1 mm
+sin estructura menor/mayor que lo confirme (commit `4eb56fc`). Antes de ese
+cambio el escaneo daba 38.3 px/mm, 5× el valor real (≈7.5 px/mm).
+
+## Fallos observados (fase 1)
+
+1. **Eje `evidence` inutilizable fuera de la imagen original**: 0/20 en
+   escaneos y fotos, en ambos motores, por la negativa de la rejilla. Es el
+   comportamiento deseado frente a un error 5× silencioso, pero hoy la única
+   medida en imágenes reales es el eje `engine` (duración asumida, 10 s).
+2. **ECG-Digitiser no produce señal en 7/10 escaneos en color (0003)**: el
+   propio motor aborta con `ValueError: Signal is empty for record page-1`
+   (reproducido fuera del banco sobre la entrada guardada de 2806926781).
+   En los 3 que sí procesa (1512936796, 4079781180, 950071314) la calidad es
+   alta (r@lag 0.957).
+3. **ECG-Digitiser en fotos (0005)**: procesa 8/10 pero la traza no se
+   parece a la verdad (r@lag 0.12, amplitud ×7.2, cobertura mediana 0.35) y
+   omite la derivación III en 6 de ellas (I y III en 1561472702). Es un fallo
+   de calidad, no de ejecución: el pipeline no lo marca por sí solo.
+4. **Ahus en escaneos/fotos**: devuelve todas las derivaciones (salvo aVL y V5
+   en 950071314-0005); r@lag baja de 0.993 (original) a 0.910 (escaneo) y
+   0.835 (foto), SNR de 18 dB a 7.5 y 4.6 dB; amplitud estable (1.01–1.02).
+5. **Fallos causados por mí, no por los motores** (3203822582-0005): una
+   ejecución manual de ECG-Digitiser para diagnosticar el punto 2 coincidió
+   con el banco. (a) Ahus murió por OOM del cgroup de 16 GB (9.5 GB RSS en la
+   foto de 12 MP); (b) ECG-Digitiser usa carpetas temporales fijas relativas
+   a su checkout (`data/temp_nnUNet_*`, borradas con `rmtree` al empezar) y
+   la ejecución manual borró las de la corrida del banco. Consecuencia
+   operativa: **no ejecutar dos instancias de ECG-Digitiser sobre el mismo
+   checkout**, y con fotos grandes no correr motores en paralelo con 16 GB.
+6. **Errores del banco destapados por datos reales** (corregidos con pruebas
+   que los reproducen): verdad recortada al hueco vs. lienzo del motor
+   (`log10(0)`, abortaba el banco); colocación distinta de las derivaciones
+   por motor (`trim_to_observed`); lag fijado a 0 con estimación y verdad de
+   igual longitud (r@lag de Ahus en escaneos 0.459 sin holgura vs 0.910 con
+   ±0.2 s, lag mediano 23 ms); mensaje de error recortado por el principio
+   (sólo barras de progreso); derivaciones no devueltas fuera del
+   denominador.
+
+## Limitaciones
+
+- 10 registros, 3 de 9 variantes en esta fase; ECG-Digitiser en las fotos de
+  la fase 2 sólo en 3 registros (≈17 min por foto en CPU). Sin intervalos de
+  confianza: medianas e IQR descriptivos.
+- Métrica por derivación estilo competición, no la oficial por registro.
+- El eje `engine` asume 10 s de página y 25 mm/s/10 mm/mV confirmados a mano;
+  en esta competición es cierto por construcción, en el flujo local no se
+  sabe (B-03).
+- Todas las variantes parten de una página renderizada con ECG-image-kit (con
+  el que se entrenó ECG-Digitiser): 0001 es ese render; el resto son su
+  impresión escaneada o fotografiada. No son de los equipos locales ni de su
+  formato (B-02/B-03). No es validación clínica.
+- Un `engine_error` de ECG-Digitiser en fotos (3406869873-0005) quedó con el
+  mensaje recortado (código anterior); la fase 2 lo repite con el mensaje
+  completo.
 
 ## Verificación de la cadena (no es evaluación)
 

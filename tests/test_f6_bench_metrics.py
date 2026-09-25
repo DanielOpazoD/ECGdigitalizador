@@ -125,3 +125,34 @@ def test_trim_to_observed_is_placement_agnostic() -> None:
         assert m["duration_err_pct"] is None
     empty = np.full(100, np.nan)
     assert trim_to_observed(empty, np.zeros(100, bool), fs)[2] is None
+
+
+def test_lag_slack_recovers_a_shifted_estimate_of_equal_length() -> None:
+    # F6-b: estimate trimmed to its observed span and slot-cropped truth have the
+    # same length, so without slack only lag 0 is searched; a 0.1 s shift in the
+    # engine's placement then depresses r although the trace is right
+    fs = 500.0
+    t = np.arange(int(10 * fs)) / fs
+    page = np.sin(2 * np.pi * 1.2 * t) + 0.2 * np.sin(2 * np.pi * 5 * t)
+    truth_slot = page[1250:2500]
+    est = page[1300:2550].copy()  # 0.1 s late, same length
+    obs = np.ones(len(est), dtype=bool)
+    no_slack = segment_metrics(truth_slot, est, obs, fs, fs, None, 2.5)
+    slack = segment_metrics(truth_slot, est, obs, fs, fs, None, 2.5, lag_slack_s=0.2)
+    assert no_slack["best_lag_s"] == 0.0
+    assert slack["best_lag_s"] == 0.1
+    assert slack["r_at_lag"] > 0.999
+    assert slack["r_at_lag"] > no_slack["r_at_lag"]
+    assert slack["rmse_mV"] < 1e-9  # scored only where the shifted estimate overlaps
+    assert abs(slack["amp_ratio"] - 1.0) < 0.05
+
+
+def test_lag_slack_zero_keeps_f6a_behaviour() -> None:
+    fs = 500.0
+    t = np.arange(int(10 * fs)) / fs
+    truth = np.sin(2 * np.pi * 1.2 * t) + 0.2 * np.sin(2 * np.pi * 5 * t)
+    est = truth[1250:2500] + np.random.default_rng(1).normal(0, 0.05, 1250)
+    obs = np.ones(len(est), dtype=bool)
+    a = segment_metrics(truth, est, obs, fs, fs, 2.5, 2.5)
+    b = segment_metrics(truth, est, obs, fs, fs, 2.5, 2.5, lag_slack_s=0.0)
+    assert a == b

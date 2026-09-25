@@ -76,11 +76,11 @@ Ubuntu/Debian con CUDA.
 | ID | Bloqueo | Qué desbloquea | Qué se hace mientras |
 |---|---|---|---|
 | B-01 | Sin señales nativas del equipo local | Validación fs/amplitud contra referencia real | Fixtures sintéticos |
-| B-02 | Sin fotos/PDF reales | Perfiles de layout (F3), banco real (F4) | Sintéticos ecg-image-kit (F2) |
+| B-02 | Sin fotos/PDF reales **del flujo local** | Perfiles de layout (F3), banco con las imágenes reales del usuario | Parcial: F6-b usa escaneos y fotos reales de impresiones (Kaggle PhysioNet, formato ECG-image-kit), no del equipo local; resultados en docs/evaluation.md |
 | B-03 | Marca/modelo de ECG desconocidos | `supported_inputs.yml` con perfil confirmado | Perfiles `unknown`; medidas bloqueadas por LAYOUT_UNSUPPORTED |
 | B-04 | Sin CUDA | Tiempos de inferencia representativos | Ejecución CPU para funcionalidad, no rendimiento |
 | B-05 | Pesos LFS de ECG-Digitiser: `git lfs pull` falla por presupuesto LFS del proxy | Inferencia ECG-Digitiser | Resuelto: descarga directa vía `media.githubusercontent.com`, sha256 verificados contra `configs/checkpoints.json` |
 | B-06 | Licencia CC BY-SA 4.0 de Ahus (pesos y código) | Redistribución del motor | Uso local de evaluación; decisión legal pendiente del usuario |
 | B-07 | Discrepancia r@lag 0.954 (bench 3 s) vs 0.654 (pipeline 10 s) | Comparabilidad de métricas | Resuelto: es la ventana — r@lag 0.957/0.882/0.654 a 3/5/10 s; refleja el error temporal acumulado del motor (docs/pipeline.md) |
 | B-08 | Pesos Kaggle requieren cuenta y aceptación de términos | Evaluar candidato Đăng | Se documenta; no se descarga |
-| B-09 | Red del entorno cloud sin acceso a `kaggle.com` (403 del proxy) | Banco F6-b con imágenes reales de la competición | Scripts F6-b preparados; motores instalables con `benchmarks/setup_engines.sh` (GitHub y PyPI sí accesibles) |
+| B-09 | Red del entorno cloud sin acceso a `kaggle.com` (403 del proxy) | Banco F6-b con imágenes reales de la competición | Resuelto (2026-09-25): entorno con red completa y credenciales en variables de entorno; reglas aceptadas (sin 403). Descarga de 10 registros (835 MB) con `f6b_fetch_kaggle.py`; fase 1 ejecutada |

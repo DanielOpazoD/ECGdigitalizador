@@ -44,6 +44,8 @@ from ecg_photo.pipeline import confirm_scale, digitize_page
 LEADS = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 ARMS = ("evidence", "engine")
 ENGINE_DURATION_S = 10.0  # standard 10 s page; the same assumption a user would configure
+LAG_SLACK_S = 0.2  # the competition metric aligns prediction and truth within +-0.2 s
+EVIDENCE_STAGE = "time_axis_from_image_evidence"
 SCOPE = (
     "Kaggle PhysioNet ECG image digitization train split: real printouts, scans and "
     "photographs of real signals; not clinical validation; not local devices"
@@ -166,6 +168,7 @@ def score_run(run_dir: Path, truth: dict[str, np.ndarray], fs: float, rhythm: st
             truth_fs=fs,
             observed_duration_s=extent_s,
             expected_window_s=expected,
+            lag_slack_s=LAG_SLACK_S,
         )
         if not full and m.get("best_lag_s") is not None:
             m["offset_err_s"] = m["best_lag_s"]  # truth already cropped to its slot
@@ -184,7 +187,7 @@ def run_one(
 ) -> dict:
     """One (image, engine): returns {'grid':..., 'wall_s':..., 'arms': {arm: [cases]}}."""
     rev_dir = work / "rev"
-    out: dict = {"grid": None, "wall_s": None, "arms": {}}
+    out: dict = {"grid": None, "wall_s": None, "arms": {}, "run_dirs": {}}
     try:
         if not (rev_dir / "manifest.json").exists():
             manifest = ingest(img, rev_dir)
@@ -235,6 +238,7 @@ def run_one(
             status = "time_scale_unknown" if code != "ERROR" else "confirm_error"
             out["arms"][arm] = [{"status": status, "reason": code, "error": short_error(e)}]
             continue
+        out["run_dirs"][arm] = str(Path(done.run_dir).resolve().relative_to(work.resolve()))
         out["arms"][arm] = score_run(done.run_dir, truth, fs, rhythm)
     return out
 

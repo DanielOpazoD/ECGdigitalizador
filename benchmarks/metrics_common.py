@@ -30,11 +30,16 @@ def segment_metrics(
     truth_fs: float,
     observed_duration_s: float | None,
     expected_window_s: float,
+    lag_slack_s: float = 0.0,
 ) -> dict:
     """Metrics over observed samples only, lag-searched over the whole truth.
 
     truth: full-length reference signal (truth_fs).
     est: estimated signal (est_fs), NaN where unobserved (observed masks it too).
+    lag_slack_s: extra lag searched on both sides of [0, len(truth) - len(est)]
+      (the competition metric aligns within +-0.2 s). With slack > 0 only the
+      samples that overlap the truth at the chosen lag are scored; with 0 the
+      search and scoring are unchanged from F6-a.
     """
     finite = np.isfinite(est) & observed
     n_obs = int(finite.sum())
@@ -89,8 +94,9 @@ def segment_metrics(
         return float(np.corrcoef(e, tt)[0, 1])
 
     max_lag = max(0, round((t_truth[-1] - t_est[-1]) * fs))
+    slack = round(lag_slack_s * fs)
     best_lag, best_r = 0, -np.inf
-    for lag in range(max_lag + 1):
+    for lag in range(-slack, max_lag + slack + 1):
         r = pearson_at(lag)
         if np.isfinite(r) and r > best_r:
             best_r, best_lag = r, lag
@@ -102,7 +108,13 @@ def segment_metrics(
         return out
 
     best_lag_s = best_lag / fs
-    truth_on_est = np.interp(t_est[finite] + best_lag_s, t_truth, truth)
+    if slack > 0:
+        shifted = t_est[finite] + best_lag_s
+        keep = (shifted >= 0.0) & (shifted <= t_truth[-1])
+        e_obs = e_obs[keep]
+        truth_on_est = np.interp(shifted[keep], t_truth, truth)
+    else:
+        truth_on_est = np.interp(t_est[finite] + best_lag_s, t_truth, truth)
     resid = truth_on_est - e_obs
     slots = np.array([0.0, 2.5, 5.0, 7.5])
     offset_err = (
@@ -117,7 +129,7 @@ def segment_metrics(
     p_sig = float(np.sum(t_c**2))
     snr_db = 10.0 * math.log10(p_sig / p_noise) if p_noise > 0 and p_sig > 0 else None
     p95e, p5e = np.percentile(e_obs, [95, 5])
-    p95t, p5t = np.percentile(np.interp(t_est[finite] + best_lag_s, t_truth, truth), [95, 5])
+    p95t, p5t = np.percentile(truth_on_est, [95, 5])
     out.update(
         {
             "status": "ok",
