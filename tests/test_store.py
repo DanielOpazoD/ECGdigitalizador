@@ -87,6 +87,13 @@ def test_run_complete_and_publish(tmp_path) -> None:
                 break
             time.sleep(0.05)
         assert job.status == "completed", job.error
+        # publish lands just after 'completed' -> poll for the side effect
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            final = store.get(st2.study_id)
+            if final is not None and final.published_run_id == job.run_id:
+                break
+            time.sleep(0.05)
         final = store.get(st2.study_id)
         assert final is not None and final.published_run_id == job.run_id
     finally:
@@ -137,10 +144,7 @@ def test_cancel_queued_and_delete_during_run(tmp_path) -> None:
         release.set()
         deadline = time.time() + 30
         while time.time() < deadline:
-            if store.get_job(st2.study_id, j1.run_id).status in (
-                "completed",
-                "completed_unpublished",
-            ):
+            if store.get_job(st2.study_id, j1.run_id).status == "completed_unpublished":
                 break
             time.sleep(0.05)
         # j2 was selected over j1 then cancelled while queued -> nothing publishes

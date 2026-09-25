@@ -44,6 +44,28 @@ def _wait_job(client: TestClient, run_id: str, timeout: float = 30.0) -> dict:
     raise AssertionError("job did not finish")
 
 
+def _wait_status(client: TestClient, run_id: str, status: str, timeout: float = 30.0) -> dict:
+    """Poll until the job reaches an exact status ('completed' is transient:
+    the worker then publishes or flips to completed_unpublished)."""
+    deadline = time.time() + timeout
+    last: dict = {}
+    while time.time() < deadline:
+        last = client.get(f"/runs/{run_id}").json()
+        if last["status"] == status:
+            return last
+        time.sleep(0.05)
+    raise AssertionError(f"job never reached {status}: {last}")
+
+
+def _wait_published(client: TestClient, sid: str, run_id: str, timeout: float = 15.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if client.get(f"/studies/{sid}").json()["published_run_id"] == run_id:
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"run {run_id} was not published")
+
+
 def _patch_engine(client: TestClient, sid: str, rev: int) -> dict:
     r = client.patch(
         f"/studies/{sid}",
@@ -118,6 +140,7 @@ def test_patch_run_publish_export(tmp_path) -> None:
         run_id = r.json()["run_id"]
         job = _wait_job(client, run_id)
         assert job["status"] == "completed", job
+        _wait_published(client, sid, run_id)
 
         g = client.get(f"/studies/{sid}").json()
         assert g["published_run_id"] == run_id
@@ -168,7 +191,7 @@ def test_t40_patch_during_run_keeps_old_result(tmp_path) -> None:
             time.sleep(0.02)
         _patch_engine(client, sid, 2)
         release.set()
-        job = _wait_job(client, run_id)
+        job = _wait_status(client, run_id, "completed_unpublished")
         assert job["status"] == "completed_unpublished"
         g = client.get(f"/studies/{sid}").json()
         assert g["published_run_id"] != run_id
@@ -191,8 +214,9 @@ def test_retry_only_last_selected_publishes(tmp_path) -> None:
                 json={"expected_revision": 2, "config_hash": st2["config_hash"]},
             )
             runs.append(r.json()["run_id"])
-        for run_id in runs:
-            _wait_job(client, run_id)
+        # 'completed' is transient (publish or flip follows); wait for outcomes
+        _wait_status(client, runs[0], "completed_unpublished")
+        _wait_published(client, sid, runs[1])
         jobs = {r: client.get(f"/runs/{r}").json()["status"] for r in runs}
         assert jobs[runs[1]] == "completed"
         assert jobs[runs[0]] == "completed_unpublished"
@@ -320,6 +344,7 @@ def _run_and_publish(client: TestClient, tmp_path: Path) -> tuple[str, str]:
     run_id = r.json()["run_id"]
     job = _wait_job(client, run_id)
     assert job["status"] == "completed", job
+    _wait_published(client, sid, run_id)
     return sid, run_id
 
 
@@ -409,6 +434,7 @@ def test_trace_decimation_and_null_gaps(tmp_path) -> None:
         )
         run_id = r.json()["run_id"]
         assert _wait_job(client, run_id)["status"] == "completed"
+        _wait_published(client, sid, run_id)
         segs = client.get(f"/studies/{sid}/runs/{run_id}/segments").json()["segments"]
         seg_id = segs[0]["segment_id"]
         tr = client.get(f"/studies/{sid}/runs/{run_id}/segments/{seg_id}/trace").json()
@@ -462,9 +488,11 @@ def test_lead_label_corrections(tmp_path) -> None:
             f"/studies/{sid}/runs",
             json={"expected_revision": 3, "config_hash": st3.json()["config_hash"]},
         )
-        job = _wait_job(client, r.json()["run_id"])
+        run2 = r.json()["run_id"]
+        job = _wait_job(client, run2)
         assert job["status"] == "completed", job
-        segs2 = client.get(f"/studies/{sid}/runs/{r.json()['run_id']}/segments").json()["segments"]
+        _wait_published(client, sid, run2)
+        segs2 = client.get(f"/studies/{sid}/runs/{run2}/segments").json()["segments"]
         fixed = next(s for s in segs2 if s["segment_id"] == v1["segment_id"])
         assert fixed["lead_label"] == "aVR" and fixed["lead_status"] == "confirmed"
     finally:
