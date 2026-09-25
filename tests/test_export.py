@@ -94,7 +94,7 @@ def test_csv_px_units_for_gain_unknown(tmp_path) -> None:
     csv_path = tmp_path / "s.csv"
     export_csv(root, seg, csv_path)
     text = csv_path.read_text()
-    assert "# gain_mm_mV=None" in text
+    assert "# gain_mm_mV=null" in text
     cols = readback_csv(csv_path)
     assert (cols["units"] == "px").all()
 
