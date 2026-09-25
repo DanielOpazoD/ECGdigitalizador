@@ -1,0 +1,43 @@
+diff --git a/src/run/digitize.py b/src/run/digitize.py
+index 913a596..7f6c2b8 100644
+--- a/src/run/digitize.py
++++ b/src/run/digitize.py
+@@ -1,6 +1,7 @@
+ # Run the digitization of ECG images.
+ import argparse
+ import cv2
++import json
+ import numpy as np
+ import matplotlib.pyplot as plt
+ # import pandas as pd
+@@ -426,6 +427,30 @@ def run(args):
+                 f"{record}.png",
+             )
+ 
++        # Persist geometric provenance so canonical sample index can be mapped
++        # back to original image pixels (F4-c image-evidence time axis).
++        geometry = {
++            "rot_angle": float(rot_angle),
++            "rotated_shape": [int(image_rotated.shape[1]), int(image_rotated.shape[2])],
++            "original_shape": [int(image.shape[1]), int(image.shape[2])],
++            "leads": {
++                lead: {
++                    "x1": int(signal_positions_cropped[lead]["x1"]),
++                    "y1": int(signal_positions_cropped[lead]["y1"]),
++                    "width": int(signal_masks_cropped[lead].shape[2]),
++                    "height": int(signal_masks_cropped[lead].shape[1]),
++                }
++                for lead in signal_masks_cropped
++                if signal_masks_cropped[lead] is not None
++            },
++            "sec_per_pixel_engine_assumed": float(sec_per_pixel),
++            "mm_per_pixel_engine_assumed": float(mm_per_pixel),
++        }
++        with open(
++            os.path.join(args.output_folder, f"{record}_geometry.json"), "w"
++        ) as f:
++            json.dump(geometry, f)
++
+         # Save the signals to a WFDB record.
+         if args.verbose:
+             print(f"Storing signals for record {record} with shape {signals.shape}")

@@ -1,0 +1,85 @@
+diff --git a/src/digitize.py b/src/digitize.py
+index e86eece..bab284f 100644
+--- a/src/digitize.py
++++ b/src/digitize.py
+@@ -1,4 +1,5 @@
+ import argparse
++import json
+ import os
+ import random
+ import warnings
+@@ -132,6 +133,36 @@ def save_matching_cost(got_values: dict[str, Any], output_basepath: str) -> None
+         f.write(f"{file_name},{matching_cost},{is_flipped},{lead_layout}\n")
+ 
+ 
++def save_geometry_json(
++    got_values: dict[str, Any],
++    output_basepath: str,
++    original_hw: tuple[int, int],
++    inference_wrapper: Any,
++) -> None:
++    """Persist the geometric provenance needed to map canonical sample index
++    back to original image pixels (F4-c: image-evidence time axis)."""
++    source_points = got_values["source_points"].cpu()
++    aligned_hw = tuple(int(v) for v in got_values["aligned"]["image"].shape[-2:])
++    resampled_hw = tuple(int(v) for v in got_values["input_image"].shape[-2:])
++    destination_points = inference_wrapper.cropper._calculate_destination_points(
++        aligned_hw[0], aligned_hw[1], source_points
++    )
++    orig_h, orig_w = int(original_hw[0]), int(original_hw[1])
++    geometry = {
++        "source_points": [list(map(float, p)) for p in source_points.tolist()],
++        "destination_points": [list(map(float, p)) for p in destination_points.tolist()],
++        "original_size": [orig_w, orig_h],
++        "resampled_size": [resampled_hw[1], resampled_hw[0]],
++        "resample_scale": resampled_hw[1] / orig_w,
++        "aligned_size": [aligned_hw[1], aligned_hw[0]],
++        "valid_span": got_values.get("signal", {}).get("valid_span"),
++        "target_num_samples": getattr(inference_wrapper.identifier, "target_num_samples", None),
++        "apply_dewarping": bool(getattr(inference_wrapper, "apply_dewarping", False)),
++    }
++    with open(output_basepath + "_geometry.json", "w", encoding="utf-8") as f:
++        json.dump(geometry, f)
++
++
+ def save_outputs(got_values: dict[str, Any], output_basepath: str, save_mode: str = "all") -> None:
+     canonical = canonical_from_got_values(got_values)
+     if save_mode in ["all", "timeseries_only"]:
+@@ -158,6 +189,7 @@ def process_one_file(file_path: str, config: CN, inference_wrapper: Any, save_mo
+         output_basepath = os.path.splitext(output_file_path)[0]
+         os.makedirs(os.path.dirname(output_basepath), exist_ok=True)
+         save_outputs(got_values, output_basepath, save_mode)
++        save_geometry_json(got_values, output_basepath, image.shape[-2:], inference_wrapper)
+ 
+ 
+ def main(config: CN) -> None:
+diff --git a/src/model/inference_wrapper.py b/src/model/inference_wrapper.py
+index 329ef6a..f46056e 100644
+--- a/src/model/inference_wrapper.py
++++ b/src/model/inference_wrapper.py
+@@ -150,6 +150,7 @@ class InferenceWrapper(Module):
+             "signal": {
+                 "raw_lines": signals.cpu(),
+                 "canonical_lines": layout.get("canonical_lines", None),
++                "valid_span": layout.get("valid_span", None),
+                 "lines": layout.get("lines", None),
+                 "layout_matching_cost": layout_cost,
+                 "layout_is_flipped": layout_is_flipped,
+diff --git a/src/model/lead_identifier.py b/src/model/lead_identifier.py
+index 62c8845..54cd6f6 100644
+--- a/src/model/lead_identifier.py
++++ b/src/model/lead_identifier.py
+@@ -419,6 +419,7 @@ class LeadIdentifier:
+         first_valid_index: int = int(np.argmax(non_nan_samples_per_column >= self.required_valid_samples))
+         last_valid_index: int = int(np.argmax(non_nan_samples_per_column[::-1] >= self.required_valid_samples))
+         last_valid_index = lines.shape[1] - last_valid_index - 1
++        self._last_valid_span = (first_valid_index, last_valid_index)
+         if first_valid_index <= last_valid_index:
+             lines = lines[:, first_valid_index : last_valid_index + 1]
+ 
+@@ -493,4 +494,5 @@ class LeadIdentifier:
+             **match,
+             "canonical_lines": canonical_lines,
+             "lines": lines,
++            "valid_span": getattr(self, "_last_valid_span", None),
+         }
