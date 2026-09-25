@@ -433,6 +433,12 @@ def confirm_scale(
             x_px = raw[:, 0]
             support = support & np.isfinite(x_px)
             idx = np.nonzero(support)[0]
+            if len(idx) == 0:
+                # no observed sample -> no extent to measure: carry the segment
+                # over unconfirmed (no signal, scales unchanged) instead of
+                # failing the whole run or inventing a time axis
+                segments.append(_carry_unconfirmed(seg, run_dir, new_dir, author, reason))
+                continue
             scale_fac = px_res.value * speed_res.value  # px per second
             t = (x_px - x_px[idx[0]]) / scale_fac
             dts = np.diff(t[support])
@@ -579,6 +585,36 @@ def confirm_scale(
     if problems:
         raise RuntimeError(f"confirmed run dir failed validation: {problems}")
     return RunPaths(run_dir=new_dir, manifest=new_dir / "manifest.json")
+
+
+def _carry_unconfirmed(
+    seg: Segment, run_dir: Path, new_dir: Path, author: str, reason: str
+) -> Segment:
+    """Copy a segment with no observed samples into the confirmed run as-is."""
+    for rel in (
+        seg.raw_path,
+        seg.raw_support_path,
+        seg.temporal_trace_path,
+        seg.observed_mask_path,
+        seg.valid_mask_path,
+        seg.gap_fill_mask_path,
+        seg.signal_path,
+    ):
+        if rel is None or not (run_dir / rel).exists():
+            continue
+        dst = new_dir / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes((run_dir / rel).read_bytes())
+    step = ProcessingStep(
+        stage="time_axis_from_image_evidence",
+        implementation="ecg_photo.pipeline",
+        parameters={
+            "skipped": "no observed samples; segment left unconfirmed",
+            "author": author,
+            "reason": reason,
+        },
+    )
+    return seg.model_copy(update={"processing": list(seg.processing) + [step]})
 
 
 def apply_lead_corrections(manifest: Manifest, corrections: dict) -> Manifest:
