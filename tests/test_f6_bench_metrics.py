@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks"))
-from metrics_common import crop_to_window, segment_metrics
+from metrics_common import segment_metrics, trim_to_observed
 
 
 def test_segment_metrics_lag_and_amplitude() -> None:
@@ -110,13 +110,18 @@ def test_segment_metrics_no_overlap_is_a_case_not_a_crash() -> None:
     assert np.isnan(m["r_at_lag"])
 
 
-def test_crop_to_window_aligns_page_canvas_with_slot_truth() -> None:
-    truth_slot, est, obs, fs = _slot_case()
-    e, o = crop_to_window(est, obs, fs, start_s=2.5, dur_s=2.5)
-    assert len(e) == 2500 and bool(o.all())
-    m = segment_metrics(truth_slot, e, o, fs, fs, None, 2.5)
-    assert m["status"] == "ok"
-    assert m["r_at_lag"] > 0.999
-    assert m["best_lag_s"] == 0.0
-    assert m["duration_err_pct"] is None
-    assert crop_to_window(est, obs, fs, start_s=11.0, dur_s=2.5)[0].size == 0
+def test_trim_to_observed_is_placement_agnostic() -> None:
+    truth_slot, est, _obs, fs = _slot_case()
+    # Ahus-like: lead at its page slot (2.5 s); ECG-Digitiser-like: from t=0
+    at_zero = np.full(len(est), np.nan)
+    at_zero[:2500] = est[2500:5000]
+    for canvas, placed in ((est, 2.5), (at_zero, 0.0)):
+        e, o, start = trim_to_observed(canvas, np.isfinite(canvas), fs)
+        assert len(e) == 2500 and bool(o.all()) and start == placed
+        m = segment_metrics(truth_slot, e, o, fs, fs, None, 2.5)
+        assert m["status"] == "ok"
+        assert m["r_at_lag"] > 0.999
+        assert m["best_lag_s"] == 0.0
+        assert m["duration_err_pct"] is None
+    empty = np.full(100, np.nan)
+    assert trim_to_observed(empty, np.zeros(100, bool), fs)[2] is None

@@ -5,18 +5,21 @@ import math
 import numpy as np
 
 
-def crop_to_window(
-    est: np.ndarray, observed: np.ndarray, est_fs: float, start_s: float, dur_s: float
-) -> tuple[np.ndarray, np.ndarray]:
-    """Cut a page-canvas estimate (t=0 at the page's first column) to one lead
-    slot [start_s, start_s + dur_s). Used when the truth is only defined in
-    that slot (NaN elsewhere) and the estimate lives on the engine's page time
-    axis; otherwise the two time origins differ and nothing overlaps."""
-    a = max(0, round(start_s * est_fs))
-    b = min(len(est), round((start_s + dur_s) * est_fs))
-    if b <= a:
-        return est[:0], observed[:0]
-    return est[a:b], observed[a:b]
+def trim_to_observed(
+    est: np.ndarray, observed: np.ndarray, est_fs: float
+) -> tuple[np.ndarray, np.ndarray, float | None]:
+    """Drop the unobserved head/tail of a canvas estimate.
+
+    Engines disagree on where a short lead sits on their canonical time axis
+    (Ahus: at its page slot; ECG-Digitiser: from t=0), so a slot-cropped truth
+    can only be compared placement-agnostically. Returns the trimmed estimate,
+    its mask and the start (s) of the first observed sample on the canvas, or
+    None if nothing is observed."""
+    idx = np.nonzero(observed & np.isfinite(est))[0]
+    if len(idx) == 0:
+        return est[:0], observed[:0], None
+    a, b = int(idx[0]), int(idx[-1]) + 1
+    return est[a:b], observed[a:b], a / est_fs
 
 
 def segment_metrics(
