@@ -100,19 +100,23 @@ class Worker(threading.Thread):
             item = self.queue.get()
             if item is None:
                 return
-            study_id, run_id = item
+            self.process(*item)
+
+    def process(self, study_id: str, run_id: str) -> None:
+        """Run one job to a terminal status; exceptions become `failed` (job
+        isolation). Used by the thread loop and synchronously by `batch`."""
+        try:
+            self._process(study_id, run_id)
+        except Exception as e:  # noqa: BLE001 - job isolation, no traceback out
             try:
-                self._process(study_id, run_id)
-            except Exception as e:  # noqa: BLE001 - job isolation, no traceback out
-                try:
-                    job = self.store.get_job(study_id, run_id)
-                    job.status = "failed"
-                    job.stage = "failed"
-                    job.error = f"{type(e).__name__}: {e}"[:500]
-                    job.finished_at = _now()
-                    self.store.write_job(study_id, job)
-                except Exception:  # noqa: BLE001,S110 - job may already be gone
-                    pass
+                job = self.store.get_job(study_id, run_id)
+                job.status = "failed"
+                job.stage = "failed"
+                job.error = f"{type(e).__name__}: {e}"[:500]
+                job.finished_at = _now()
+                self.store.write_job(study_id, job)
+            except Exception:  # noqa: BLE001,S110 - job may already be gone
+                pass
 
     def _process(self, study_id: str, run_id: str) -> None:
         store = self.store
@@ -191,6 +195,25 @@ class Worker(threading.Thread):
 
     def shutdown(self) -> None:
         self.queue.put(None)
+
+
+def resume_after_restart(store: Store, worker: Worker) -> dict:
+    """T47: reconcile the store (`Store.recover`) and re-enqueue the runs that
+    were still waiting and current. Call with the process lock held, before
+    serving requests. Runs that no longer fit the queue fail explicitly."""
+    rep = store.recover()
+    out = rep.as_dict()
+    out["requeued"] = []
+    out["queue_overflow"] = []
+    for sid, rid in rep.requeue:
+        try:
+            worker.submit(sid, rid)
+            out["requeued"].append(f"{sid}/{rid}")
+        except QueueFull:
+            store.fail_job(sid, rid, "QUEUE_FULL: queue full while resuming after restart")
+            out["queue_overflow"].append(f"{sid}/{rid}")
+    del out["requeue"]
+    return out
 
 
 def cfg_hash_of(job) -> str:

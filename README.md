@@ -32,6 +32,8 @@ ruff check src tests && ruff format --check src tests && mypy src && pytest -q
   EXIF, raster embebido o render PDF, `study_id` seguro.
 - `src/ecg_photo/grid.py` — estimador determinista del paso de rejilla por autocorrelación.
 - `src/ecg_photo/calibration.py` — resolución de escala por evidencias (manual > concordancia).
+- `src/ecg_photo/store.py`, `worker.py`, `api.py` — revisiones, worker único, API local,
+  recuperación tras reinicio; `batch.py` — lotes con informe reanudable.
 - `configs/` — configuración propuesta, entradas admitidas, inventario de motores/pesos,
   perfiles de formato (`configs/profiles/`).
 - `external/` (ignorado) — checkouts de motores candidatos fijados por commit.
@@ -55,7 +57,11 @@ ecg-photo confirm-scale estudio/runs/run-XXX --gain 10 \
 ecg-photo export estudio/runs/run-YYY --out export_dir
 ecg-photo serve --store STORE_DIR [--port 8000]   # API local 127.0.0.1 + worker único
 # luego abrir http://127.0.0.1:8000/ui para la revisión local
+ecg-photo batch DIR --store STORE_DIR --report lote.json --engine ahus --duration 10 \
+    [--gain 10 --speed 25 --author NOMBRE --reason "..."] [--resume]
 ```
+Un solo proceso (`serve` o `batch`) por almacén; al arrancar, `serve` recupera los
+trabajos que quedaron a medias (ver `docs/api.md`, «Reinicio y lotes»).
 
 Benchmarks: `docs/evaluation.md` (F6-a: PTB-XL real -> imágenes sintéticas -> pipeline; señal real, imagen sintética — no fotos, no validación clínica).
 

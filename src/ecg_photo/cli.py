@@ -104,8 +104,8 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
     from ecg_photo.api import create_app
     from ecg_photo.ingest import load_supported_inputs
-    from ecg_photo.store import Store, load_execution_limits
-    from ecg_photo.worker import Worker, default_engines
+    from ecg_photo.store import Store, StoreLocked, load_execution_limits
+    from ecg_photo.worker import Worker, default_engines, resume_after_restart
 
     host = args.host
     try:
@@ -124,13 +124,79 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         load_supported_inputs(),
         load_execution_limits(),
     )
+    try:
+        store.acquire_process_lock()
+    except StoreLocked as e:
+        print(json.dumps({"error": str(e), "code": e.code}))
+        return 2
     worker = Worker(store, default_engines())
     worker.start()
+    print(json.dumps({"recovery": resume_after_restart(store, worker)}))
     app = create_app(store, worker)
     import uvicorn
 
     uvicorn.run(app, host=host, port=args.port)
     return 0
+
+
+def _cmd_batch(args: argparse.Namespace) -> int:
+    from ecg_photo.batch import BatchError, list_inputs, run_batch
+    from ecg_photo.ingest import load_supported_inputs
+    from ecg_photo.store import Store, StoreLocked, StudyPatch, load_execution_limits
+    from ecg_photo.worker import default_engines
+
+    if (args.speed is not None or args.gain is not None) and not (args.author and args.reason):
+        print(json.dumps({"error": "--speed/--gain are manual evidence: --author and --reason"}))
+        return 2
+    options = StudyPatch(
+        **{
+            k: v
+            for k, v in {
+                "engine": args.engine,
+                "engine_duration_s": args.duration,
+                "time_source": args.time_source,
+                "speed_mm_s": args.speed,
+                "gain_mm_mV": args.gain,
+                "fs_hz": args.fs,
+                "page_id": args.page,
+            }.items()
+            if v is not None
+        }
+    )
+    store = Store(Path(args.store), load_supported_inputs(), load_execution_limits())
+    try:
+        store.acquire_process_lock()
+    except StoreLocked as e:
+        print(json.dumps({"error": str(e), "code": e.code}))
+        return 2
+    try:
+        recovery = store.recover()
+        report = run_batch(
+            store,
+            default_engines(args.engines_config),
+            list_inputs(Path(args.input_dir)),
+            options,
+            Path(args.report),
+            author=args.author or "batch",
+            reason=args.reason or "batch",
+            resume=args.resume,
+        )
+    except BatchError as e:
+        print(json.dumps({"error": str(e)}))
+        return 2
+    finally:
+        store.release_process_lock()
+    print(
+        json.dumps(
+            {
+                "report": str(args.report),
+                "summary": report["summary"],
+                # runs from an earlier `serve` left waiting; `serve` resumes them
+                "left_queued": recovery.as_dict()["requeue"],
+            }
+        )
+    )
+    return 0 if set(report["summary"]) <= {"published"} else 1
 
 
 def _cmd_run_demo(args: argparse.Namespace) -> int:
@@ -359,6 +425,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="permitir bind fuera de loopback (F9; desactivado por defecto)",
     )
     sv.set_defaults(func=_cmd_serve)
+
+    b = sub.add_parser("batch", help="procesa todos los archivos de un directorio (T48/T49)")
+    b.add_argument("input_dir")
+    b.add_argument("--store", required=True)
+    b.add_argument("--report", required=True, help="informe JSON (se reescribe tras cada archivo)")
+    b.add_argument("--resume", action="store_true", help="continuar un informe existente")
+    b.add_argument("--engine", required=True)
+    b.add_argument("--duration", type=float, default=None)
+    b.add_argument("--time-source", choices=["evidence", "engine"], default=None)
+    b.add_argument("--speed", type=float, default=None)
+    b.add_argument("--gain", type=float, default=None)
+    b.add_argument("--fs", type=float, default=None)
+    b.add_argument("--page", default=None)
+    b.add_argument("--author", default=None)
+    b.add_argument("--reason", default=None)
+    b.add_argument("--engines-config", type=Path, default=None)
+    b.set_defaults(func=_cmd_batch)
     return p
 
 
