@@ -57,5 +57,13 @@
       "status": "reference_ui_only",
       "weights": []
     }
-  ]
+  ],
+  "f6a_bench": {
+    "scope": "real 12-lead signals (PTB-XL), synthetic ECG-Image-Kit renders; not real photographs; not clinical validation",
+    "dataset": "PTB-XL 1.0.3 records500/00000 records 00001-00010",
+    "license": "CC BY 4.0",
+    "script": "benchmarks/f6_ptbxl_bench.py",
+    "results": "benchmarks/results/f6_ptbxl_two_engines_2026-09-24.json",
+    "status": "bench_run_done"
+  }
 }

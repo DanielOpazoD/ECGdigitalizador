@@ -84,3 +84,8 @@ python benchmarks/f2_synthetic_bench.py \
   --work runs/f2 --seeds 7 8 9
 # resultado: runs/f2/f2_results.json (copiado a benchmarks/results/f2_two_engines_synthetic_2026-09-25.json)
 ```
+## Banco F6-a (señales reales PTB-XL, imágenes sintéticas)
+
+Ver `docs/evaluation.md`: 10 registros reales PTB-XL x 2 motores por el pipeline
+completo con escala temporal desde evidencia. Alcance: señal real, imagen
+sintética — no fotos reales, no validación clínica.
