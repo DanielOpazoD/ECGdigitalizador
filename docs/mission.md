@@ -52,7 +52,7 @@ Un médico que tiene el trazado en papel (o sólo su foto) y quiere:
 | O3 | Eje temporal por evidencia | error de duración de la tira ≤ 2 % en ≥ 90 % de las imágenes | **Parcial**: −1.0…+2.7 % salvo 2 fallos marcados por QC |
 | O4 | Control de calidad que separe | `insufficient` con r@lag claramente menor que `good`; ninguna digitalización inservible como `good` | **Cumplido en Kaggle** (0.80/0.12 frente a 0.93/0.97); falsas alarmas en trazados de bajo voltaje |
 | O5 | Contraste con lo impreso | RR medido dentro de ±5 % del RR impreso cuando la tira es buena | **Cumplido en Kaggle** (1/104 fuera) y en 7 fotos MAC2000 |
-| O6 | Uso real por el médico | de la foto al CSV/PDF/WFDB con **un solo comando** o desde la interfaz, con el informe de calidad a la vista | **Cumplido en CLI** (`ecg-photo process`, con `summary.json` y `overview.png`); en la interfaz web, pendiente mostrar el `overview` |
+| O6 | Uso real por el médico | de la foto al CSV/PDF/WFDB con **un solo comando** o desde la interfaz, con el informe de calidad a la vista | **Cumplido**: CLI `ecg-photo process` (con `summary.json` y `overview.png`); en la interfaz web, línea de calidad y `overview` del resultado publicado |
 | O7 | Mediciones básicas | RR/FC y, con evidencia suficiente, PR/QRS/QT, con su incertidumbre | **Pendiente**: sólo RR/FC en el QC |
 | O8 | Formatos del flujo real | 3×4+1R (MAC2000) soportado; 6×2 y otros detectados y rechazados con motivo | **Parcial**: 3×4+1R sí; 6×2 sale `insufficient` sin decir por qué |
 

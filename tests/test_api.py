@@ -154,6 +154,10 @@ def test_patch_run_publish_export(tmp_path) -> None:
         assert qc.json()["label"] == "insufficient"
         assert "MISSING_LEAD" in qc.json()["flags"]
         assert client.get(f"/studies/{sid}/runs/run-nope/qc").status_code == 404
+        ov = client.get(f"/studies/{sid}/runs/{run_id}/overview")
+        assert ov.status_code == 200 and ov.headers["content-type"] == "image/png"
+        assert ov.content[:8] == b"\x89PNG\r\n\x1a\n"
+        assert client.get(f"/studies/{sid}/runs/run-nope/overview").status_code == 404
 
         ex = client.post(
             f"/studies/{sid}/exports",
