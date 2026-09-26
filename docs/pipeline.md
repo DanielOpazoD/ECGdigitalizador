@@ -1,5 +1,16 @@
 # Pipeline de digitalización: dos corridas (F4-a)
 
+> **Atajo (objetivo O6 de `docs/mission.md`):** `ecg-photo process foto.jpg --out DIR --speed 25
+> --gain 10 --author ... --reason ...` ejecuta en un directorio nuevo `ingest` → `digitize` →
+> `confirm-scale` → `qc` → `export` y escribe `DIR/summary.json` y `DIR/overview.png` (las 12
+> derivaciones redibujadas en formato 3×4 + II a 25 mm/s y 10 mm/mV para compararlas a ojo con
+> la hoja). Eje temporal `--time-source auto` (defecto): primero la evidencia de la imagen; si se
+> rechaza (sin geometría o sin rejilla medible), el supuesto del motor, y el motivo del rechazo
+> queda en `summary.json` (`evidence_axis_refused`). `--time-source evidence` no admite ese
+> retroceso. Velocidad y ganancia son obligatorias: son lo impreso en la hoja, confirmado por
+> quien ejecuta. Un intento rechazado no deja corridas a medias. El detalle de cada paso sigue
+> abajo.
+
 El flujo completo de una foto de ECG a señal exportable pasa por **dos corridas
 separadas** sobre el mismo estudio, cada una con su propio directorio de corrida
 (`run-*`). Nada escala la señal del motor hasta que un humano confirma

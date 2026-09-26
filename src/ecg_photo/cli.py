@@ -10,20 +10,11 @@ from ecg_photo.contracts import (
     load_manifest,
     validate_revision_dir,
 )
-from ecg_photo.export import (
-    ExportNotAllowed,
-    export_csv,
-    export_json,
-    export_wfdb,
-)
 from ecg_photo.fixtures import write_fixture_revision
 from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest, page_upsample
 from ecg_photo.qc import qc_json, run_qc
 from ecg_photo.render import (
     PaperSpec,
-    RenderNotAllowed,
-    render_segment_pdf,
-    render_segment_png,
 )
 
 KINDS = ["calibrated", "gap", "gain_unknown", "time_unknown", "tail_2503"]
@@ -57,52 +48,12 @@ def _cmd_qc(args: argparse.Namespace) -> int:
 
 
 def _do_export(root: Path, out_dir: Path, dpi: float, speed: float, gain: float) -> int:
-    manifest = load_manifest(root / "manifest.json")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    export_json(manifest, out_dir / "manifest.json")
-    produced: list[str] = []
-    skipped: list[dict[str, str]] = []
-    produced.append("manifest.json")
-    paper = PaperSpec(speed_mm_s=speed, gain_mm_mV=gain, dpi=dpi)
+    from ecg_photo.process import export_run
 
-    for seg in manifest.segments:
-        try:
-            export_csv(root, seg, out_dir / f"{seg.segment_id}.csv")
-            produced.append(f"{seg.segment_id}.csv")
-        except ExportNotAllowed as e:
-            skipped.append(
-                {"segment_id": seg.segment_id, "artifact": "csv", "reason_code": str(e.reason)}
-            )
-        for artifact, fn in (
-            ("png", render_segment_png),
-            ("pdf", render_segment_pdf),
-        ):
-            try:
-                fn(root, seg, out_dir / f"{seg.segment_id}.{artifact}", paper)
-                produced.append(f"{seg.segment_id}.{artifact}")
-            except RenderNotAllowed as e:
-                skipped.append(
-                    {
-                        "segment_id": seg.segment_id,
-                        "artifact": artifact,
-                        "reason_code": str(e.reason),
-                    }
-                )
-        try:
-            export_wfdb(root, manifest, [seg.segment_id], out_dir, seg.segment_id)
-            produced.append(f"{seg.segment_id}.hea/.dat (wfdb)")
-        except ExportNotAllowed as e:
-            skipped.append(
-                {"segment_id": seg.segment_id, "artifact": "wfdb", "reason_code": str(e.reason)}
-            )
-
-    report = {"produced": produced, "skipped": skipped}
-    (out_dir / "export_report.json").write_text(
-        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-    for p in produced:
+    report = export_run(root, out_dir, PaperSpec(speed_mm_s=speed, gain_mm_mV=gain, dpi=dpi))
+    for p in report["produced"]:
         print(f"produced  {p}")
-    for s in skipped:
+    for s in report["skipped"]:
         print(f"skipped   {s['segment_id']} {s['artifact']} {s['reason_code']}")
     return 0
 
@@ -209,6 +160,65 @@ def _cmd_batch(args: argparse.Namespace) -> int:
         )
     )
     return 0 if set(report["summary"]) <= {"published"} else 1
+
+
+def _cmd_process(args: argparse.Namespace) -> int:
+    from ecg_photo.process import ProcessOptions, process_file
+    from ecg_photo.store import RunConfig
+    from ecg_photo.worker import default_engines
+
+    engines = default_engines(args.engines_config)
+    if args.engine not in engines:
+        print(
+            json.dumps(
+                {
+                    "error": f"engine {args.engine!r} not configured "
+                    "(configs/engines.local.yml; see benchmarks/setup_engines.sh)",
+                    "available": sorted(engines),
+                }
+            )
+        )
+        return 2
+    digitizer = engines[args.engine](RunConfig(engine=args.engine, engine_duration_s=args.duration))
+    opts = ProcessOptions(
+        speed_mm_s=args.speed,
+        gain_mm_mV=args.gain,
+        author=args.author,
+        reason=args.reason,
+        page_id=args.page,
+        engine_duration_s=args.duration,
+        time_source=args.time_source,
+        fs_hz=args.fs,
+        printed_rr_ms=args.printed_rr_ms,
+        printed_hr_bpm=args.printed_hr,
+    )
+    try:
+        summary = process_file(Path(args.file), Path(args.out), digitizer, opts)
+    except IngestRejected as e:
+        print(json.dumps({"rejected": str(e.reason_code)}, ensure_ascii=False))
+        return 2
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)[:500]}, ensure_ascii=False))
+        return 1
+    qc = summary["qc"]
+    print(
+        json.dumps(
+            {
+                "out": str(args.out),
+                "time_source": summary["time_source"],
+                "evidence_axis_refused": summary["evidence_axis_refused"],
+                "leads_written": summary["leads_written"],
+                "qc_label": qc["label"],
+                "qc_flags": qc["flags"],
+                "rr_measured_ms": qc["rr_measured_ms"],
+                "rr_error_pct": qc["rr_error_pct"],
+                "overview": str(Path(args.out) / summary["overview"]),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
 
 
 def _cmd_run_demo(args: argparse.Namespace) -> int:
@@ -449,6 +459,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="permitir bind fuera de loopback (F9; desactivado por defecto)",
     )
     sv.set_defaults(func=_cmd_serve)
+
+    pr = sub.add_parser(
+        "process",
+        help="foto/PDF -> señal exportada + control de calidad + overview.png (un comando)",
+    )
+    pr.add_argument("file")
+    pr.add_argument("--out", required=True, help="directorio de salida (nuevo o vacío)")
+    pr.add_argument("--speed", type=float, required=True, help="mm/s impreso en la hoja")
+    pr.add_argument("--gain", type=float, required=True, help="mm/mV impreso en la hoja")
+    pr.add_argument("--author", required=True)
+    pr.add_argument("--reason", required=True)
+    pr.add_argument("--engine", default="ahus")
+    pr.add_argument("--duration", type=float, default=10.0)
+    pr.add_argument("--time-source", choices=["auto", "evidence", "engine"], default="auto")
+    pr.add_argument("--fs", type=float, default=None)
+    pr.add_argument("--page", default="page-1")
+    pr.add_argument("--printed-rr-ms", type=float, default=None)
+    pr.add_argument("--printed-hr", type=float, default=None)
+    pr.add_argument("--engines-config", type=Path, default=None)
+    pr.set_defaults(func=_cmd_process)
 
     b = sub.add_parser("batch", help="procesa todos los archivos de un directorio (T48/T49)")
     b.add_argument("input_dir")
