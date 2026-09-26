@@ -34,6 +34,7 @@ from ecg_photo.qc import QC_FILENAME, RHYTHM_S, SHORT_LEAD_S, qc_json, run_qc
 from ecg_photo.render import PaperSpec, RenderNotAllowed, render_segment_pdf, render_segment_png
 
 SUMMARY_SCHEMA = "ecg-photo-process/1"
+OVERVIEW_FILENAME = "overview.png"
 TimeSource = Literal["auto", "evidence", "engine"]
 
 # 3x4 + II rhythm (GE MAC2000 / ECG-image-kit): column of each short lead
@@ -111,6 +112,16 @@ def _lead_signals(run_dir: Path) -> dict[str, tuple[np.ndarray, float]]:
         if len(idx):
             out[seg.lead_label] = (x[idx[0] : idx[-1] + 1], float(seg.working_fs_hz))
     return out
+
+
+def write_overview(run_dir: Path) -> bool:
+    """`overview.png` next to a confirmed run's manifest (worker / API); the
+    overview is display only, so a failure is reported, never raised."""
+    try:
+        render_overview(run_dir, Path(run_dir) / OVERVIEW_FILENAME)
+    except Exception:  # noqa: BLE001 - advisory image, the run stands
+        return False
+    return True
 
 
 def render_overview(run_dir: Path, out_path: Path, *, title: str = "") -> None:
