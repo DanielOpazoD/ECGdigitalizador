@@ -15,6 +15,7 @@ from ecg_photo.paths import config_file
 from ecg_photo.pipeline import apply_lead_corrections, confirm_scale, digitize_page
 from ecg_photo.process import write_overview
 from ecg_photo.qc import write_qc_report
+from ecg_photo.report import write_report
 from ecg_photo.store import QueueFull, RunConfig, Store, utc_now_iso
 
 EngineFactory = Callable[[RunConfig], Digitizer]
@@ -183,6 +184,7 @@ class Worker(threading.Thread):
             write_qc_report(final.run_dir)
             write_intervals_report(final.run_dir)
             write_overview(final.run_dir)
+            write_report(final.run_dir)
 
         job = store.get_job(study_id, run_id)  # re-read: cancel may have landed
         if job.cancel_requested:

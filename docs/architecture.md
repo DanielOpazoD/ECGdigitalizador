@@ -38,6 +38,7 @@ foto/PDF ──ingest──► revisión (manifest.json, pages/*.png, *.grid.jso
          ──run_qc──► qc.json (good / acceptable / insufficient, sin verdad)
          ──intervals──► intervals.json (PR, QRS, QT, QTc; ok / doubtful / unavailable)
          ──export / render──► CSV, WFDB, PNG/PDF por derivación, overview.png
+         ──report──► report.pdf (una página: trazado, mediciones, calidad, escalas, límites)
 ```
 
 Principios que el código hace cumplir (no sólo documenta):

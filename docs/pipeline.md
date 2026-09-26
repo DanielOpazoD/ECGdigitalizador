@@ -2,9 +2,11 @@
 
 > **Atajo (objetivo O6 de `docs/mission.md`):** `ecg-photo process foto.jpg --out DIR --speed 25
 > --gain 10 --author ... --reason ...` ejecuta en un directorio nuevo `ingest` → `digitize` →
-> `confirm-scale` → `qc` → `export` y escribe `DIR/summary.json` y `DIR/overview.png` (las 12
-> derivaciones redibujadas en formato 3×4 + II a 25 mm/s y 10 mm/mV para compararlas a ojo con
-> la hoja). Eje temporal `--time-source auto` (defecto): primero la evidencia de la imagen; si se
+> `confirm-scale` → `qc` → `intervals` → `export` y escribe `DIR/summary.json`, `DIR/overview.png`
+> (las 12 derivaciones redibujadas en formato 3×4 + II a 25 mm/s y 10 mm/mV para compararlas a
+> ojo con la hoja) y `DIR/report.pdf` (informe de una página: trazado redibujado, FC y
+> PR/QRS/QT/QTc con su estado, calidad, cómo se obtuvieron las escalas y límites de uso;
+> `ecg_photo.report`, sólo presenta lo ya calculado). Eje temporal `--time-source auto` (defecto): primero la evidencia de la imagen; si se
 > rechaza (sin geometría o sin rejilla medible), el supuesto del motor, y el motivo del rechazo
 > queda en `summary.json` (`evidence_axis_refused`). `--time-source evidence` no admite ese
 > retroceso. Velocidad y ganancia son obligatorias: son lo impreso en la hoja, confirmado por

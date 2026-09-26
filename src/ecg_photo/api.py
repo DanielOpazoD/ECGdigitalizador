@@ -14,6 +14,7 @@ from ecg_photo.ingest import IngestRejected
 from ecg_photo.intervals import read_intervals_report
 from ecg_photo.process import OVERVIEW_FILENAME
 from ecg_photo.qc import read_qc_report
+from ecg_photo.report import REPORT_FILENAME
 from ecg_photo.store import (
     Artifact,
     EngineNotConfigured,
@@ -355,6 +356,23 @@ def create_app(store: Store, worker: Worker) -> FastAPI:
         if not path.exists():
             raise _err(404, "OVERVIEW_NOT_FOUND", "run has no overview (scale not confirmed)")
         return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+    @app.get("/studies/{study_id}/runs/{run_id}/report")
+    def run_report_pdf(study_id: str, run_id: str):
+        """One-page PDF: redrawn ECG, measurements, quality, scales, limits."""
+        study_id = _check_id(study_id)
+        run_id = _check_id(run_id)
+        if store.get(study_id) is None:
+            raise _err(404, "STUDY_NOT_FOUND", "unknown study")
+        path = _run_result_dir(study_id, run_id) / REPORT_FILENAME
+        if not path.exists():
+            raise _err(404, "REPORT_NOT_FOUND", "run has no report (scale not confirmed)")
+        return FileResponse(
+            path,
+            media_type="application/pdf",
+            filename=f"ecg-{study_id}-{run_id}.pdf",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/studies/{study_id}/runs/{run_id}/segments/{segment_id}/trace")
     def run_segment_trace(study_id: str, run_id: str, segment_id: str) -> dict:

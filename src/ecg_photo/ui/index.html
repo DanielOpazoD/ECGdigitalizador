@@ -78,6 +78,7 @@
       <h2>Segmentos del resultado publicado</h2>
       <div id="qcBox" class="hint" role="status">—</div>
       <div id="ivBox" class="hint" role="status"></div>
+      <a id="reportLink" style="display:none" target="_blank" rel="noopener">Informe PDF (una página)</a>
       <img id="overview" alt="Las 12 derivaciones digitalizadas redibujadas en formato 3×4 + II (25 mm/s, 10 mm/mV)" style="display:none; width:100%; margin:6px 0; border:1px solid #ddd">
       <table id="segTable"><thead><tr><th>Segmento</th><th>Etiqueta</th><th>Estado etiqueta</th><th>Tiempo</th><th>Ganancia</th><th>Muestras</th><th>Corregir etiqueta</th></tr></thead><tbody></tbody></table>
     </section>
@@ -335,6 +336,11 @@
     $('ivBox').textContent = ivText;
     // 3x4 + II redraw of the published leads (worker writes it with qc.json)
     const ov = $('overview'); ov.style.display = 'none';
+    const rl = $('reportLink'); rl.style.display = 'none';
+    if (run) {
+      const url = `/studies/${S.id}/runs/${run}/report`;
+      fetch(url).then(r => { if (r.ok) { rl.href = url; rl.style.display = ''; } }).catch(() => {});
+    }
     if (run) { ov.onload = () => { ov.style.display = ''; }; ov.onerror = () => { ov.style.display = 'none'; }; ov.src = `/studies/${S.id}/runs/${run}/overview?t=${Date.now()}`; }
     const tb = $('segTable').querySelector('tbody'); tb.innerHTML = '';
     const sel = $('segSel'); sel.innerHTML = '';
