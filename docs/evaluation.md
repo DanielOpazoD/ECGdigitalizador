@@ -566,3 +566,44 @@ stderr.
 
 Limitaciones: 10 fotos de un tipo (foto de impresión); reducción sintética
 con Lanczos, no la compresión JPEG real de cada aplicación.
+
+# F7 paso 5: perspectiva — rejilla en el marco alineado del motor
+
+Ahus endereza la hoja con una homografía antes de leer los trazos, y sus
+muestras son lineales en las columnas de esa imagen alineada; el adaptador la
+registra en la cadena de geometría. Desde `4184796`, `confirm_scale` con eje
+`evidence` deforma la página a ese marco (`src/ecg_photo/aligned.py`),
+estima allí la rejilla (supuesto de página + uniformidad) y toma el tiempo de
+cada derivación de su extensión en columnas alineadas. Sin cadena de Ahus
+(ECG-Digitiser, corridas antiguas) se usa la rejilla de la página como antes.
+
+Re-confirmación del eje `evidence` sobre las corridas F6-b guardadas, sin
+re-ejecutar motores (`benchmarks/f7_grid_prior_eval.py --out-dir
+runs/f7/aligned` → `benchmarks/results/f7_aligned_grid_kaggle_2026-09-26.json`).
+Ahus; error de escala = duración de II por `evidence` / por `engine` − 1:
+
+| tipo | con escala propia (página → alineado) | error de escala (%) | r@lag `evidence` | r@lag `engine` |
+|---|---|---|---|---|
+| 0001 original | 10/10 → 10/10 | −0.1 … +0.1 | 0.993 | 0.993 |
+| 0003 escaneo color | 10/10 → 10/10 | −0.4 … 0.0 | 0.931 | 0.910 |
+| 0004 escaneo B/N | 10/10 → 10/10 | −0.2 … −0.1 | 0.928 | 0.919 |
+| 0005 foto de impresión | 2/10 → 10/10 | −0.5 … +1.4; **+21.3** (dos hojas superpuestas) | 0.845 | 0.833 |
+| 0006 foto de pantalla | 3/10 → 8/10 | −1.0 … +0.3; **−77.7** (el motor sólo leyó 2.5 s) | 0.960 | 0.954 |
+| 0009 foto manchada | 0/10 → 9/10 | −0.1 … +0.9 | 0.937 | 0.933 |
+| 0010 foto con daño | 3/10 → 9/10 | +0.2 … +2.7 | 0.901 | 0.854 |
+| 0011 escaneo color con moho | 10/10 → 10/10 | −1.0 … +0.2 | 0.910 | 0.899 |
+| 0012 escaneo B/N con moho | 10/10 → 10/10 | −0.8 … +3.5 | 0.839 | 0.834 |
+| **todas** | | | **0.941** | 0.922 |
+
+- Con Ahus, el eje por rejilla propia supera ya al del motor en todos los
+  tipos (0.941 frente a 0.922), y funciona en fotos: antes se negaba en casi
+  todas.
+- Los dos casos extremos no son errores de escala silenciosos: en la foto de
+  dos hojas la rejilla alineada sale a 6.7 px/mm frente a ~10.9 en las demás;
+  en la foto de pantalla el motor colocó su lienzo de 10 s sobre 2.5 s de la
+  hoja. En ambos la tira no mide 10 s y el control de calidad marca
+  `RHYTHM_DURATION_MISMATCH`.
+- ECG-Digitiser no cambia (su geometría no trae homografía).
+
+Limitaciones: depende de la rectificación de Ahus (si su cuadrilátero es
+erróneo, la escala también); 10 registros por tipo; no es validación clínica.
