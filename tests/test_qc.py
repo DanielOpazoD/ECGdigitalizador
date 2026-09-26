@@ -44,8 +44,16 @@ def _limb_page(t: np.ndarray) -> dict[str, np.ndarray]:
     }
 
 
-def _write_run(root: Path, page: dict[str, np.ndarray], drop: tuple[str, ...] = ()) -> Path:
-    """Confirmed-run layout: every lead on a 10 s canvas, NaN outside its slot."""
+def _write_run(
+    root: Path,
+    page: dict[str, np.ndarray],
+    drop: tuple[str, ...] = (),
+    *,
+    slots: dict[str, tuple[float, float]] | None = None,
+    layout: str | None = None,
+) -> Path:
+    """Confirmed-run layout: every lead on a 10 s canvas, NaN outside its slot
+    (default: 3x4 + II rhythm; `slots` maps lead -> (start, duration) s)."""
     m = write_fixture_revision(root, "calibrated", fs_hz=FS)
     base = m.segments[0]
     grid = grid_from_observed_duration(10.0, FS)
@@ -55,11 +63,9 @@ def _write_run(root: Path, page: dict[str, np.ndarray], drop: tuple[str, ...] = 
         if name in drop:
             continue
         canvas = np.full(n, np.nan)
-        if name == "II":
-            canvas[:] = sig[:n]
-        else:
-            a = int(SLOTS[name] * FS)
-            canvas[a : a + int(2.5 * FS)] = sig[a : a + int(2.5 * FS)]
+        t0, dur = slots[name] if slots else ((0.0, 10.0) if name == "II" else (SLOTS[name], 2.5))
+        a, b = int(t0 * FS), int((t0 + dur) * FS)
+        canvas[a:b] = sig[a:b]
         obs = np.isfinite(canvas)
         sid = f"seg-{name}"
         np.save(root / "signals" / f"{sid}.npy", np.nan_to_num(canvas))
@@ -75,6 +81,11 @@ def _write_run(root: Path, page: dict[str, np.ndarray], drop: tuple[str, ...] = 
                     "duration_s": grid.duration_s,
                     "observed_duration_s": grid.observed_duration_s,
                     "discarded_tail_s": grid.discarded_tail_s,
+                    "representation_evidence": (
+                        f"engine layout {layout!r}; continuous strip slot"
+                        if layout
+                        else base.representation_evidence
+                    ),
                 }
             )
         )
@@ -246,3 +257,19 @@ def test_rr_mean_ignores_missed_beat(tmp_path: Path) -> None:
     assert rep.n_beats == len(qrs)
     assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 1.0
     assert "RR_MISMATCH_PRINTED" not in rep.flags
+
+
+def test_6x2_layout_leads_are_5s_and_rr_uses_them(tmp_path: Path) -> None:
+    # 6x2 printout (other electrocardiographs): limb leads 0-5 s, V1-V6 5-10 s,
+    # no 10 s rhythm strip. Before, every lead was judged against 2.5 s and RR
+    # was not measurable.
+    limb = ("I", "II", "III", "aVR", "aVL", "aVF")
+    slots = {n: ((0.0, 5.0) if n in limb else (5.0, 5.0)) for n in _page()}
+    rep = run_qc(
+        _write_run(tmp_path, _page(), slots=slots, layout="standard_6x2"), printed_hr_bpm=72
+    )
+    assert rep.layout == "standard_6x2"
+    assert all(q.expected_s == 5.0 and q.coverage == 1.0 for q in rep.leads)
+    assert rep.rr_lead == "II" and rep.n_beats is not None and rep.n_beats >= 5
+    assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 2
+    assert rep.label == QualityLabel.good, rep.flags
