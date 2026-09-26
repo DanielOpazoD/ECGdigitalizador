@@ -34,8 +34,9 @@ class EcgDigitiserDigitizer:
         engine_spec: EngineSpec | None = None,
         expected_patches_applied: bool = True,
     ) -> None:
-        self.root = Path(root)
-        self.python_exe = Path(python_exe)
+        # absolute paths: the engine subprocess runs with cwd=root (see Ahus)
+        self.root = Path(root).resolve()
+        self.python_exe = Path(python_exe).absolute()
         self.model_dir = Path(model_dir)
         self.expected_patches_applied = expected_patches_applied
         if engine_spec is None:
@@ -74,8 +75,8 @@ class EcgDigitiserDigitizer:
         if problems:
             raise EngineNotReady("ecg_digitiser weights invalid: " + "; ".join(problems))
 
-        image_path = Path(image_path)
-        work_dir = Path(work_dir)
+        image_path = Path(image_path).resolve()
+        work_dir = Path(work_dir).resolve()
         in_dir = work_dir / "in"
         out_dir = work_dir / "out"
         in_dir.mkdir(parents=True, exist_ok=True)

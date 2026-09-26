@@ -15,6 +15,7 @@ from typing import Literal
 
 import numpy as np
 
+from ecg_photo.aligned import ALIGNED_FRAME, AlignedGeometry, aligned_geometry, aligned_grid
 from ecg_photo.calibration import resolve_scale
 from ecg_photo.contracts import (
     CalibrationEvidence,
@@ -28,11 +29,13 @@ from ecg_photo.contracts import (
     Segment,
     TemporalTraceUnits,
     TimeRelation,
+    TransformChain,
     dump_json,
     load_manifest,
     validate_revision_dir_report,
 )
 from ecg_photo.digitizers.base import Digitizer
+from ecg_photo.grid import GridEstimate
 from ecg_photo.signal import grid_from_observed_duration
 from ecg_photo.transforms import apply_chain
 
@@ -392,6 +395,28 @@ def confirm_scale(
     px_res = resolve_scale("px_per_mm_x", all_ev)
     speed_res = resolve_scale("speed_mm_s", all_ev)
 
+    # perspective-corrected grid per page, from the engine's own rectification
+    # (Ahus geometry); computed once per page, None when not available
+    aligned_cache: dict[str, tuple[AlignedGeometry, GridEstimate] | None] = {}
+
+    def _aligned_for(seg: Segment) -> tuple[AlignedGeometry, GridEstimate] | None:
+        geo_path = run_dir / "raw_paths" / f"{seg.segment_id}-geometry.json"
+        if not geo_path.exists():
+            return None
+        geo = aligned_geometry(
+            TransformChain.model_validate_json(geo_path.read_text(encoding="utf-8"))
+        )
+        if geo is None:
+            return None
+        if seg.page_id not in aligned_cache:
+            page = next((p for p in manifest.pages if p.page_id == seg.page_id), None)
+            png = run_dir / "pages" / Path(page.raster_path).name if page else None
+            aligned_cache[seg.page_id] = (
+                (geo, aligned_grid(png, geo)) if png is not None and png.exists() else None
+            )
+        cached = aligned_cache[seg.page_id]
+        return None if cached is None else (geo, cached[1])
+
     segments: list[Segment] = []
     (new_dir / "signals").mkdir(exist_ok=True)
     (new_dir / "masks").mkdir(exist_ok=True)
@@ -419,7 +444,9 @@ def confirm_scale(
                     f"{seg.segment_id}: {ReasonCode.TIME_SCALE_UNKNOWN} - raw frame is "
                     "engine-canonical, no page-pixel geometry"
                 )
-            if px_res.value is None:
+            aligned = _aligned_for(seg)
+            use_aligned = aligned is not None and aligned[1].px_per_mm_x is not None
+            if not use_aligned and px_res.value is None:
                 raise ValueError(
                     f"{seg.segment_id}: {ReasonCode.CALIBRATION_MISSING} - no px_per_mm_x "
                     "evidence (page grid estimate)"
@@ -433,8 +460,27 @@ def confirm_scale(
             x_px = raw[:, 0]
             support = support & np.isfinite(x_px)
             idx = np.nonzero(support)[0]
-            scale_fac = px_res.value * speed_res.value  # px per second
-            t = (x_px - x_px[idx[0]]) / scale_fac
+            if len(idx) == 0:
+                # no observed sample -> no extent to measure: carry the segment
+                # over unconfirmed (no signal, scales unchanged) instead of
+                # failing the whole run or inventing a time axis
+                segments.append(_carry_unconfirmed(seg, run_dir, new_dir, author, reason))
+                continue
+            if use_aligned:
+                assert aligned is not None
+                geo, aest = aligned
+                assert aest.px_per_mm_x is not None
+                # aligned columns are linear in the canonical index
+                x_ev = geo.col_first + np.arange(len(x_px)) * geo.col_per_sample
+                px_scale = float(aest.px_per_mm_x)
+                grid_frame = ALIGNED_FRAME
+            else:
+                assert px_res.value is not None
+                x_ev = x_px
+                px_scale = float(px_res.value)
+                grid_frame = "file"
+            scale_fac = px_scale * speed_res.value  # px per second
+            t = (x_ev - x_ev[idx[0]]) / scale_fac
             dts = np.diff(t[support])
             dt_med = float(np.median(dts)) if len(dts) else 0.0
             observed_duration = float(t[idx[-1]]) + dt_med
@@ -442,7 +488,7 @@ def confirm_scale(
             sig, observed = _contiguous_resample_t(
                 t, np.where(support, trace, 0.0), support, target_fs, grid.n_samples
             )
-            seg_px = px_res.value
+            seg_px = px_res.value  # page-frame scale (None if only the aligned one)
             seg_speed = speed_res.value
             seg_speed_status = speed_res.status
             effective_dt_ms = 1000.0 / scale_fac
@@ -451,11 +497,12 @@ def confirm_scale(
                     stage="time_axis_from_image_evidence",
                     implementation="ecg_photo.pipeline",
                     parameters={
-                        "px_per_mm_x": float(px_res.value),
+                        "px_per_mm_x": px_scale,
+                        "grid_frame": grid_frame,
                         "speed_mm_s": float(speed_res.value),
-                        "x_first": float(x_px[idx[0]]),
-                        "x_last": float(x_px[idx[-1]]),
-                        "extent_px": float(x_px[idx[-1]] - x_px[idx[0]]),
+                        "x_first": float(x_ev[idx[0]]),
+                        "x_last": float(x_ev[idx[-1]]),
+                        "extent_px": float(x_ev[idx[-1]] - x_ev[idx[0]]),
                         "observed_duration_s": observed_duration,
                     },
                 )
@@ -508,6 +555,22 @@ def confirm_scale(
         if cli_speed_ev is not None:
             evidence.append(cli_speed_ev)
         evidence.extend(e for e in grid_evs if e.quantity == "px_per_mm_x")
+        if time_source == "evidence" and seg.page_id in aligned_cache:
+            cached = aligned_cache[seg.page_id]
+            if cached is not None and cached[1].px_per_mm_x is not None:
+                evidence.append(
+                    CalibrationEvidence(
+                        evidence_id=f"grid-aligned-{seg.page_id}-px_per_mm_x",
+                        kind="grid_period",
+                        quantity="px_per_mm_x",  # type: ignore[arg-type]
+                        value=float(cached[1].px_per_mm_x),
+                        unit="px/mm",
+                        frame_id=ALIGNED_FRAME,
+                        method="page warped by the engine's rectifying homography; "
+                        + cached[1].method,
+                        limitations=cached[1].limitations,
+                    )
+                )
         evidence.append(
             CalibrationEvidence(
                 evidence_id=f"manual-{uuid.uuid4().hex[:12]}",
@@ -579,6 +642,36 @@ def confirm_scale(
     if problems:
         raise RuntimeError(f"confirmed run dir failed validation: {problems}")
     return RunPaths(run_dir=new_dir, manifest=new_dir / "manifest.json")
+
+
+def _carry_unconfirmed(
+    seg: Segment, run_dir: Path, new_dir: Path, author: str, reason: str
+) -> Segment:
+    """Copy a segment with no observed samples into the confirmed run as-is."""
+    for rel in (
+        seg.raw_path,
+        seg.raw_support_path,
+        seg.temporal_trace_path,
+        seg.observed_mask_path,
+        seg.valid_mask_path,
+        seg.gap_fill_mask_path,
+        seg.signal_path,
+    ):
+        if rel is None or not (run_dir / rel).exists():
+            continue
+        dst = new_dir / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes((run_dir / rel).read_bytes())
+    step = ProcessingStep(
+        stage="time_axis_from_image_evidence",
+        implementation="ecg_photo.pipeline",
+        parameters={
+            "skipped": "no observed samples; segment left unconfirmed",
+            "author": author,
+            "reason": reason,
+        },
+    )
+    return seg.model_copy(update={"processing": list(seg.processing) + [step]})
 
 
 def apply_lead_corrections(manifest: Manifest, corrections: dict) -> Manifest:

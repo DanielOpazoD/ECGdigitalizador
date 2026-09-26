@@ -147,6 +147,14 @@ def test_patch_run_publish_export(tmp_path) -> None:
         assert g["segments"] and g["segments"][0]["run_id"] == run_id
         assert g["published_result_stale"] is False
 
+        # the worker attaches the truth-free quality report to the result: the
+        # fake engine returns one lead, so the other eleven are missing
+        qc = client.get(f"/studies/{sid}/runs/{run_id}/qc")
+        assert qc.status_code == 200, qc.text
+        assert qc.json()["label"] == "insufficient"
+        assert "MISSING_LEAD" in qc.json()["flags"]
+        assert client.get(f"/studies/{sid}/runs/run-nope/qc").status_code == 404
+
         ex = client.post(
             f"/studies/{sid}/exports",
             json={"revision": 2, "run_id": run_id, "formats": ["csv", "json", "png"]},

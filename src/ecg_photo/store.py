@@ -13,9 +13,10 @@ import os
 import shutil
 import threading
 import uuid
-from dataclasses import dataclass
+from collections.abc import Iterator
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import IO, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -68,6 +69,10 @@ class ArtifactNotFound(StoreError):
 
 class RunRevisionMismatch(StoreError):
     code = "RUN_REVISION_MISMATCH"
+
+
+class StoreLocked(StoreError):
+    code = "STORE_LOCKED"
 
 
 class RunConfig(BaseModel):
@@ -206,6 +211,28 @@ def _atomic_json(path: Path, payload) -> None:
     os.replace(tmp, path)
 
 
+@dataclass
+class RecoveryReport:
+    """What `Store.recover` found after an unclean stop (T47). Entries are
+    "study_id/run_id" (or study_id) strings, safe to print as JSON."""
+
+    requeue: list[tuple[str, str]] = field(default_factory=list)
+    interrupted: list[str] = field(default_factory=list)
+    superseded: list[str] = field(default_factory=list)
+    cancelled: list[str] = field(default_factory=list)
+    published: list[str] = field(default_factory=list)
+    unpublished: list[str] = field(default_factory=list)
+    finished_deletes: list[str] = field(default_factory=list)
+    orphans_removed: list[str] = field(default_factory=list)
+    orphans_kept: list[str] = field(default_factory=list)
+    tmp_removed: int = 0
+
+    def as_dict(self) -> dict:
+        d = asdict(self)
+        d["requeue"] = [f"{s}/{r}" for s, r in self.requeue]
+        return d
+
+
 def _config_hash(config: RunConfig) -> str:
     import hashlib
 
@@ -222,6 +249,36 @@ class Store:
         self.execution = execution
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
+        self._process_lock: IO[str] | None = None
+
+    # -- process lock --------------------------------------------------
+    def acquire_process_lock(self) -> None:
+        """One worker process per store (`max_active_jobs` holds across
+        `serve` and `batch`). flock on STORE/.lock, released on exit/crash."""
+        import fcntl
+
+        if self._process_lock is not None:
+            return
+        fh = open(self.root / ".lock", "a+", encoding="utf-8")  # noqa: SIM115 - held open
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as e:
+            fh.close()
+            raise StoreLocked(f"store {self.root} is in use by another ecg-photo process") from e
+        fh.seek(0)
+        fh.truncate()
+        fh.write(f"{os.getpid()}\n")
+        fh.flush()
+        self._process_lock = fh
+
+    def release_process_lock(self) -> None:
+        import fcntl
+
+        if self._process_lock is None:
+            return
+        fcntl.flock(self._process_lock.fileno(), fcntl.LOCK_UN)
+        self._process_lock.close()
+        self._process_lock = None
 
     # -- internals -----------------------------------------------------
     def _study_dir(self, study_id: str) -> Path:
@@ -267,10 +324,13 @@ class Store:
     def run_dir(self, study_id: str, run_id: str) -> Path:
         return self._study_dir(study_id) / "runs" / run_id
 
+    def _study_dirs(self) -> Iterator[Path]:
+        for sdir in sorted(self.root.iterdir()):
+            if sdir.is_dir():
+                yield sdir
+
     def job_for_run(self, run_id: str) -> tuple[str, Job] | None:
-        for sdir in self.root.iterdir():
-            if not sdir.is_dir():
-                continue
+        for sdir in self._study_dirs():
             job = self._read_job(sdir.name, run_id)
             if job is not None:
                 return sdir.name, job
@@ -284,6 +344,9 @@ class Store:
         *,
         default_engine: str | None = None,
         options: StudyPatch | None = None,
+        author: str = "uploader",
+        reason: str = "initial options",
+        method: str = "initial options via API",
     ) -> StudyState:
         admit(upload_path, self.limits)  # raises IngestRejected on limit breach
         study_id = safe_study_id(original_filename)
@@ -319,10 +382,10 @@ class Store:
                         value=new_val,
                         unit=unit,
                         frame_id="study",
-                        method="initial options via API",
+                        method=method,
                         limitations="manual operator value; not verified against raster",
-                        author="uploader",
-                        reason="initial options",
+                        author=author,
+                        reason=reason,
                         previous_value=None,
                     ).model_dump(mode="json")
                 )
@@ -663,14 +726,21 @@ class Store:
                 return
             state = state.model_copy(update={"deleted": True})
             self._write_state(state)
-            for name in os.listdir(self._study_dir(study_id)):
-                p = self._study_dir(study_id) / name
-                if p.name == "state.json":
-                    continue
-                if p.is_dir():
-                    shutil.rmtree(p, ignore_errors=True)
-                else:
-                    p.unlink(missing_ok=True)
+            self._wipe(study_id)
+
+    def _wipe(self, study_id: str) -> bool:
+        """Remove everything but state.json; True if something was removed."""
+        removed = False
+        for name in os.listdir(self._study_dir(study_id)):
+            p = self._study_dir(study_id) / name
+            if p.name == "state.json":
+                continue
+            removed = True
+            if p.is_dir():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink(missing_ok=True)
+        return removed
 
     def late_worker_result(self, study_id: str, run_id: str, result_src: Path) -> bool:
         """Move a finished worker result under runs/<run_id>/result unless the
@@ -684,3 +754,114 @@ class Store:
             shutil.rmtree(dst, ignore_errors=True)
             shutil.move(str(result_src), str(dst))
             return True
+
+    # -- restart recovery (T47) ----------------------------------------
+    def _close_job(
+        self, study_id: str, job: Job, status: str, stage: str, error: str | None
+    ) -> None:
+        job.status = status  # type: ignore[assignment]
+        job.stage = stage
+        job.error = error
+        job.finished_at = _now()
+        self.write_job(study_id, job)
+
+    def fail_job(self, study_id: str, run_id: str, error: str) -> None:
+        with self._lock(study_id):
+            job = self._read_job(study_id, run_id)
+            if job is not None and job.status in ("queued", "running"):
+                self._close_job(study_id, job, "failed", "failed", error[:500])
+
+    def recover(self) -> RecoveryReport:
+        """Reconcile the store after an unclean stop, before any worker runs.
+
+        Nothing is re-executed silently and nothing partial is published:
+        - `running` → `failed` (stage `interrupted`); work/partial result wiped.
+          Not retried automatically (the engine may be what killed the process).
+        - `queued` → returned in `requeue` only if still the selected run of the
+          active revision with the same config_hash; else `cancelled`
+          (`superseded`), or `cancelled` if a cancel had been requested.
+        - `completed` (stopped between completion and publication) → `publish()`
+          with all its checks if the result is in place; else `failed`.
+        - deleted studies with leftovers → wiped; study dirs without state.json
+          (upload interrupted before 201) → removed if they only hold `rev1`.
+        - stale `upload-*` / `*.json.tmp` files → removed.
+        Must run with the process lock held (no other worker on this store).
+        """
+        rep = RecoveryReport()
+        for tmp in self.root.glob("upload-*"):
+            if tmp.is_file():
+                tmp.unlink(missing_ok=True)
+                rep.tmp_removed += 1
+        to_publish: list[tuple[str, str]] = []
+        for sdir in self._study_dirs():
+            sid = sdir.name
+            for tmp in [*sdir.glob("*.json.tmp"), *sdir.glob("runs/*/*.json.tmp")]:
+                tmp.unlink(missing_ok=True)
+                rep.tmp_removed += 1
+            state = self._read_state(sid)
+            if state is None:
+                if {p.name for p in sdir.iterdir()} <= {"rev1"}:
+                    shutil.rmtree(sdir, ignore_errors=True)
+                    rep.orphans_removed.append(sid)
+                else:
+                    rep.orphans_kept.append(sid)
+                continue
+            if state.deleted:
+                with self._lock(sid):
+                    if self._wipe(sid):
+                        rep.finished_deletes.append(sid)
+                continue
+            requeue: list[tuple[str, str]] = []
+            with self._lock(sid):
+                for job in self.list_jobs(sid):
+                    key = f"{sid}/{job.run_id}"
+                    rdir = self.run_dir(sid, job.run_id)
+                    if job.status == "running":
+                        shutil.rmtree(rdir / "work", ignore_errors=True)
+                        shutil.rmtree(rdir / "result", ignore_errors=True)
+                        self._close_job(
+                            sid,
+                            job,
+                            "failed",
+                            "interrupted",
+                            f"INTERRUPTED: process stopped during {job.stage}; not retried",
+                        )
+                        rep.interrupted.append(key)
+                    elif job.status == "queued":
+                        current = (
+                            state.selected_run_id == job.run_id
+                            and state.active_revision == job.input_revision
+                            and state.config_hash == job.config_hash
+                        )
+                        if job.cancel_requested:
+                            self._close_job(sid, job, "cancelled", "cancelled", None)
+                            rep.cancelled.append(key)
+                        elif current:
+                            requeue.append((sid, job.run_id))
+                        else:
+                            self._close_job(
+                                sid,
+                                job,
+                                "cancelled",
+                                "superseded",
+                                "SUPERSEDED: not the selected run of the active revision at restart",
+                            )
+                            rep.superseded.append(key)
+                    elif job.status == "completed":
+                        shutil.rmtree(rdir / "work", ignore_errors=True)
+                        if (rdir / "result").is_dir():
+                            to_publish.append((sid, job.run_id))
+                        else:
+                            self._close_job(
+                                sid,
+                                job,
+                                "failed",
+                                "interrupted",
+                                "INTERRUPTED: stopped before the result was stored",
+                            )
+                            rep.interrupted.append(key)
+            rep.requeue.extend(requeue)
+        for sid, rid in to_publish:
+            (rep.published if self.publish(sid, rid) else rep.unpublished).append(f"{sid}/{rid}")
+        rep.requeue.sort(key=lambda sr: self.get_job(sr[0], sr[1]).created_at)
+        return rep

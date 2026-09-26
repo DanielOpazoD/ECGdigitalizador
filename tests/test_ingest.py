@@ -133,3 +133,38 @@ def test_reason_codes_exist() -> None:
     assert ReasonCode.UNSUPPORTED_TYPE
     assert ReasonCode.PAGE_LIMIT
     assert ReasonCode.FILE_SIZE_LIMIT
+
+
+def test_low_resolution_photo_is_upsampled_and_recorded(tmp_path) -> None:
+    # F7: a 1000 px photo (messaging-app size) is upsampled x2 before the
+    # engine; the step is part of the file -> page transform
+    from ecg_photo.ingest import page_upsample, upsample_factor
+    from ecg_photo.transforms import apply_chain, invert_chain
+
+    assert [upsample_factor(w) for w in (300, 400, 1000, 1599, 1600, 4032)] == [1, 4, 2, 2, 1, 1]
+    arr = np.zeros((750, 1000, 3), dtype=np.uint8)
+    arr[:, 500] = 255
+    p = tmp_path / "small.png"
+    Image.fromarray(arr).save(p)
+    m = ingest(p, tmp_path / "rev")
+    pg = m.pages[0]
+    assert (pg.width_px, pg.height_px) == (2000, 1500)
+    assert page_upsample(m, "page-1") == 2
+    raster = np.asarray(Image.open(tmp_path / "rev" / pg.raster_path))
+    assert raster.shape[:2] == (1500, 2000)
+    assert raster[:, 1000:1002].mean() > raster[:, :900].mean() + 50  # line kept at 2x
+    chain = m.transforms[0]
+    pts = np.array([[0.0, 0.0], [500.0, 374.5], [999.0, 749.0]])
+    page_pts = apply_chain(chain, pts)
+    assert np.allclose(page_pts[0], [0.5, 0.5]) and np.allclose(page_pts[2], [1998.5, 1498.5])
+    assert np.allclose(invert_chain(chain, page_pts), pts)
+
+
+def test_full_resolution_photo_is_not_upsampled(tmp_path) -> None:
+    from ecg_photo.ingest import page_upsample
+
+    p = tmp_path / "big.png"
+    Image.fromarray(np.zeros((1200, 1700, 3), dtype=np.uint8)).save(p)
+    m = ingest(p, tmp_path / "rev")
+    assert (m.pages[0].width_px, page_upsample(m, "page-1")) == (1700, 1)
+    assert m.transforms[0].steps == []

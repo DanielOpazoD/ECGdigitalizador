@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 import wfdb
@@ -110,3 +112,57 @@ def test_ecg_digitiser_patch_check_before_weights(tmp_path) -> None:
     )
     with pytest.raises(EngineNotReady, match="patches 0001/0002 not applied"):
         d.run(tmp_path / "img.png", tmp_path / "work")
+
+
+def test_ahus_relative_work_dir_and_stderr_tail(tmp_path, monkeypatch) -> None:
+    # F7: a relative work dir produced a relative --config path; the engine
+    # subprocess runs with cwd=ahus_root, where it did not exist, and the
+    # failure surfaced as a bare CalledProcessError without the engine's stderr
+    import subprocess
+
+    import yaml
+
+    import ecg_photo.digitizers.ahus as ahus_mod
+    from ecg_photo.digitizers.ahus import AhusDigitizer
+
+    root = tmp_path / "ahus"
+    root.mkdir()
+    base = tmp_path / "base.yml"
+    base.write_text(
+        yaml.safe_dump(
+            {
+                "MODEL": {"KWARGS": {"config": {"LAYOUT_IDENTIFIER": {"KWARGS": {}}}}},
+                "DATA": {},
+            }
+        )
+    )
+    img = tmp_path / "page.png"
+    img.write_bytes(b"png")
+    seen: dict = {}
+
+    def fake_run(cmd, cwd, **kw):
+        cfg = Path(cmd[-1])
+        seen["cfg_absolute"] = cfg.is_absolute()
+        seen["cfg_exists_from_cwd"] = (Path(cwd) / cfg).exists()
+        seen["images_path"] = yaml.safe_load(cfg.read_text())["DATA"]["images_path"]
+        return subprocess.CompletedProcess(
+            cmd, 1, stdout="", stderr="12%|###| progress\n" * 50 + "ValueError: boom"
+        )
+
+    monkeypatch.setattr(ahus_mod, "verify_weights", lambda *_a, **_k: [])
+    monkeypatch.setattr(ahus_mod.subprocess, "run", fake_run)
+    spec = load_engine_specs()["ahus"]  # read from the repo before leaving it
+    monkeypatch.chdir(tmp_path)
+    d = AhusDigitizer(
+        ahus_root=Path("ahus"),
+        python_exe=Path("venv/bin/python"),
+        base_config=Path("base.yml"),
+        duration_s=10.0,
+        engine_spec=spec,
+        expected_patches_applied=False,
+    )
+    with pytest.raises(EngineNotReady, match="ValueError: boom"):
+        d.run(img, Path("work/rel"))
+    assert seen["cfg_absolute"] and seen["cfg_exists_from_cwd"]
+    assert Path(seen["images_path"]).is_absolute()
+    assert d.python_exe.is_absolute() and d.ahus_root.is_absolute()

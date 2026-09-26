@@ -56,7 +56,9 @@ def test_cli_ingest_and_calibrate(tmp_path, capsys) -> None:
     summary = json.loads(capsys.readouterr().out)
     pg = summary["pages"][0]
     assert pg["extraction"] == "image_file"
-    assert pg["px_per_mm_x"] == pytest.approx(300.0 / 25.4, rel=0.05)
+    # the 886 px wide export is upsampled x2 at ingest (F7); px/mm are page pixels
+    assert pg["upsample"] == 2 and pg["size_px"][0] > 1600
+    assert pg["px_per_mm_x"] == pytest.approx(2 * 300.0 / 25.4, rel=0.05)
     assert (study / "manifest.json").exists()
     assert (study / "pages/page-1.grid.json").exists()
     m = json.loads((study / "manifest.json").read_text())

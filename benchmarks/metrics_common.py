@@ -5,6 +5,23 @@ import math
 import numpy as np
 
 
+def trim_to_observed(
+    est: np.ndarray, observed: np.ndarray, est_fs: float
+) -> tuple[np.ndarray, np.ndarray, float | None]:
+    """Drop the unobserved head/tail of a canvas estimate.
+
+    Engines disagree on where a short lead sits on their canonical time axis
+    (Ahus: at its page slot; ECG-Digitiser: from t=0), so a slot-cropped truth
+    can only be compared placement-agnostically. Returns the trimmed estimate,
+    its mask and the start (s) of the first observed sample on the canvas, or
+    None if nothing is observed."""
+    idx = np.nonzero(observed & np.isfinite(est))[0]
+    if len(idx) == 0:
+        return est[:0], observed[:0], None
+    a, b = int(idx[0]), int(idx[-1]) + 1
+    return est[a:b], observed[a:b], a / est_fs
+
+
 def segment_metrics(
     truth: np.ndarray,
     est: np.ndarray,
@@ -13,11 +30,16 @@ def segment_metrics(
     truth_fs: float,
     observed_duration_s: float | None,
     expected_window_s: float,
+    lag_slack_s: float = 0.0,
 ) -> dict:
     """Metrics over observed samples only, lag-searched over the whole truth.
 
     truth: full-length reference signal (truth_fs).
     est: estimated signal (est_fs), NaN where unobserved (observed masks it too).
+    lag_slack_s: extra lag searched on both sides of [0, len(truth) - len(est)]
+      (the competition metric aligns within +-0.2 s). With slack > 0 only the
+      samples that overlap the truth at the chosen lag are scored; with 0 the
+      search and scoring are unchanged from F6-a.
     """
     finite = np.isfinite(est) & observed
     n_obs = int(finite.sum())
@@ -35,6 +57,7 @@ def segment_metrics(
         "offset_err_s": None,
         "rmse_mV": math.nan,
         "amp_ratio": math.nan,
+        "snr_db": math.nan,
     }
     if n_obs < 10:
         out["status"] = "no_signal"
@@ -71,14 +94,27 @@ def segment_metrics(
         return float(np.corrcoef(e, tt)[0, 1])
 
     max_lag = max(0, round((t_truth[-1] - t_est[-1]) * fs))
+    slack = round(lag_slack_s * fs)
     best_lag, best_r = 0, -np.inf
-    for lag in range(max_lag + 1):
+    for lag in range(-slack, max_lag + slack + 1):
         r = pearson_at(lag)
         if np.isfinite(r) and r > best_r:
             best_r, best_lag = r, lag
 
+    if not np.isfinite(best_r):
+        # no lag gives >= 10 overlapping samples with variance: interpolating
+        # truth outside its span would clamp to a constant (zero power)
+        out["status"] = "no_valid_lag"
+        return out
+
     best_lag_s = best_lag / fs
-    truth_on_est = np.interp(t_est[finite] + best_lag_s, t_truth, truth)
+    if slack > 0:
+        shifted = t_est[finite] + best_lag_s
+        keep = (shifted >= 0.0) & (shifted <= t_truth[-1])
+        e_obs = e_obs[keep]
+        truth_on_est = np.interp(shifted[keep], t_truth, truth)
+    else:
+        truth_on_est = np.interp(t_est[finite] + best_lag_s, t_truth, truth)
     resid = truth_on_est - e_obs
     slots = np.array([0.0, 2.5, 5.0, 7.5])
     offset_err = (
@@ -86,8 +122,14 @@ def segment_metrics(
         if expected_window_s < t_truth[-1]
         else None
     )
+    # competition-style SNR (not the official metric): best lag, both means removed
+    t_c = truth_on_est - truth_on_est.mean()
+    noise = t_c - (e_obs - e_obs.mean())
+    p_noise = float(np.sum(noise**2))
+    p_sig = float(np.sum(t_c**2))
+    snr_db = 10.0 * math.log10(p_sig / p_noise) if p_noise > 0 and p_sig > 0 else None
     p95e, p5e = np.percentile(e_obs, [95, 5])
-    p95t, p5t = np.percentile(np.interp(t_est[finite] + best_lag_s, t_truth, truth), [95, 5])
+    p95t, p5t = np.percentile(truth_on_est, [95, 5])
     out.update(
         {
             "status": "ok",
@@ -96,6 +138,7 @@ def segment_metrics(
             "offset_err_s": offset_err,
             "rmse_mV": float(np.sqrt(np.mean(resid**2))),
             "amp_ratio": float((p95e - p5e) / (p95t - p5t)) if (p95t - p5t) > 0 else math.nan,
+            "snr_db": snr_db,
         }
     )
     return out

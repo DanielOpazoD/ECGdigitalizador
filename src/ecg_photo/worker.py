@@ -11,6 +11,7 @@ import yaml
 
 from ecg_photo.digitizers.base import Digitizer
 from ecg_photo.pipeline import apply_lead_corrections, confirm_scale, digitize_page
+from ecg_photo.qc import write_qc_report
 from ecg_photo.store import QueueFull, RunConfig, Store, _now
 
 EngineFactory = Callable[[RunConfig], Digitizer]
@@ -100,19 +101,23 @@ class Worker(threading.Thread):
             item = self.queue.get()
             if item is None:
                 return
-            study_id, run_id = item
+            self.process(*item)
+
+    def process(self, study_id: str, run_id: str) -> None:
+        """Run one job to a terminal status; exceptions become `failed` (job
+        isolation). Used by the thread loop and synchronously by `batch`."""
+        try:
+            self._process(study_id, run_id)
+        except Exception as e:  # noqa: BLE001 - job isolation, no traceback out
             try:
-                self._process(study_id, run_id)
-            except Exception as e:  # noqa: BLE001 - job isolation, no traceback out
-                try:
-                    job = self.store.get_job(study_id, run_id)
-                    job.status = "failed"
-                    job.stage = "failed"
-                    job.error = f"{type(e).__name__}: {e}"[:500]
-                    job.finished_at = _now()
-                    self.store.write_job(study_id, job)
-                except Exception:  # noqa: BLE001,S110 - job may already be gone
-                    pass
+                job = self.store.get_job(study_id, run_id)
+                job.status = "failed"
+                job.stage = "failed"
+                job.error = f"{type(e).__name__}: {e}"[:500]
+                job.finished_at = _now()
+                self.store.write_job(study_id, job)
+            except Exception:  # noqa: BLE001,S110 - job may already be gone
+                pass
 
     def _process(self, study_id: str, run_id: str) -> None:
         store = self.store
@@ -169,6 +174,11 @@ class Worker(threading.Thread):
                 time_source=cfg.time_source,
             )
 
+        if final is not paths:
+            # signals exist only after confirm_scale: attach the truth-free
+            # quality report; a QC failure never fails the job
+            write_qc_report(final.run_dir)
+
         job = store.get_job(study_id, run_id)  # re-read: cancel may have landed
         if job.cancel_requested:
             job.status = "cancelled"
@@ -191,6 +201,25 @@ class Worker(threading.Thread):
 
     def shutdown(self) -> None:
         self.queue.put(None)
+
+
+def resume_after_restart(store: Store, worker: Worker) -> dict:
+    """T47: reconcile the store (`Store.recover`) and re-enqueue the runs that
+    were still waiting and current. Call with the process lock held, before
+    serving requests. Runs that no longer fit the queue fail explicitly."""
+    rep = store.recover()
+    out = rep.as_dict()
+    out["requeued"] = []
+    out["queue_overflow"] = []
+    for sid, rid in rep.requeue:
+        try:
+            worker.submit(sid, rid)
+            out["requeued"].append(f"{sid}/{rid}")
+        except QueueFull:
+            store.fail_job(sid, rid, "QUEUE_FULL: queue full while resuming after restart")
+            out["queue_overflow"].append(f"{sid}/{rid}")
+    del out["requeue"]
+    return out
 
 
 def cfg_hash_of(job) -> str:

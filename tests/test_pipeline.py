@@ -390,3 +390,34 @@ def test_engine_duration_mismatch_raises(tmp_path) -> None:
             reason="r",
             time_source="engine",
         )
+
+
+def test_confirm_scale_evidence_keeps_run_when_a_lead_has_no_mapped_support(tmp_path) -> None:
+    # seen in the F6-b smoke run with ECG-Digitiser: a lead has observed samples
+    # but its geometry maps none of them to a page column (x_px NaN)
+    rev = tmp_path / "rev"
+    m = write_fixture_revision(rev, "calibrated")
+    truth = np.load(rev / m.segments[0].signal_path)
+    study = _study(tmp_path)
+    _write_grid(study, 8.0)
+    out = _fake_output(truth)
+    out.geometry = _fake_geometry(1500)
+    g = out.geometry["V1"]
+    out.geometry["V1"] = LeadGeometry(
+        frame_id=g.frame_id,
+        x_px=np.full(1500, np.nan),
+        y_ref_px=None,
+        chain=g.chain,
+        method=g.method,
+        limitations=g.limitations,
+    )
+    paths = digitize_page(study, "page-1", FakeDigitizer(out), engine_duration_s=3.0)
+
+    p2 = confirm_scale(paths.run_dir, gain_mm_mV=10.0, author="t", reason="r", speed_mm_s=25.0)
+    m2 = load_manifest(p2.manifest)
+    assert validate_revision_dir(p2.run_dir, m2) == []
+    v1 = next(s for s in m2.segments if s.lead_label == "V1")
+    assert v1.signal_path is None and v1.speed_status == ScaleStatus.unknown
+    assert v1.processing[-1].parameters["skipped"].startswith("no observed samples")
+    ii = next(s for s in m2.segments if s.lead_label == "II")
+    assert ii.signal_path is not None and ii.speed_status == ScaleStatus.manual

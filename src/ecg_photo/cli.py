@@ -10,19 +10,11 @@ from ecg_photo.contracts import (
     load_manifest,
     validate_revision_dir,
 )
-from ecg_photo.export import (
-    ExportNotAllowed,
-    export_csv,
-    export_json,
-    export_wfdb,
-)
 from ecg_photo.fixtures import write_fixture_revision
-from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest
+from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest, page_upsample
+from ecg_photo.qc import qc_json, run_qc
 from ecg_photo.render import (
     PaperSpec,
-    RenderNotAllowed,
-    render_segment_pdf,
-    render_segment_png,
 )
 
 KINDS = ["calibrated", "gap", "gain_unknown", "time_unknown", "tail_2503"]
@@ -44,53 +36,24 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
-def _do_export(root: Path, out_dir: Path, dpi: float, speed: float, gain: float) -> int:
-    manifest = load_manifest(root / "manifest.json")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    export_json(manifest, out_dir / "manifest.json")
-    produced: list[str] = []
-    skipped: list[dict[str, str]] = []
-    produced.append("manifest.json")
-    paper = PaperSpec(speed_mm_s=speed, gain_mm_mV=gain, dpi=dpi)
-
-    for seg in manifest.segments:
-        try:
-            export_csv(root, seg, out_dir / f"{seg.segment_id}.csv")
-            produced.append(f"{seg.segment_id}.csv")
-        except ExportNotAllowed as e:
-            skipped.append(
-                {"segment_id": seg.segment_id, "artifact": "csv", "reason_code": str(e.reason)}
-            )
-        for artifact, fn in (
-            ("png", render_segment_png),
-            ("pdf", render_segment_pdf),
-        ):
-            try:
-                fn(root, seg, out_dir / f"{seg.segment_id}.{artifact}", paper)
-                produced.append(f"{seg.segment_id}.{artifact}")
-            except RenderNotAllowed as e:
-                skipped.append(
-                    {
-                        "segment_id": seg.segment_id,
-                        "artifact": artifact,
-                        "reason_code": str(e.reason),
-                    }
-                )
-        try:
-            export_wfdb(root, manifest, [seg.segment_id], out_dir, seg.segment_id)
-            produced.append(f"{seg.segment_id}.hea/.dat (wfdb)")
-        except ExportNotAllowed as e:
-            skipped.append(
-                {"segment_id": seg.segment_id, "artifact": "wfdb", "reason_code": str(e.reason)}
-            )
-
-    report = {"produced": produced, "skipped": skipped}
-    (out_dir / "export_report.json").write_text(
-        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+def _cmd_qc(args: argparse.Namespace) -> int:
+    report = run_qc(
+        Path(args.run_dir), printed_rr_ms=args.printed_rr_ms, printed_hr_bpm=args.printed_hr
     )
-    for p in produced:
+    text = qc_json(report)
+    if args.out:
+        Path(args.out).write_text(text + "\n", encoding="utf-8")
+    print(text)
+    return 0
+
+
+def _do_export(root: Path, out_dir: Path, dpi: float, speed: float, gain: float) -> int:
+    from ecg_photo.process import export_run
+
+    report = export_run(root, out_dir, PaperSpec(speed_mm_s=speed, gain_mm_mV=gain, dpi=dpi))
+    for p in report["produced"]:
         print(f"produced  {p}")
-    for s in skipped:
+    for s in report["skipped"]:
         print(f"skipped   {s['segment_id']} {s['artifact']} {s['reason_code']}")
     return 0
 
@@ -104,8 +67,8 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
     from ecg_photo.api import create_app
     from ecg_photo.ingest import load_supported_inputs
-    from ecg_photo.store import Store, load_execution_limits
-    from ecg_photo.worker import Worker, default_engines
+    from ecg_photo.store import Store, StoreLocked, load_execution_limits
+    from ecg_photo.worker import Worker, default_engines, resume_after_restart
 
     host = args.host
     try:
@@ -124,12 +87,137 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         load_supported_inputs(),
         load_execution_limits(),
     )
+    try:
+        store.acquire_process_lock()
+    except StoreLocked as e:
+        print(json.dumps({"error": str(e), "code": e.code}))
+        return 2
     worker = Worker(store, default_engines())
     worker.start()
+    print(json.dumps({"recovery": resume_after_restart(store, worker)}))
     app = create_app(store, worker)
     import uvicorn
 
     uvicorn.run(app, host=host, port=args.port)
+    return 0
+
+
+def _cmd_batch(args: argparse.Namespace) -> int:
+    from ecg_photo.batch import BatchError, list_inputs, run_batch
+    from ecg_photo.ingest import load_supported_inputs
+    from ecg_photo.store import Store, StoreLocked, StudyPatch, load_execution_limits
+    from ecg_photo.worker import default_engines
+
+    if (args.speed is not None or args.gain is not None) and not (args.author and args.reason):
+        print(json.dumps({"error": "--speed/--gain are manual evidence: --author and --reason"}))
+        return 2
+    options = StudyPatch(
+        **{
+            k: v
+            for k, v in {
+                "engine": args.engine,
+                "engine_duration_s": args.duration,
+                "time_source": args.time_source,
+                "speed_mm_s": args.speed,
+                "gain_mm_mV": args.gain,
+                "fs_hz": args.fs,
+                "page_id": args.page,
+            }.items()
+            if v is not None
+        }
+    )
+    store = Store(Path(args.store), load_supported_inputs(), load_execution_limits())
+    try:
+        store.acquire_process_lock()
+    except StoreLocked as e:
+        print(json.dumps({"error": str(e), "code": e.code}))
+        return 2
+    try:
+        recovery = store.recover()
+        report = run_batch(
+            store,
+            default_engines(args.engines_config),
+            list_inputs(Path(args.input_dir)),
+            options,
+            Path(args.report),
+            author=args.author or "batch",
+            reason=args.reason or "batch",
+            resume=args.resume,
+        )
+    except BatchError as e:
+        print(json.dumps({"error": str(e)}))
+        return 2
+    finally:
+        store.release_process_lock()
+    print(
+        json.dumps(
+            {
+                "report": str(args.report),
+                "summary": report["summary"],
+                # runs from an earlier `serve` left waiting; `serve` resumes them
+                "left_queued": recovery.as_dict()["requeue"],
+            }
+        )
+    )
+    return 0 if set(report["summary"]) <= {"published"} else 1
+
+
+def _cmd_process(args: argparse.Namespace) -> int:
+    from ecg_photo.process import ProcessOptions, process_file
+    from ecg_photo.store import RunConfig
+    from ecg_photo.worker import default_engines
+
+    engines = default_engines(args.engines_config)
+    if args.engine not in engines:
+        print(
+            json.dumps(
+                {
+                    "error": f"engine {args.engine!r} not configured "
+                    "(configs/engines.local.yml; see benchmarks/setup_engines.sh)",
+                    "available": sorted(engines),
+                }
+            )
+        )
+        return 2
+    digitizer = engines[args.engine](RunConfig(engine=args.engine, engine_duration_s=args.duration))
+    opts = ProcessOptions(
+        speed_mm_s=args.speed,
+        gain_mm_mV=args.gain,
+        author=args.author,
+        reason=args.reason,
+        page_id=args.page,
+        engine_duration_s=args.duration,
+        time_source=args.time_source,
+        fs_hz=args.fs,
+        printed_rr_ms=args.printed_rr_ms,
+        printed_hr_bpm=args.printed_hr,
+    )
+    try:
+        summary = process_file(Path(args.file), Path(args.out), digitizer, opts)
+    except IngestRejected as e:
+        print(json.dumps({"rejected": str(e.reason_code)}, ensure_ascii=False))
+        return 2
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)[:500]}, ensure_ascii=False))
+        return 1
+    qc = summary["qc"]
+    print(
+        json.dumps(
+            {
+                "out": str(args.out),
+                "time_source": summary["time_source"],
+                "evidence_axis_refused": summary["evidence_axis_refused"],
+                "leads_written": summary["leads_written"],
+                "qc_label": qc["label"],
+                "qc_flags": qc["flags"],
+                "rr_measured_ms": qc["rr_measured_ms"],
+                "rr_error_pct": qc["rr_error_pct"],
+                "overview": str(Path(args.out) / summary["overview"]),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
@@ -160,6 +248,9 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
                 "extraction": str(pg.extraction),
                 "size_px": [pg.width_px, pg.height_px],
                 "exif_orientation": pg.exif_orientation,
+                # low-resolution photos are upsampled at ingest; the grid is
+                # measured on the page raster, so px/mm are page pixels
+                "upsample": page_upsample(manifest, pg.page_id),
                 "px_per_mm_x": grid.px_per_mm_x,
                 "px_per_mm_y": grid.px_per_mm_y,
             }
@@ -298,6 +389,15 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--no-strict", action="store_true")
     v.set_defaults(func=_cmd_validate)
 
+    q = sub.add_parser("qc", help="informe de calidad de una corrida confirmada (sin verdad)")
+    q.add_argument("run_dir")
+    q.add_argument("--out", default=None, help="escribe el informe JSON en este archivo")
+    q.add_argument(
+        "--printed-rr-ms", type=float, default=None, help="RR impreso por el equipo (ms)"
+    )
+    q.add_argument("--printed-hr", type=float, default=None, help="FC impresa por el equipo (lpm)")
+    q.set_defaults(func=_cmd_qc)
+
     e = sub.add_parser("export")
     e.add_argument("dir")
     e.add_argument("--out", required=True)
@@ -359,6 +459,43 @@ def build_parser() -> argparse.ArgumentParser:
         help="permitir bind fuera de loopback (F9; desactivado por defecto)",
     )
     sv.set_defaults(func=_cmd_serve)
+
+    pr = sub.add_parser(
+        "process",
+        help="foto/PDF -> señal exportada + control de calidad + overview.png (un comando)",
+    )
+    pr.add_argument("file")
+    pr.add_argument("--out", required=True, help="directorio de salida (nuevo o vacío)")
+    pr.add_argument("--speed", type=float, required=True, help="mm/s impreso en la hoja")
+    pr.add_argument("--gain", type=float, required=True, help="mm/mV impreso en la hoja")
+    pr.add_argument("--author", required=True)
+    pr.add_argument("--reason", required=True)
+    pr.add_argument("--engine", default="ahus")
+    pr.add_argument("--duration", type=float, default=10.0)
+    pr.add_argument("--time-source", choices=["auto", "evidence", "engine"], default="auto")
+    pr.add_argument("--fs", type=float, default=None)
+    pr.add_argument("--page", default="page-1")
+    pr.add_argument("--printed-rr-ms", type=float, default=None)
+    pr.add_argument("--printed-hr", type=float, default=None)
+    pr.add_argument("--engines-config", type=Path, default=None)
+    pr.set_defaults(func=_cmd_process)
+
+    b = sub.add_parser("batch", help="procesa todos los archivos de un directorio (T48/T49)")
+    b.add_argument("input_dir")
+    b.add_argument("--store", required=True)
+    b.add_argument("--report", required=True, help="informe JSON (se reescribe tras cada archivo)")
+    b.add_argument("--resume", action="store_true", help="continuar un informe existente")
+    b.add_argument("--engine", required=True)
+    b.add_argument("--duration", type=float, default=None)
+    b.add_argument("--time-source", choices=["evidence", "engine"], default=None)
+    b.add_argument("--speed", type=float, default=None)
+    b.add_argument("--gain", type=float, default=None)
+    b.add_argument("--fs", type=float, default=None)
+    b.add_argument("--page", default=None)
+    b.add_argument("--author", default=None)
+    b.add_argument("--reason", default=None)
+    b.add_argument("--engines-config", type=Path, default=None)
+    b.set_defaults(func=_cmd_batch)
     return p
 
 
