@@ -13,6 +13,7 @@ from pathlib import Path
 
 from ecg_photo.contracts import sha256_file
 from ecg_photo.ingest import IngestRejected
+from ecg_photo.qc import read_qc_report
 from ecg_photo.store import Job, RunNotFound, Store, StudyPatch, _atomic_json, _now
 from ecg_photo.worker import EngineFactory, Worker
 
@@ -180,6 +181,10 @@ def run_batch(
             published = store.get(state.study_id)
             if published is not None and published.published_run_id == job.run_id:
                 entry["status"] = "published"
+                qc = read_qc_report(store.run_dir(state.study_id, job.run_id) / "result")
+                if qc is not None:
+                    entry["qc_label"] = qc.get("label")
+                    entry["qc_flags"] = qc.get("flags", [])
             else:
                 entry["status"] = job.status
                 entry["error"] = job.error

@@ -76,6 +76,7 @@
     </section>
     <section>
       <h2>Segmentos del resultado publicado</h2>
+      <div id="qcBox" class="hint" role="status">—</div>
       <table id="segTable"><thead><tr><th>Segmento</th><th>Etiqueta</th><th>Estado etiqueta</th><th>Tiempo</th><th>Ganancia</th><th>Muestras</th><th>Corregir etiqueta</th></tr></thead><tbody></tbody></table>
     </section>
   </div>
@@ -306,6 +307,18 @@
     S.segs = []; S.seg = null; S.trace = null;
     const run = S.study.published_run_id;
     if (run) { try { S.segs = (await api('GET', `/studies/${S.id}/runs/${run}/segments`)).segments; } catch (err) { msg(err.message, true); } }
+    // truth-free quality report (qc.json) attached by the worker; guidance only
+    let qcText = 'calidad: sin informe (escala no confirmada)';
+    if (run) {
+      try {
+        const q = await api('GET', `/studies/${S.id}/runs/${run}/qc`);
+        const res = (v) => v == null ? '—' : v.toFixed(2);
+        qcText = q.label == null ? `calidad: no calculada (${q.error || ''})`
+          : `calidad: ${q.label} · Einthoven ${res(q.einthoven_residual)} · Goldberger ${res(q.goldberger_residual)}`
+            + (q.flags && q.flags.length ? ` · ${q.flags.join(', ')}` : '') + ' · orientativo, no validación clínica';
+      } catch (err) { /* older results have no qc.json */ }
+    }
+    $('qcBox').textContent = qcText;
     const tb = $('segTable').querySelector('tbody'); tb.innerHTML = '';
     const sel = $('segSel'); sel.innerHTML = '';
     for (const s of S.segs) {

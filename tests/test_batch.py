@@ -71,6 +71,10 @@ def test_batch_isolates_failures_and_writes_report(tmp_path) -> None:
     by = {e["input"]: e for e in rep["entries"]}
     assert by["a.png"]["status"] == "failed" and "engine crashed" in by["a.png"]["error"]
     assert by["b.png"]["status"] == "published"
+    # quality label of the published result travels in the batch report
+    assert by["b.png"]["qc_label"] == "insufficient"  # fake engine: one lead
+    assert "MISSING_LEAD" in by["b.png"]["qc_flags"]
+    assert "qc_label" not in by["a.png"]
     assert by["c.txt"]["status"] == "rejected"
     assert by["c.txt"]["reason_code"] == "UNSUPPORTED_TYPE"
     assert rep["summary"] == {"failed": 1, "published": 1, "rejected": 1}

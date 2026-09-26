@@ -266,3 +266,28 @@ def qc_json(report: RunQC) -> str:
     d = asdict(report)
     d["label"] = report.label.value
     return json.dumps(d, indent=2, ensure_ascii=False)
+
+
+QC_FILENAME = "qc.json"
+
+
+def write_qc_report(run_dir: Path) -> dict:
+    """Write `qc.json` next to the run's manifest and return it as a dict. A
+    report that cannot be computed is written as {"label": null, "error": ...}
+    so its absence is explicit; never raises."""
+    run_dir = Path(run_dir)
+    try:
+        text = qc_json(run_qc(run_dir))
+    except Exception as e:  # noqa: BLE001 - QC is advisory, the run stands
+        text = json.dumps({"label": None, "error": f"{type(e).__name__}: {e}"[:300]})
+    (run_dir / QC_FILENAME).write_text(text + "\n", encoding="utf-8")
+    result: dict = json.loads(text)
+    return result
+
+
+def read_qc_report(run_dir: Path) -> dict | None:
+    path = Path(run_dir) / QC_FILENAME
+    if not path.exists():
+        return None
+    result: dict = json.loads(path.read_text(encoding="utf-8"))
+    return result

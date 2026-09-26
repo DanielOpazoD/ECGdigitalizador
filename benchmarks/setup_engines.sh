@@ -61,4 +61,21 @@ VIRTUAL_ENV=external/.venv-digitiser uv pip install -q torch torchvision numpy s
   scikit-image opencv-python-headless matplotlib tqdm wfdb pillow pandas \
   -e external/ecg-digitiser/nnUNet
 
+# worker/API engine registry (not versioned). Absolute paths: the engine
+# subprocess runs with cwd=<engine root>, where a relative interpreter path
+# would not resolve. An existing file is left as the user wrote it.
+if [ ! -f configs/engines.local.yml ]; then
+  cat > configs/engines.local.yml <<YML
+ahus:
+  root: $PWD/external/ahus
+  python: $PWD/external/.venv-ahus/bin/python
+  config: $PWD/external/ahus/src/config/inference_wrapper_george-moody-2024.yml
+ecg_digitiser:
+  root: $PWD/external/ecg-digitiser
+  python: $PWD/external/.venv-digitiser/bin/python
+  model_dir: models/M3
+YML
+  echo "wrote configs/engines.local.yml"
+fi
+
 echo "engines ready: external/ahus (+.venv-ahus), external/ecg-digitiser M3 (+.venv-digitiser)"
