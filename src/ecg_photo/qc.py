@@ -157,6 +157,23 @@ def detect_qrs(x: np.ndarray, fs: float) -> np.ndarray:
     return np.asarray(cand[heights >= QRS_KEEP * float(np.median(heights))], dtype=int)
 
 
+def rhythm_rr(x: np.ndarray, fs: float) -> tuple[int, float | None, float | None]:
+    """(beats, mean RR ms, median RR ms) of a rhythm strip; RR None with < 3 beats.
+
+    The electrocardiograph prints the mean RR; in an irregular rhythm (AF) the
+    median differs from it by more than the tolerance. Intervals far from the
+    median are a missed beat (~2x) or a spurious one (split interval) of the
+    digitized trace, not rhythm: they are left out of the mean (F7 Kaggle:
+    strips > 5 % off the truth 7/104 -> 1/104)."""
+    beats = detect_qrs(observed_span(x, fs)[0], fs)
+    if len(beats) < 3:
+        return len(beats), None, None
+    rr = np.diff(beats) / fs * 1000.0
+    rr_median = float(np.median(rr))
+    keep = rr[(rr >= RR_KEEP[0] * rr_median) & (rr <= RR_KEEP[1] * rr_median)]
+    return len(beats), float(np.mean(keep if len(keep) else rr)), rr_median
+
+
 def identity_residual(
     parts: list[np.ndarray], target: np.ndarray | None, fs: float, floor_mV: float = 0.0
 ) -> float | None:
@@ -279,20 +296,7 @@ def run_qc(
         )
     rr_lead = rhythm[0] if rhythm else None
     if rhythm:
-        x, fs = signals[rhythm[0]]
-        beats = detect_qrs(observed_span(x, fs)[0], fs)
-        n_beats = len(beats)
-        if n_beats >= 3:
-            rr = np.diff(beats) / fs * 1000.0
-            # the electrocardiograph prints the mean RR; in an irregular rhythm
-            # (AF) the median differs from it by more than the tolerance.
-            # Intervals far from the median are a missed beat (~2x) or a
-            # spurious one (split interval) of the digitized trace, not rhythm:
-            # they are left out of the mean (F7 Kaggle: strips > 5 % off the truth
-            # 7/104 -> 1/104).
-            rr_median = float(np.median(rr))
-            keep = rr[(rr >= RR_KEEP[0] * rr_median) & (rr <= RR_KEEP[1] * rr_median)]
-            rr_ms = float(np.mean(keep if len(keep) else rr))
+        n_beats, rr_ms, rr_median = rhythm_rr(*signals[rhythm[0]])
 
     flags = sorted({f for q in leads for f in q.flags})
     if printed_rr_ms is not None:

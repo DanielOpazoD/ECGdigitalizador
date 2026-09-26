@@ -50,6 +50,8 @@ QTC_RR_RANGE_S = (0.3, 2.0)
 # flagged values had about twice the error of the kept ones)
 MIN_LEADS = 3
 MAX_SPREAD_MS = {"pr_ms": 40.0, "qrs_ms": 30.0, "qt_ms": 40.0}
+# percentile over leads reported for each interval (50 = median)
+AGG_PERCENTILE = {"pr_ms": 50.0, "qrs_ms": 50.0, "qt_ms": 50.0}
 
 
 @dataclass
@@ -236,7 +238,7 @@ def measure_signals(
         vals = [getattr(li, key) for li in leads if getattr(li, key) is not None]
         count[key] = len(vals)
         if vals:
-            res[key] = float(np.median(vals))
+            res[key] = float(np.percentile(vals, AGG_PERCENTILE[key]))
             iqr = float(np.subtract(*np.percentile(vals, [75, 25])))
             spread[key] = iqr
             if len(vals) < MIN_LEADS:
