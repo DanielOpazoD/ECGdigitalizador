@@ -18,6 +18,7 @@ from ecg_photo.export import (
 )
 from ecg_photo.fixtures import write_fixture_revision
 from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest
+from ecg_photo.qc import qc_json, run_qc
 from ecg_photo.render import (
     PaperSpec,
     RenderNotAllowed,
@@ -42,6 +43,14 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         print(p)
     print(f"{len(problems)} problem(s)")
     return 1 if problems else 0
+
+
+def _cmd_qc(args: argparse.Namespace) -> int:
+    text = qc_json(run_qc(Path(args.run_dir)))
+    if args.out:
+        Path(args.out).write_text(text + "\n", encoding="utf-8")
+    print(text)
+    return 0
 
 
 def _do_export(root: Path, out_dir: Path, dpi: float, speed: float, gain: float) -> int:
@@ -363,6 +372,11 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("dir")
     v.add_argument("--no-strict", action="store_true")
     v.set_defaults(func=_cmd_validate)
+
+    q = sub.add_parser("qc", help="informe de calidad de una corrida confirmada (sin verdad)")
+    q.add_argument("run_dir")
+    q.add_argument("--out", default=None, help="escribe el informe JSON en este archivo")
+    q.set_defaults(func=_cmd_qc)
 
     e = sub.add_parser("export")
     e.add_argument("dir")

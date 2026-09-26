@@ -452,3 +452,58 @@ escala local por derivación o rectificación de la página.
 - El escaneo B/N con moho (0012) llega a +6.5 % con rejilla uniforme.
 - Umbrales ajustados con 90 imágenes Kaggle + 3 fotos; no es validación
   clínica.
+
+# F7 paso 2: control de calidad sin verdad (`ecg_photo.qc`, `ecg-photo qc`)
+
+Informe de sólo lectura sobre una corrida confirmada:
+
+- Por derivación: `MISSING_LEAD`, `NO_SIGNAL`, `LOW_COVERAGE` (< 90 % de su
+  tramo de 2.5 s o 10 s), `FLAT_TRACE` (rango p0.5–p99.5 < 0.05 mV) y
+  `RHYTHM_DURATION_MISMATCH` (tira de ritmo ≠ 10 s ± 5 %, útil en el eje
+  `evidence`).
+- Entre derivaciones, identidades que cumple cualquier ECG real y que en el
+  formato 3×4 + II (MAC2000 `4x2.5x3_25_R1`, Kaggle) comparten columna:
+  Einthoven I + III = II y Goldberger aVR + aVL + aVF = 0. Residuo = rms del
+  incumplimiento / rms de la señal (alineación ±40 ms entre filas).
+  ≤ 0.35 coherente; 0.35–1.0 `LIMB_LEADS_DOUBTFUL`; > 1.0
+  `LIMB_LEADS_INCONSISTENT`.
+- Etiqueta: `insufficient` con derivación ausente, vacía, plana o residuo
+  > 1.0; `acceptable` con cualquier otra marca; si no, `good`.
+
+Umbrales ajustados en Kaggle: residuo de Einthoven mediano 0.10 en originales,
+0.14–0.35 en escaneos, 0.34–0.53 en fotos; con la verdad, las derivaciones
+siguen buenas hasta 1.0 y se degradan por encima (Goldberger > 1.0: r@lag
+mediana 0.76, p10 0.35).
+
+## ¿Separa buenas de malas? (Kaggle, eje `engine`, `benchmarks/f7_qc_eval.py`)
+
+`benchmarks/results/f7_qc_kaggle_2026-09-26.json` — r@lag contra la verdad
+por imagen (mediana de sus derivaciones):
+
+| motor | etiqueta | imágenes | r@lag mediana | p10 |
+|---|---|---|---|---|
+| Ahus | good | 21 | 0.934 | 0.906 |
+| Ahus | acceptable | 48 | 0.902 | 0.795 |
+| Ahus | insufficient | 21 | 0.803 | 0.195 |
+| ECG-Digitiser | good | 12 | 0.971 | 0.923 |
+| ECG-Digitiser | acceptable | 8 | 0.953 | 0.622 |
+| ECG-Digitiser | insufficient | 8 | 0.122 | 0.092 |
+
+Las fotos inservibles de ECG-Digitiser (r@lag ≈ 0.13) salen `insufficient`
+sin conocer la verdad.
+
+## Fotos reales del GE MAC2000 (usuario; no versionadas)
+
+| imagen | Einthoven | Goldberger | etiqueta | observado a mano |
+|---|---|---|---|---|
+| MAC2000, 81/min | 0.08 | 0.19 | good | FC = impresa |
+| MAC2000, 96/min | 0.31 | 0.75 | acceptable (dudosa) | aVR/aVL/aVF r 0.82–0.89 vs PMcardio |
+| MAC2000, 48/min, 1036 px | 1.06 | – | insufficient | aVL vacía (`FLAT_TRACE`), V6 cortada (`LOW_COVERAGE`) |
+| otro equipo, formato 6×2 | 1.06 | 0.54 | insufficient | formato no soportado |
+| imágenes PMcardio (referencia) | 0.14–0.24 | 0.21–0.23 | good | |
+
+Limitaciones: umbrales ajustados con 118 imágenes Kaggle y 6 del usuario;
+las identidades sólo cubren derivaciones de miembros (V1–V6 sólo tienen
+cobertura/planitud); un fallo que respete las identidades (p. ej. las tres de
+una columna escaladas igual) no se detecta. Guía para quien lee, no
+validación clínica.
