@@ -47,6 +47,14 @@ def _cmd_qc(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_intervals(args: argparse.Namespace) -> int:
+    from ecg_photo.intervals import intervals_json, measure_run
+
+    iv = intervals_json(measure_run(Path(args.run_dir), rr_ms=args.rr_ms))
+    print(json.dumps(iv, indent=2, ensure_ascii=False))
+    return 0
+
+
 def _do_export(root: Path, out_dir: Path, dpi: float, speed: float, gain: float) -> int:
     from ecg_photo.process import export_run
 
@@ -211,6 +219,10 @@ def _cmd_process(args: argparse.Namespace) -> int:
                 "time_source": summary["time_source"],
                 "evidence_axis_refused": summary["evidence_axis_refused"],
                 "leads_written": summary["leads_written"],
+                "intervals": {
+                    k: summary["intervals"].get(k)
+                    for k in ("hr_bpm", "pr_ms", "qrs_ms", "qt_ms", "qtc_bazett_ms", "status")
+                },
                 "qc_label": qc["label"],
                 "qc_flags": qc["flags"],
                 "rr_measured_ms": qc["rr_measured_ms"],
@@ -400,6 +412,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     q.add_argument("--printed-hr", type=float, default=None, help="FC impresa por el equipo (lpm)")
     q.set_defaults(func=_cmd_qc)
+
+    iv = sub.add_parser("intervals", help="PR / QRS / QT / QTc de una corrida confirmada")
+    iv.add_argument("run_dir")
+    iv.add_argument("--rr-ms", type=float, default=None, help="RR para FC y QTc")
+    iv.set_defaults(func=_cmd_intervals)
 
     e = sub.add_parser("export")
     e.add_argument("dir")

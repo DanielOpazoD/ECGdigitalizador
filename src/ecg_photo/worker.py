@@ -10,6 +10,7 @@ from pathlib import Path
 import yaml
 
 from ecg_photo.digitizers.base import Digitizer
+from ecg_photo.intervals import write_intervals_report
 from ecg_photo.paths import config_file
 from ecg_photo.pipeline import apply_lead_corrections, confirm_scale, digitize_page
 from ecg_photo.process import write_overview
@@ -180,6 +181,7 @@ class Worker(threading.Thread):
             # signals exist only after confirm_scale: attach the truth-free
             # quality report; a QC failure never fails the job
             write_qc_report(final.run_dir)
+            write_intervals_report(final.run_dir)
             write_overview(final.run_dir)
 
         job = store.get_job(study_id, run_id)  # re-read: cancel may have landed

@@ -28,6 +28,7 @@ from ecg_photo.contracts import load_manifest, sha256_file
 from ecg_photo.digitizers.base import Digitizer
 from ecg_photo.export import ExportNotAllowed, export_csv, export_json, export_wfdb
 from ecg_photo.ingest import estimate_page_grids, ingest, page_upsample
+from ecg_photo.intervals import write_intervals_report
 from ecg_photo.pipeline import RunPaths, confirm_scale, digitize_page
 from ecg_photo.qc import (
     QC_FILENAME,
@@ -248,6 +249,7 @@ def process_file(file: Path, out: Path, digitizer: Digitizer, opts: ProcessOptio
 
     qc = run_qc(final.run_dir, printed_rr_ms=opts.printed_rr_ms, printed_hr_bpm=opts.printed_hr_bpm)
     (final.run_dir / QC_FILENAME).write_text(qc_json(qc) + "\n", encoding="utf-8")
+    intervals = write_intervals_report(final.run_dir)
     paper = PaperSpec(speed_mm_s=opts.speed_mm_s, gain_mm_mV=opts.gain_mm_mV, dpi=opts.dpi)
     exported = export_run(final.run_dir, out / "export", paper)
     render_overview(
@@ -284,6 +286,7 @@ def process_file(file: Path, out: Path, digitizer: Digitizer, opts: ProcessOptio
             for s in confirmed.segments
         ],
         "qc": json.loads(qc_json(qc)),
+        "intervals": {k: v for k, v in intervals.items() if k != "leads"},
         "run_dirs": {
             "engine": str(run.run_dir.relative_to(out)),
             "confirmed": str(final.run_dir.relative_to(out)),
