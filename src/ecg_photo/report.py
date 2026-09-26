@@ -35,6 +35,10 @@ REASONS_ES = (
     (re.compile(r"not found in any lead"), "no hallado en ninguna derivación"),
     (re.compile(r"digitization quality insufficient"), "calidad de digitalización insuficiente"),
     (re.compile(r"RR not measured"), "RR no medido"),
+    (
+        re.compile(r"differs from printed \w+ by ([+-]\d+) ms \(> (\d+)\)"),
+        r"difiere del impreso en \1 ms (> \2)",
+    ),
     (re.compile(r"RR (\d+) ms outside .*"), r"RR \1 ms fuera de rango"),
 )
 
@@ -61,7 +65,19 @@ def measurement_rows(iv: dict | None) -> list[tuple[str, str, str]]:
     spread = iv.get("spread_ms") or {}
     n_leads = iv.get("n_leads") or {}
 
+    printed = iv.get("printed") or {}
+
+    def with_printed(key: str, text: str) -> str:
+        p = printed.get(key)
+        if not p:
+            return text
+        mark = {True: "coincide", False: "NO coincide", None: "sin medida"}[p.get("agrees")]
+        return f"{text}; impreso {p['printed_ms']:.0f} ms ({mark})"
+
     def note(key: str) -> str:
+        return with_printed(key, _note(key))
+
+    def _note(key: str) -> str:
         st = status.get(key)
         if st == "ok":
             return f"{n_leads.get(key, 0)} derivaciones, dispersión {spread.get(key) or 0:.0f} ms"
@@ -85,7 +101,7 @@ def measurement_rows(iv: dict | None) -> list[tuple[str, str, str]]:
     )
     if status.get("qt_ms") != "ok" and iv.get("qtc_bazett_ms") is not None:
         qtc_note = "dudoso (QT dudoso); " + qtc_note
-    rows.append(("QTc", _ms(iv.get("qtc_bazett_ms")), qtc_note))
+    rows.append(("QTc", _ms(iv.get("qtc_bazett_ms")), with_printed("qtc_bazett_ms", qtc_note)))
     return rows
 
 
@@ -164,13 +180,23 @@ def render_report(run_dir: Path, out_pdf: Path, *, source_name: str | None = Non
     for i, line in enumerate(scale_lines(manifest)):
         fig.text(0.04, y - 0.065 - 0.027 * i, line, fontsize=8.5)
 
-    fig.text(0.52, y, "Mediciones (mediana entre derivaciones)", fontsize=10.5, weight="bold")
+    fig.text(0.52, y, "Mediciones (entre derivaciones)", fontsize=10.5, weight="bold")
     for i, (k, v, note) in enumerate(measurement_rows(iv)):
-        yy = y - 0.03 - 0.028 * i
+        yy = y - 0.03 - 0.034 * i
         doubtful = note.startswith("dudoso")
         fig.text(0.52, yy, k, fontsize=9, weight="bold")
         fig.text(0.615, yy, v, fontsize=9, color="#b00020" if doubtful else "#000")
-        fig.text(0.695, yy, note[:62], fontsize=7.5, color="#555")
+        main, _, printed = note.partition("; impreso ")
+        fig.text(0.695, yy, main[:62], fontsize=7.5, color="#555")
+        if printed:
+            mismatch = "NO coincide" in printed
+            fig.text(
+                0.695,
+                yy - 0.014,
+                ("impreso " + printed)[:62],
+                fontsize=7,
+                color="#b00020" if mismatch else "#555",
+            )
 
     fig.text(0.04, 0.035, DISCLAIMER, fontsize=7.5, color="#444", wrap=True)
     out_pdf.parent.mkdir(parents=True, exist_ok=True)

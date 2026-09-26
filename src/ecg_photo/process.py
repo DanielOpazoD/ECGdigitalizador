@@ -19,7 +19,7 @@ printed on the page).
 
 import json
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -64,6 +64,8 @@ class ProcessOptions:
     fs_hz: float | None = None
     printed_rr_ms: float | None = None
     printed_hr_bpm: float | None = None
+    # PR / QRS / QT / QTc printed by the electrocardiograph (ms), if any
+    printed_intervals_ms: dict[str, float | None] = field(default_factory=dict)
     dpi: float = 300.0
 
 
@@ -251,7 +253,7 @@ def process_file(file: Path, out: Path, digitizer: Digitizer, opts: ProcessOptio
 
     qc = run_qc(final.run_dir, printed_rr_ms=opts.printed_rr_ms, printed_hr_bpm=opts.printed_hr_bpm)
     (final.run_dir / QC_FILENAME).write_text(qc_json(qc) + "\n", encoding="utf-8")
-    intervals = write_intervals_report(final.run_dir)
+    intervals = write_intervals_report(final.run_dir, printed=opts.printed_intervals_ms)
     paper = PaperSpec(speed_mm_s=opts.speed_mm_s, gain_mm_mV=opts.gain_mm_mV, dpi=opts.dpi)
     exported = export_run(final.run_dir, out / "export", paper)
     render_overview(

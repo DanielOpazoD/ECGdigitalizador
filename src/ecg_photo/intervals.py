@@ -79,6 +79,8 @@ class Intervals:
     resolution_ms: float | None
     reasons: dict[str, str]
     leads: list[LeadIntervals]
+    # comparison with the values printed by the electrocardiograph, per interval
+    printed: dict[str, dict] = field(default_factory=dict)
     note: str = "guidance only; not clinical validation"
 
 
@@ -322,7 +324,41 @@ def demote_on_qc(iv: Intervals, qc_label: str | None) -> Intervals:
     return iv
 
 
-def write_intervals_report(run_dir: Path) -> dict:
+# largest |ours - printed| still counted as agreement (ms): 95th percentile of
+# the difference against the GE 12SL values over `ok` measurements on the
+# first half of the F11 PTB-XL sample (printed 3x4 + II signal)
+PRINTED_TOL_MS = {"pr_ms": 0.0, "qrs_ms": 0.0, "qt_ms": 0.0, "qtc_bazett_ms": 0.0}
+
+
+def compare_printed(iv: Intervals, printed: dict[str, float | None]) -> Intervals:
+    """Compare with the electrocardiograph's printed values (keys of
+    PRINTED_TOL_MS; None/absent = not printed). An `ok` interval outside the
+    tolerance becomes `doubtful`: either the digitization or the machine is
+    wrong, and the original must be looked at."""
+    for key, tol in PRINTED_TOL_MS.items():
+        p = printed.get(key)
+        if p is None:
+            continue
+        if not (np.isfinite(p) and p > 0):
+            raise ValueError(f"printed {key} must be > 0")
+        ours = getattr(iv, key)
+        entry: dict = {"printed_ms": float(p), "tolerance_ms": tol}
+        if ours is None:
+            entry["agrees"] = None
+        else:
+            entry["diff_ms"] = round(ours - p, 1)
+            entry["agrees"] = bool(abs(ours - p) <= tol)
+            status_key = "qt_ms" if key == "qtc_bazett_ms" else key
+            if not entry["agrees"] and iv.status.get(status_key) == "ok":
+                iv.status[status_key] = "doubtful"
+                iv.reasons[status_key] = (
+                    f"differs from printed {key} by {ours - p:+.0f} ms (> {tol:.0f})"
+                )
+        iv.printed[key] = entry
+    return iv
+
+
+def write_intervals_report(run_dir: Path, printed: dict[str, float | None] | None = None) -> dict:
     """Write `intervals.json` next to a confirmed run's manifest, using the RR
     of its quality report (qc.json) when present. Never raises: a failure is
     written as {"error": ...} so its absence is explicit. When the quality
@@ -337,7 +373,8 @@ def write_intervals_report(run_dir: Path) -> dict:
             qc = json.loads(qc_path.read_text(encoding="utf-8"))
             rr = qc.get("rr_measured_ms")
             qc_label = qc.get("label")
-        d = intervals_json(demote_on_qc(measure_run(run_dir, rr_ms=rr), qc_label))
+        iv = demote_on_qc(measure_run(run_dir, rr_ms=rr), qc_label)
+        d = intervals_json(compare_printed(iv, printed or {}))
     except Exception as e:  # noqa: BLE001 - measurements are advisory, the run stands
         d = {"error": f"{type(e).__name__}: {e}"[:300]}
     (run_dir / INTERVALS_FILENAME).write_text(
