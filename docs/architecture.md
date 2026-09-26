@@ -82,6 +82,9 @@ Principios que el código hace cumplir (no sólo documenta):
 
 ## Pruebas y calidad
 
+- Versiones exactas de todas las dependencias en `requirements.lock`
+  (instalación y CI con `pip install -c requirements.lock -e .[dev]`).
+
 - `ruff check`, `ruff format --check`, `mypy src`, `pytest` (CI en cada PR,
   `.github/workflows/ci.yml`). Las pruebas no necesitan motores ni red: usan
   fixtures sintéticos (`fixtures.py`) y motores falsos.
@@ -96,7 +99,5 @@ Principios que el código hace cumplir (no sólo documenta):
   rutas / subcomandos en una función cada uno.
 - `store.py` (≈870 líneas) mezcla estudios, revisiones, corridas, bloqueo y
   recuperación tras reinicio.
-- Dependencias de ejecución sin versión fijada salvo FastAPI/uvicorn/pdfium;
-  no hay archivo de bloqueo.
 - Instalar como wheel no incluye `configs/` (hay que fijar
   `ECG_PHOTO_CONFIG_DIR`).

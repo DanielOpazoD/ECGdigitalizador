@@ -19,8 +19,12 @@ ecg-photo process foto.jpg --out salida --speed 25 --gain 10 \
 ## Instalación
 ```bash
 python3.12 -m venv .venv && . .venv/bin/activate
-pip install -e .[dev]
+pip install -c requirements.lock -e .[dev]
 ```
+`requirements.lock` fija las versiones exactas con las que se probaron el código y los
+bancos (también las usa CI). Para actualizarlas: `uv pip compile pyproject.toml --extra dev
+--python-version 3.12 --no-header --no-annotate -o requirements.lock`, instalar, y volver a
+pasar las pruebas y los bancos afectados antes de fusionar.
 
 ## Verificación
 ```bash
