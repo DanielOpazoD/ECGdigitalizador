@@ -106,3 +106,59 @@ def test_render_png_grid(tmp_path, dpi: float, expected: float) -> None:
     est = estimate_grid(img, min_period_px=3, max_period_px=max(60, expected * 2))
     assert est.px_per_mm_x == pytest.approx(expected, rel=0.003)
     assert est.px_per_mm_y == pytest.approx(expected, rel=0.003)
+
+
+def test_page_prior_resolves_blurred_full_page() -> None:
+    # same blurred page as above: the grid alone cannot decide, the page-size
+    # prior (2200 px / 39.4 px = 56 -> 5 mm) recovers 7.874 px/mm on both axes
+    from scipy.ndimage import gaussian_filter
+
+    from ecg_photo.grid import resolve_ambiguous_period
+
+    img = gaussian_filter(_paper(1700, 2200, 7.874, 7.874).astype(np.float64), 2.5)
+    img8 = np.clip(img, 0, 255).astype(np.uint8)
+    est = resolve_ambiguous_period(estimate_grid(img8), img8)
+    assert est.period_step_mm == 5.0
+    assert est.px_per_mm_x == pytest.approx(7.874, rel=0.01)
+    assert est.px_per_mm_y == pytest.approx(7.874, rel=0.01)
+    assert est.ambiguous_period_px_x == pytest.approx(39.37, rel=0.02)  # still recorded
+    assert "page-size prior" in est.method and "close-up" in est.limitations
+
+
+def test_page_prior_resolves_1mm_period_on_full_page() -> None:
+    # uniform 1 mm lines across a full 280 mm page at 7.5 px/mm: 2100/7.5 = 280
+    from ecg_photo.grid import resolve_ambiguous_period
+
+    p = 7.5
+    img = np.full((1500, 2100), 240, dtype=np.uint8)
+    img[:, np.clip(np.round(np.arange(0, 2100, p)).astype(int), 0, 2099)] = 60
+    img[np.clip(np.round(np.arange(0, 1500, p)).astype(int), 0, 1499), :] = 60
+    raw = estimate_grid(img)
+    assert raw.px_per_mm_x is None  # grid alone: ambiguous
+    est = resolve_ambiguous_period(raw, img)
+    assert est.period_step_mm == 1.0
+    assert est.px_per_mm_x == pytest.approx(p, rel=0.01)
+
+
+def test_page_prior_leaves_gray_zone_undecided() -> None:
+    from ecg_photo.grid import period_step_mm_from_page, resolve_ambiguous_period
+
+    # 600 px / 9.3 px = 64.5 fits 5 mm; 1900 px / 9.3 px = 204 fits neither
+    assert period_step_mm_from_page(600, 9.3) == 5.0
+    assert period_step_mm_from_page(1900, 9.3) is None
+    assert period_step_mm_from_page(2000, 7.5) == 1.0
+    assert period_step_mm_from_page(2000, 0.0) is None
+    img = np.full((400, 1900), 240, dtype=np.uint8)
+    img[:, np.clip(np.round(np.arange(0, 1900, 9.3)).astype(int), 0, 1899)] = 60
+    img[np.clip(np.round(np.arange(0, 400, 9.3)).astype(int), 0, 399), :] = 60
+    raw = estimate_grid(img)
+    assert resolve_ambiguous_period(raw, img) == raw
+
+
+def test_page_prior_does_not_override_a_confirmed_grid() -> None:
+    from ecg_photo.grid import resolve_ambiguous_period
+
+    img = _paper(800, 1200, 9.3, 9.3)
+    raw = estimate_grid(img)
+    assert raw.px_per_mm_x is not None
+    assert resolve_ambiguous_period(raw, img) is raw

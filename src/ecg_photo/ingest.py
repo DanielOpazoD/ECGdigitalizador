@@ -29,7 +29,7 @@ from ecg_photo.contracts import (
     dump_json,
     sha256_file,
 )
-from ecg_photo.grid import GridEstimate, estimate_grid
+from ecg_photo.grid import GridEstimate, estimate_grid, resolve_ambiguous_period
 from ecg_photo.transforms import exif_to_steps
 
 EXIF_ORIENTATION_TAG = 0x0112
@@ -291,7 +291,7 @@ def estimate_page_grids(out_dir: Path, manifest: Manifest) -> tuple[Manifest, li
     pages: list[Page] = []
     for pg in manifest.pages:
         img = np.asarray(Image.open(out_dir / pg.raster_path))
-        grid = estimate_grid(img)
+        grid = resolve_ambiguous_period(estimate_grid(img), img)
         rel = f"pages/{pg.page_id}.grid.json"
         (out_dir / rel).write_text(
             json.dumps(asdict(grid), indent=2, ensure_ascii=False), encoding="utf-8"

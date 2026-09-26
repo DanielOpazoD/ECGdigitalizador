@@ -10,7 +10,7 @@ and 5 mm and yields None with the candidate recorded, never a guess.
 Returns None where no peak passes the prominence threshold; nothing is invented.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from scipy.ndimage import uniform_filter1d  # type: ignore[import-untyped]
@@ -37,6 +37,8 @@ class GridEstimate:
     refine_rms_px_y: float | None
     ambiguous_period_px_x: float | None = None
     ambiguous_period_px_y: float | None = None
+    # set only by resolve_ambiguous_period (page-size prior): mm per ambiguous period
+    period_step_mm: float | None = None
 
 
 METHOD = "autocorr-fft-grid-v1"
@@ -192,6 +194,20 @@ def _refine_period_by_lines(
     return float(b), rms, len(keep)
 
 
+def _grid_channel(img: np.ndarray) -> tuple[np.ndarray, bool]:
+    """2-D float image where grid lines stand out, and whether lines are maxima
+    (True: redness channel) or minima (False: grayscale)."""
+    a = np.asarray(img)
+    if a.ndim == 3 and a.shape[2] >= 3:
+        rgb = a[..., :3].astype(np.float64)
+        # red-ish grid ink stands out in R - (G+B)/2; keeps traces dark
+        redness = rgb[..., 0] - 0.5 * (rgb[..., 1] + rgb[..., 2])
+        if float(redness.max()) > 8.0:
+            return np.clip(redness, 0.0, None), True
+        return rgb.mean(axis=2), False
+    return np.asarray(a, dtype=np.float64), False
+
+
 def estimate_grid(
     img: np.ndarray,
     *,
@@ -200,18 +216,7 @@ def estimate_grid(
     min_period_px: float = 3.0,
     max_period_px: float = 60.0,
 ) -> GridEstimate:
-    a = np.asarray(img)
-    ink_bright = False  # True when lines are maxima in `a` (redness channel)
-    if a.ndim == 3 and a.shape[2] >= 3:
-        rgb = a[..., :3].astype(np.float64)
-        # red-ish grid ink stands out in R - (G+B)/2; keeps traces dark
-        redness = rgb[..., 0] - 0.5 * (rgb[..., 1] + rgb[..., 2])
-        if float(redness.max()) > 8.0:
-            a = np.clip(redness, 0.0, None)
-            ink_bright = True
-        else:
-            a = rgb.mean(axis=2)
-    a = np.asarray(a, dtype=np.float64)
+    a, ink_bright = _grid_channel(img)
     h, w = a.shape
     ry, rx = regions
     minors_x: list[float] = []
@@ -320,4 +325,77 @@ def estimate_grid(
         refine_rms_px_y=ref_y[1] if ref_y is not None else None,
         ambiguous_period_px_x=amb_x,
         ambiguous_period_px_y=amb_y,
+    )
+
+
+# Page-size prior for an ambiguous period (1 mm or 5 mm). Assumption: the whole
+# ECG page is in the frame, its printed width is PAGE_WIDTH_MM (a 10 s strip at
+# 25 mm/s is 250 mm; letter/A4 landscape <= 300 mm) and it fills at least
+# PAGE_MIN_FILL of the image width. Then image_width / P lies in
+#   [250, 300 / PAGE_MIN_FILL]            if P is 1 mm
+#   [250 / 5, 300 / (5 * PAGE_MIN_FILL)]  if P is 5 mm
+# and anything else stays undecided. Observed (F6-b, 2026-09-25): 5 mm periods
+# gave 56.7-82.9 (Kaggle scans/photos, MAC2000 phone photos); 1 mm periods
+# 264-270 (clean full-page renders). A close-up of part of a page breaks the
+# assumption; the measured strip duration must then disagree with the layout.
+PAGE_WIDTH_MM = (250.0, 300.0)
+PAGE_MIN_FILL = 0.35
+PAGE_PRIOR = (
+    "1 mm/5 mm resolved by page-size prior: whole page in frame, page width "
+    f"{PAGE_WIDTH_MM[0]:.0f}-{PAGE_WIDTH_MM[1]:.0f} mm filling >= {PAGE_MIN_FILL:.0%} "
+    "of the image width"
+)
+
+
+def period_step_mm_from_page(width_px: int, period_px: float) -> float | None:
+    """1.0 or 5.0 (mm per period) if image_width/period fits only one of the
+    two hypotheses under the page-size prior, else None."""
+    if period_px <= 0:
+        return None
+    r = width_px / period_px
+    lo, hi = PAGE_WIDTH_MM
+    for step in (1.0, 5.0):
+        if lo / step <= r <= hi / (step * PAGE_MIN_FILL):
+            return step
+    return None
+
+
+def resolve_ambiguous_period(est: GridEstimate, img: np.ndarray) -> GridEstimate:
+    """Resolve an ambiguous x period (see period_step_mm_from_page), refine it
+    by line positions over the full width and apply the same step to y when
+    the y period agrees within 15 %. Returns `est` unchanged when there is
+    nothing to resolve or the prior does not decide. The raw ambiguous periods
+    stay recorded; method/limitations name the prior."""
+    if est.px_per_mm_x is not None or est.ambiguous_period_px_x is None:
+        return est
+    a, ink_bright = _grid_channel(img)
+    _h, w = a.shape
+    period_x = est.ambiguous_period_px_x
+    step = period_step_mm_from_page(w, period_x)
+    if step is None:
+        return est
+    col_full = a.mean(axis=0) if ink_bright else -a.mean(axis=0)
+    ref_x = _refine_period_by_lines(col_full, period_x)
+    if ref_x is not None:
+        period_x = ref_x[0]
+    px_y = est.px_per_mm_y
+    period_y = est.ambiguous_period_px_y
+    ref_y = None
+    if px_y is None and period_y is not None and abs(period_y / period_x - 1.0) <= 0.15:
+        row_full = a.mean(axis=1) if ink_bright else -a.mean(axis=1)
+        ref_y = _refine_period_by_lines(row_full, period_y)
+        px_y = (ref_y[0] if ref_y is not None else period_y) / step
+    return replace(
+        est,
+        px_per_mm_x=period_x / step,
+        px_per_mm_y=px_y,
+        method=est.method + f" + {PAGE_PRIOR} (x period = {step:g} mm)",
+        limitations=est.limitations
+        + f"; {PAGE_PRIOR}: a close-up of part of the page breaks this assumption",
+        refine_method="line-position least squares" if ref_x is not None else est.refine_method,
+        refine_n_lines_x=ref_x[2] if ref_x is not None else est.refine_n_lines_x,
+        refine_rms_px_x=ref_x[1] if ref_x is not None else est.refine_rms_px_x,
+        refine_n_lines_y=ref_y[2] if ref_y is not None else est.refine_n_lines_y,
+        refine_rms_px_y=ref_y[1] if ref_y is not None else est.refine_rms_px_y,
+        period_step_mm=step,
     )
