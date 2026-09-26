@@ -39,9 +39,12 @@ class AhusDigitizer:
         engine_spec: EngineSpec | None = None,
         expected_patches_applied: bool = True,
     ) -> None:
-        self.ahus_root = Path(ahus_root)
-        self.python_exe = Path(python_exe)
-        self.base_config = Path(base_config)
+        # absolute paths: the engine subprocess runs with cwd=ahus_root, where
+        # relative paths given by the caller would not resolve. The venv
+        # interpreter is made absolute, not resolved (it is a symlink).
+        self.ahus_root = Path(ahus_root).resolve()
+        self.python_exe = Path(python_exe).absolute()
+        self.base_config = Path(base_config).resolve()
         self.duration_s = float(duration_s)
         self.device = device
         self.layout_config = layout_config
@@ -82,7 +85,7 @@ class AhusDigitizer:
         problems = verify_weights(self.ahus_root, self.spec)
         if problems:
             raise EngineNotReady("ahus weights invalid: " + "; ".join(problems))
-        work_dir = Path(work_dir)
+        work_dir = Path(work_dir).resolve()
         work_dir.mkdir(parents=True, exist_ok=True)
         cfg_path = self._effective_config(work_dir)
         config_hash = hashlib.sha256(cfg_path.read_bytes()).hexdigest()
@@ -92,7 +95,7 @@ class AhusDigitizer:
 
         env = {**os.environ, "PYTHONPATH": str(self.ahus_root)}
         t0 = time.monotonic()
-        subprocess.run(
+        proc = subprocess.run(
             [
                 str(self.python_exe),
                 "src/digitize.py",
@@ -101,12 +104,17 @@ class AhusDigitizer:
             ],
             cwd=self.ahus_root,
             env=env,
-            check=True,
+            check=False,
             timeout=3600,
             capture_output=True,
             text=True,
         )
         wall = time.monotonic() - t0
+        if proc.returncode != 0:
+            # the cause is at the end of stderr (progress output comes first)
+            raise EngineNotReady(
+                f"ahus subprocess failed (rc={proc.returncode}): {proc.stderr[-2000:]}"
+            )
 
         out_dir = work_dir / "out"
         leads, observed, fs_hz, layout = parse_ahus_output(out_dir, self.duration_s)
