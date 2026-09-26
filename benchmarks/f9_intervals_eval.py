@@ -225,7 +225,10 @@ def main() -> int:
             {
                 "record": r["record"],
                 "truth": r["truth"],
-                **{a: {k: r[a][k] for k in KEYS} if r.get(a) else None for a in arms},
+                **{
+                    a: {k: r[a][k] for k in (*KEYS, "status", "spread_ms")} if r.get(a) else None
+                    for a in arms
+                },
             }
             for r in rows
         ],

@@ -13,7 +13,7 @@ Entrada     cli.py  ·  api.py (FastAPI) + ui/index.html  ·  batch.py
                 │            │                                │
 Orquestación    process.py (un comando)   worker.py (cola, 1 trabajo)   store.py (estudios, revisiones, corridas)
                 │                               │
-Dominio     ingest.py → pipeline.py (digitize_page, confirm_scale) → qc.py → export.py / render.py
+Dominio     ingest.py → pipeline.py (digitize_page, confirm_scale) → qc.py, intervals.py → export.py / render.py
             grid.py · aligned.py · calibration.py · transforms.py · signal.py · geometry.py · measure.py
 Motores     digitizers/base.py (Protocol Digitizer, EngineOutput) · ahus.py · ecg_digitiser.py
 Contrato    contracts.py (pydantic, extra="forbid")        paths.py (ubicación de configs/)
@@ -36,6 +36,7 @@ foto/PDF ──ingest──► revisión (manifest.json, pages/*.png, *.grid.jso
                             eje temporal por evidencia de imagen o supuesto del motor,
                             CalibrationEvidence y ProcessingStep por derivación
          ──run_qc──► qc.json (good / acceptable / insufficient, sin verdad)
+         ──intervals──► intervals.json (PR, QRS, QT, QTc; ok / doubtful / unavailable)
          ──export / render──► CSV, WFDB, PNG/PDF por derivación, overview.png
 ```
 

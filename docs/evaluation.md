@@ -15,6 +15,7 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F7 paso 5](#f7-paso-5-perspectiva--rejilla-en-el-marco-alineado-del-motor) | Kaggle | rejilla en el marco corregido de perspectiva | eje propio 0.941 frente a 0.922 del motor |
 | [F7 paso 6–7](#f7-paso-6-detector-de-qrs-del-contraste-con-lo-impreso) | fotos MAC2000 + Kaggle | detector de QRS, RR medio recortado | RR: 1/104 tiras fuera de ±5 % |
 | [F8](#f8-formatos-distintos-de-34--ii-objetivo-o8-de-docsmissionmd) | PTB-XL impreso 3×4 y 6×2 + Kaggle | formatos de hoja | 6×2: 0.70 → 0.993 sin empeorar 3×4 |
+| [F9](#f9-intervalos-pr-qrs-qt-objetivo-o7-de-docsmissionmd) | LUDB (anotaciones de cardiólogos) | PR, QRS, QT | hoja impresa, valores `ok`: QRS +1.6 ± 9.8 ms, QT −13.7 ± 13.2 ms (CSE sí), PR −3.6 ± 11.5 ms |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -770,3 +771,64 @@ derivación con las corridas F6-b):
 Limitaciones: 6×2 sólo con impresiones sintéticas limpias (no fotos reales
 de ese formato); no se evaluaron 6×2 con tira de ritmo ni 12×1; ECG-Digitiser
 no cambia (no informa formato). No es validación clínica.
+
+# F9: intervalos PR, QRS, QT (objetivo O7 de `docs/mission.md`)
+
+`ecg_photo.intervals` (detalle del método en su docstring): latido mediano
+por derivación, límites del QRS por energía de pendiente, fin de T cuando la
+onda vuelve a menos del 15 % de su amplitud de la línea isoeléctrica, inicio
+de P por tangente; valor = mediana entre derivaciones. Cada intervalo sale
+`ok`, `doubtful` (hallado en < 3 derivaciones o derivaciones en desacuerdo:
+IQR > 40 ms PR, 30 ms QRS, 40 ms QT) o `unavailable` (p. ej. sin onda P);
+nunca un valor por defecto. QTc (Bazett, Fridericia) sólo con RR medido.
+
+**Referencia:** LUDB (PhysioNet; Kalyakulina et al., IEEE Access 2020): 200
+registros de 10 s, 12 derivaciones, 500 Hz, con inicio y fin de P, QRS y T
+marcados por cardiólogos en cada derivación. La verdad de un registro usa la
+misma agregación que la medida (mediana de latidos por derivación, mediana
+entre derivaciones). Parámetros ajustados sólo con los registros impares
+(`benchmarks/results/f9_intervals_ludb_odd_tuning_2026-09-26.json`); resultados
+en los pares, no vistos al ajustar
+(`benchmarks/results/f9_intervals_ludb_even_2026-09-26.json`,
+`benchmarks/f9_intervals_eval.py`). Tolerancias de referencia: criterios CSE
+para programas de medida (diferencia media / DE frente a la referencia: PR y
+QRS 10 / 10 ms, QT 25 / 30 ms).
+
+Brazos: **señal completa** (12 derivaciones de 10 s); **impreso** (lo que
+muestra una hoja 3×4 + II: 2.5 s por derivación, II 10 s — lo máximo que
+daría una digitalización perfecta); **digitalizado** (esa hoja dibujada como
+imagen, Ahus, `confirm_scale` con eje por evidencia de imagen; 20 registros
+pares).
+
+Registros pares (diferencia medida − cardiólogos, ms; «todos» incluye los
+`doubtful`):
+
+| brazo | intervalo | todos: n · media ± DE · \|dif.\| mediana | sólo `ok`: n · media ± DE · \|dif.\| mediana | CSE con `ok` |
+|---|---|---|---|---|
+| impreso | PR | 87 · +3.5 ± 31.3 · 9.4 | 56 · −3.6 ± 11.5 · 8.5 | no (DE 11.5 > 10) |
+| impreso | QRS | 100 · +3.8 ± 12.8 · 5.5 | 74 · +1.6 ± 9.8 · 4.5 | sí |
+| impreso | QT | 100 · −13.4 ± 28.4 · 14.5 | 73 · −13.7 ± 13.2 · 14.0 | sí |
+| digitalizado | PR | 16 · +0.2 ± 17.5 · 8.0 | 12 · −0.8 ± 10.7 · 7.1 | no (DE 10.7 > 10) |
+| digitalizado | QRS | 20 · +9.0 ± 17.1 · 9.2 | 13 · +4.9 ± 8.2 · 7.0 | sí |
+| digitalizado | QT | 20 · −5.0 ± 19.9 · 13.0 | 9 · −9.5 ± 22.4 · 20.0 | sí |
+| señal completa | PR / QRS / QT | ver JSON | 70 / 83 / 77 · +0.3 ± 17.5 / −1.1 ± 17.5 / −15.0 ± 34.9 | no |
+
+- El sesgo es pequeño en todos los brazos (|media| ≤ 15 ms); el error típico
+  es de 5–15 ms. La DE la inflan unos pocos registros con errores grandes;
+  la marca `doubtful` retiene la mayoría de ellos (en la hoja impresa, la DE
+  baja de 31 a 11 ms en PR y de 28 a 13 ms en QT).
+- Sobre la misma hoja, digitalizar con Ahus añade poco error a lo que da la
+  señal impresa perfecta (mismos 20 registros, \|dif.\| mediana PR 8.0 frente
+  a 11.2, QRS 9.2 frente a 6.5, QT 13.0 frente a 11.2).
+- La señal completa (12 × 10 s) no mejora a la impresa: más latidos también
+  suman latidos atípicos; el método no se ajustó para ese caso, que no es el
+  del programa.
+- QT se mide ~10–15 ms más corto que los cardiólogos (sesgo sistemático del
+  criterio de fin de T), dentro de la tolerancia CSE de 25 ms.
+
+Limitaciones: una sola base (LUDB, un electrocardiógrafo Schiller), 100
+registros de prueba y sólo 20 por el motor; la hoja digitalizada es una
+impresión sintética limpia, no una foto; ritmos con marcapasos y bloqueos
+incluidos pero no analizados por separado; la tolerancia CSE se aplicó a
+nuestra agregación (mediana entre derivaciones), no al protocolo CSE
+original. No es validación clínica.

@@ -48,7 +48,8 @@ ruff check src tests && ruff format --check src tests && mypy src && pytest -q
 - `src/ecg_photo/grid.py`, `aligned.py`, `calibration.py`, `transforms.py`, `geometry.py`,
   `signal.py` — rejilla, marco corregido de perspectiva, resolución de escalas, cadenas de
   transformaciones, px ↔ s/mV, rejilla temporal y remuestreo sin puentear huecos.
-- `src/ecg_photo/qc.py` — control de calidad sin verdad; `measure.py` — RR/FC/PR/QRS/QT.
+- `src/ecg_photo/qc.py` — control de calidad sin verdad; `intervals.py` — PR/QRS/QT/QTc medidos
+  en la señal; `measure.py` — aritmética de RR/FC/QTc.
 - `src/ecg_photo/export.py`, `render.py` — CSV/WFDB/JSON y PNG/PDF.
 - `src/ecg_photo/process.py` — cadena completa en un comando y `overview.png`.
 - `src/ecg_photo/store.py`, `worker.py`, `api.py`, `batch.py`, `ui/` — estudios y revisiones,
