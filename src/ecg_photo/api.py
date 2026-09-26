@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ecg_photo.contracts import load_manifest
 from ecg_photo.ingest import IngestRejected
+from ecg_photo.intervals import read_intervals_report
 from ecg_photo.process import OVERVIEW_FILENAME
 from ecg_photo.qc import read_qc_report
 from ecg_photo.store import (
@@ -329,6 +330,18 @@ def create_app(store: Store, worker: Worker) -> FastAPI:
         report = read_qc_report(_run_result_dir(study_id, run_id))
         if report is None:
             raise _err(404, "QC_NOT_FOUND", "run has no quality report (scale not confirmed)")
+        return report
+
+    @app.get("/studies/{study_id}/runs/{run_id}/intervals")
+    def run_intervals(study_id: str, run_id: str) -> dict:
+        """PR / QRS / QT / QTc written by the worker (intervals.json)."""
+        study_id = _check_id(study_id)
+        run_id = _check_id(run_id)
+        if store.get(study_id) is None:
+            raise _err(404, "STUDY_NOT_FOUND", "unknown study")
+        report = read_intervals_report(_run_result_dir(study_id, run_id))
+        if report is None:
+            raise _err(404, "INTERVALS_NOT_FOUND", "run has no intervals (scale not confirmed)")
         return report
 
     @app.get("/studies/{study_id}/runs/{run_id}/overview")

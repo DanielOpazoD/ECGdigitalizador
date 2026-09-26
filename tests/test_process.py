@@ -94,6 +94,8 @@ def test_process_falls_back_to_engine_axis_and_says_why(tmp_path: Path) -> None:
     assert s["qc"]["label"] is not None and s["qc"]["rr_error_pct"] is not None
     assert abs(s["qc"]["rr_error_pct"]) < 2
     assert (out / "overview.png").stat().st_size > 0
+    assert s["intervals"]["rr_ms"] == s["qc"]["rr_measured_ms"]
+    assert (out / s["run_dirs"]["confirmed"] / "intervals.json").exists()
     assert (out / "summary.json").exists() and (out / "export" / "export_report.json").exists()
     assert "seg-II-page-1.csv" in s["export"]["produced"]
     assert json.loads((out / "summary.json").read_text())["input"]["name"] == "page.png"

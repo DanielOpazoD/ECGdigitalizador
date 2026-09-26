@@ -158,6 +158,8 @@ def test_patch_run_publish_export(tmp_path) -> None:
         assert ov.status_code == 200 and ov.headers["content-type"] == "image/png"
         assert ov.content[:8] == b"\x89PNG\r\n\x1a\n"
         assert client.get(f"/studies/{sid}/runs/run-nope/overview").status_code == 404
+        iv = client.get(f"/studies/{sid}/runs/{run_id}/intervals")
+        assert iv.status_code == 200 and set(iv.json()["status"]) == {"pr_ms", "qrs_ms", "qt_ms"}
 
         ex = client.post(
             f"/studies/{sid}/exports",
