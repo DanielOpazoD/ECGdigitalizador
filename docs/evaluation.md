@@ -699,3 +699,53 @@ bajo voltaje; hacen falta más fotos reales de ese tipo.
 
 Limitaciones: 118 imágenes Kaggle de 10 registros; RR "impreso" derivado de
 la señal verdadera con el mismo detector; no es validación clínica.
+
+# F8: formatos distintos de 3×4 + II (objetivo O8 de `docs/mission.md`)
+
+Motivo: una foto del usuario de otro electrocardiógrafo, en formato 6×2 (seis
+filas de dos columnas de 5 s), salía `insufficient` sin decir por qué. La
+configuración de Ahus que usábamos (`inference_wrapper_george-moody-2024.yml`)
+sólo deja elegir al identificador de formato entre tres variantes de 3×4.
+
+**Banco sintético** (`benchmarks/f8_layout_eval.py` →
+`benchmarks/results/f8_layout_ptbxl_2026-09-26.json`): las 12 derivaciones
+reales de los 10 registros PTB-XL de F6-a dibujadas como impresión limpia
+(25 mm/s, 10 mm/mV, rejilla mm, pulso de calibración, 200 ppp) en 3×4+1R y
+6×2; Ahus con tres conjuntos de formatos. r@lag mediana por derivación contra
+la parte impresa de la verdad (120 derivaciones por fila):
+
+| impresión | formatos de Ahus | formato detectado | r@lag `evidence` | r@lag `engine` |
+|---|---|---|---|---|
+| 3×4+1R | George-Moody (anterior) | 3x4+1R 10/10 | 0.994 | 0.992 |
+| 3×4+1R | `lead_layouts_all.yml` | standard_3x4_with_r1 10/10 | 0.994 | 0.992 |
+| 3×4+1R | **`configs/ahus_lead_layouts.yml`** | 3x4+1R 10/10 | 0.994 | 0.992 |
+| 6×2 | George-Moody (anterior) | 6x4 9/10, 3x4+3R 1/10 | 0.728 | 0.700 |
+| 6×2 | `lead_layouts_all.yml` | standard_6x2 10/10 | 0.993 | 0.993 |
+| 6×2 | **`configs/ahus_lead_layouts.yml`** | standard_6x2 10/10 | 0.993 | 0.993 |
+
+**Imágenes reales 3×4** (Kaggle F6-b, tipos 0003 escaneo color, 0005 foto de
+impresión, 0010 foto con daño; 30 imágenes; eje `engine`, pareado por
+derivación con las corridas F6-b):
+
+| formatos de Ahus | r@lag mediana 0003 / 0005 / 0010 | derivaciones que bajan / suben > 0.1 | formato detectado |
+|---|---|---|---|
+| George-Moody (F6-b) | 0.910 / 0.833 / 0.854 | — | — |
+| `lead_layouts_all.yml` | 0.886 / 0.821 / 0.865 | 20 / 13 (sobre todo aVF, 9) | standard_3x4_with_r1/r2 |
+| **`configs/ahus_lead_layouts.yml`** | 0.911 / 0.835 / 0.854 | 3 / 6 | 3x4+1R 29/30, 6x4 1/30 |
+
+- El conjunto completo de Ahus reconoce 6×2 pero **empeora las imágenes 3×4
+  reales**: detecta variantes con tira de ritmo comodín y pierde sobre todo
+  aVF (`benchmarks/results/f8_kaggle_all_layouts_2026-09-26.json`; un fallo
+  adicional del motor en esa corrida fue por disco lleno, no del motor).
+- **Decisión:** `configs/ahus_lead_layouts.yml` = los tres formatos 3×4
+  anteriores + `standard_6x2` de Ahus, por defecto en el adaptador desde este
+  paso. Reconoce 6×2 como el conjunto completo y deja las imágenes 3×4 reales
+  como estaban (`benchmarks/results/f8_kaggle_own_layouts_2026-09-26.json`;
+  las diferencias de ±0.1 en pocas derivaciones aparecen en ambos sentidos).
+- El control de calidad y `overview.png` usan el formato que informa el motor:
+  cada derivación dura 10 s / columnas (6×2 → 5 s) y, sin tira de 10 s, el RR
+  se mide en la derivación más larga (II primero).
+
+Limitaciones: 6×2 sólo con impresiones sintéticas limpias (no fotos reales
+de ese formato); no se evaluaron 6×2 con tira de ritmo ni 12×1; ECG-Digitiser
+no cambia (no informa formato). No es validación clínica.

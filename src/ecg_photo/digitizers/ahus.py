@@ -26,6 +26,11 @@ PATCH_MARKER = "save_geometry_json"
 PATCH_FILE = "src/digitize.py"
 
 
+# the George-Moody 3x4 layouts + standard_6x2; Ahus' own lead_layouts_all.yml
+# degraded real 3x4 images (F8, docs/evaluation.md)
+DEFAULT_LAYOUTS = Path(__file__).resolve().parents[3] / "configs" / "ahus_lead_layouts.yml"
+
+
 class AhusDigitizer:
     def __init__(
         self,
@@ -34,7 +39,7 @@ class AhusDigitizer:
         base_config: Path,
         duration_s: float,
         device: str = "cpu",
-        layout_config: str = "lead_layouts_george-moody-2024.yml",
+        layout_config: str | None = None,
         target_num_samples: int | None = None,
         engine_spec: EngineSpec | None = None,
         expected_patches_applied: bool = True,
@@ -47,7 +52,8 @@ class AhusDigitizer:
         self.base_config = Path(base_config).resolve()
         self.duration_s = float(duration_s)
         self.device = device
-        self.layout_config = layout_config
+        # default: our layout set (3x4 + 6x2, F8 in docs/evaluation.md)
+        self.layout_config = layout_config or str(DEFAULT_LAYOUTS)
         self.target_num_samples = target_num_samples
         self.expected_patches_applied = expected_patches_applied
         if engine_spec is None:

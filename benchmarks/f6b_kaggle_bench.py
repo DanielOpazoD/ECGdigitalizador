@@ -290,8 +290,9 @@ def main() -> int:
     )
     ap.add_argument(
         "--ahus-layout-config",
-        default="lead_layouts_george-moody-2024.yml",
-        help="layout set the Ahus layout identifier chooses from (src/config/...)",
+        default=None,
+        help="layout set of the Ahus layout identifier: a name in Ahus src/config/ or a "
+        "path (default: the adapter's, configs/ahus_lead_layouts.yml)",
     )
     ap.add_argument("--digitiser-root", type=Path, default=Path("external/ecg-digitiser"))
     ap.add_argument(
