@@ -41,6 +41,9 @@ FLAT_RANGE_MV = 0.05
 RHYTHM_DURATION_TOL = 0.05
 IDENTITY_GOOD = 0.35
 IDENTITY_BAD = 1.0
+# absolute floor (mV) for the rms that normalises the identity residuals; 0
+# keeps the pure relative residual (see F7 paso 7 in docs/evaluation.md)
+IDENTITY_RMS_FLOOR_MV = 0.0
 MAX_ALIGN_S = 0.04
 RR_TOL = 0.05  # vs printed RR; printed HR is an integer (+-1 bpm ~ 1-2 %)
 MIN_RR_S = 0.2  # 300 bpm refractory: a 0.3 s limit halved an SVT at 207 bpm (RR 290 ms)
@@ -53,6 +56,8 @@ QRS_BAND_HZ = (5.0, 25.0)
 QRS_WINDOW_S = 0.1
 QRS_FLOOR = 0.3
 QRS_KEEP = 0.4
+# RR intervals kept for the mean, as fractions of the median RR
+RR_KEEP = (0.5, 1.8)
 
 
 @dataclass
@@ -126,13 +131,14 @@ def detect_qrs(x: np.ndarray, fs: float) -> np.ndarray:
 
 
 def identity_residual(
-    parts: list[np.ndarray], target: np.ndarray | None, fs: float
+    parts: list[np.ndarray], target: np.ndarray | None, fs: float, floor_mV: float = 0.0
 ) -> float | None:
     """rms(sum(parts) - target) / rms(target), both mean-removed, over their
     common finite samples, best over target shifts within +-MAX_ALIGN_S (rows
     of a printout are not perfectly aligned). With target None: rms(sum) over
-    the mean rms of the parts (an identity summing to zero). None if under
-    half of the samples are usable."""
+    the mean rms of the parts (an identity summing to zero). The normalising
+    rms is at least floor_mV, so low-voltage leads are judged by an absolute
+    error. None if under half of the samples are usable."""
     arrays = parts + ([target] if target is not None else [])
     n = min(len(a) for a in arrays)
     if n < 10:
@@ -144,7 +150,7 @@ def identity_residual(
         if m.sum() < 0.5 * n or not ref > 0:
             return None
         d = total[m] - np.mean(total[m])
-        return float(np.sqrt(np.mean(d**2)) / ref)
+        return float(np.sqrt(np.mean(d**2)) / max(ref, floor_mV))
     best: float | None = None
     max_lag = int(MAX_ALIGN_S * fs)
     for lag in range(-max_lag, max_lag + 1, max(1, max_lag // 20)):
@@ -156,7 +162,7 @@ def identity_residual(
         if not sd > 0:
             continue
         d = (total[m] - np.mean(total[m])) - (t[m] - np.mean(t[m]))
-        r = float(np.sqrt(np.mean(d**2)) / sd)
+        r = float(np.sqrt(np.mean(d**2)) / max(sd, floor_mV))
         best = r if best is None or r < best else best
     return best
 
@@ -166,6 +172,7 @@ def run_qc(
     *,
     printed_rr_ms: float | None = None,
     printed_hr_bpm: float | None = None,
+    identity_floor_mV: float | None = None,
 ) -> RunQC:
     """Quality report of a confirmed run (segments with signals in mV).
     printed_rr_ms / printed_hr_bpm: values printed by the electrocardiograph
@@ -220,16 +227,17 @@ def run_qc(
         leads.append(q)
         trimmed[name] = span
 
+    floor = IDENTITY_RMS_FLOOR_MV if identity_floor_mV is None else identity_floor_mV
     rates = {r for _x, r in signals.values()}
     common_fs = rates.pop() if len(rates) == 1 else None
     ein = gold = None
     if common_fs is not None:
         if {"I", "II", "III"} <= trimmed.keys():
             # column 1 of the printout: I, II (rhythm strip from t=0), III
-            ein = identity_residual([trimmed["I"], trimmed["III"]], trimmed["II"], common_fs)
+            ein = identity_residual([trimmed["I"], trimmed["III"]], trimmed["II"], common_fs, floor)
         if {"aVR", "aVL", "aVF"} <= trimmed.keys():
             parts = [trimmed[k] for k in ("aVR", "aVL", "aVF")]
-            gold = identity_residual(parts, None, common_fs)
+            gold = identity_residual(parts, None, common_fs, floor)
 
     n_beats = rr_ms = rr_err = rr_median = None
     rhythm = [q.lead for q in leads if q.status == "ok" and q.expected_s == RHYTHM_S]
@@ -240,9 +248,14 @@ def run_qc(
         if n_beats >= 3:
             rr = np.diff(beats) / fs * 1000.0
             # the electrocardiograph prints the mean RR; in an irregular rhythm
-            # (AF) the median differs from it by more than the tolerance
-            rr_ms = float(np.mean(rr))
+            # (AF) the median differs from it by more than the tolerance.
+            # Intervals far from the median are a missed beat (~2x) or a
+            # spurious one (split interval) of the digitized trace, not rhythm:
+            # they are left out of the mean (F7 Kaggle: strips > 5 % off the truth
+            # 7/104 -> 1/104).
             rr_median = float(np.median(rr))
+            keep = rr[(rr >= RR_KEEP[0] * rr_median) & (rr <= RR_KEEP[1] * rr_median)]
+            rr_ms = float(np.mean(keep if len(keep) else rr))
 
     flags = sorted({f for q in leads for f in q.flags})
     if printed_rr_ms is not None:
@@ -283,10 +296,13 @@ def run_qc(
             "rhythm_duration_tol": RHYTHM_DURATION_TOL,
             "identity_good": IDENTITY_GOOD,
             "identity_bad": IDENTITY_BAD,
+            "identity_rms_floor_mV": floor,
             "rr_tol": RR_TOL,
             "min_rr_s": MIN_RR_S,
             "qrs_floor": QRS_FLOOR,
             "qrs_keep": QRS_KEEP,
+            "rr_keep_min": RR_KEEP[0],
+            "rr_keep_max": RR_KEEP[1],
         },
         n_beats=n_beats,
         rr_measured_ms=None if rr_ms is None else round(rr_ms, 1),

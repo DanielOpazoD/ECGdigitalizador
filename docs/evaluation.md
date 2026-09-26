@@ -642,3 +642,60 @@ resuelve. Cambiar la normalización (p. ej. un suelo absoluto en mV) exige
 recalibrar los umbrales con las corridas Kaggle de `f7_qc_eval.py`; no se
 cambia sin esa evaluación. En la foto de FA el error de Goldberger es
 0.28 mV y falta V3: ahí la marca sí parece merecida.
+
+# F7 paso 7: re-evaluación del QC en Kaggle con el detector nuevo
+
+`benchmarks/f7_qc_eval.py` sobre las corridas F6-b guardadas (eje `engine`,
+sin re-ejecutar motores) →
+`benchmarks/results/f7_qc_rr_floor_kaggle_2026-09-26.json`.
+
+**Separación de etiquetas:** idéntica a la tabla del paso 2 (Ahus good /
+acceptable / insufficient: r@lag mediana 0.934 / 0.902 / 0.803;
+ECG-Digitiser 0.971 / 0.953 / 0.122). El detector sólo afecta al contraste
+de RR, que en Kaggle no se usa para etiquetar sin RR impreso.
+
+**Contraste de RR contra la verdad.** Como "RR impreso" se toma el RR medio que
+`detect_qrs` mide en la II verdadera (10 s), y se compara con el de la tira
+digitalizada (104 imágenes con tira medible; 14 sin tira medible, casi todas
+fotos inservibles de ECG-Digitiser o fallos de Ahus en `0006`):
+
+| agregación del RR medido | \|error\| mediana | p90 | casos > 5 % |
+|---|---|---|---|
+| media simple (paso 6) | 0.10 % | 0.76 % | 7 |
+| **detector nuevo + media recortada (0.5–1.8 × mediana)** | **0.10 %** | **0.73 %** | **1** |
+
+Con la media simple, un latido perdido en la traza digitalizada (intervalo
+≈ 2 RR) o uno espurio (intervalo partido) sesga el RR más del 5 %. Desde este
+paso `rr_measured_ms` es la media de los intervalos entre 0.5 y 1.8 veces la
+mediana (`RR_KEEP`; si ninguno cae ahí, la media de todos). La prueba
+sintética de FA (RR 0.36–0.72 s, extrasístole aberrante) sigue pasando: esos
+intervalos quedan dentro del rango. El caso restante > 5 % (registro
+3406869873, foto manchada `0009`, Ahus, −8.5 %) sale `acceptable`. Prueba
+nueva: `test_rr_mean_ignores_missed_beat` (falla con la media simple).
+Las fotos del GE MAC2000 de los pasos 3 y 6 no están disponibles en el
+repositorio: la media recortada no se re-midió sobre ellas, sólo sobre sus
+reproducciones sintéticas.
+
+**Suelo absoluto para las identidades de miembros.** Se probó normalizar el
+residuo por `max(rms_ref, suelo)` (equivale a exigir residuo relativo > 1 y
+error absoluto > suelo para `LIMB_LEADS_INCONSISTENT`). Imágenes Kaggle por
+r@lag de sus derivaciones de miembros:
+
+| suelo | falsas alarmas (miembros r ≥ 0.9, marcadas inconsistentes) | aciertos (miembros r < 0.7, marcadas inconsistentes) | Ahus `good`: n / p10 r@lag |
+|---|---|---|---|
+| 0 (actual) | 6 | 5 | 21 / 0.906 |
+| 0.1 mV | 5 | 5 | 25 / 0.864 |
+| 0.15 mV | 4 | 1 | 32 / 0.875 |
+| 0.2 mV | 3 | 1 | 45 / 0.824 |
+
+Ningún suelo mejora la separación: 0.1 mV quita una falsa alarma pero mete en
+`good` imágenes peores (p10 0.906 → 0.864); desde 0.15 mV se pierden 4 de 5
+aciertos. **Se mantiene el suelo 0** (`IDENTITY_RMS_FLOOR_MV`; `run_qc` acepta
+`identity_floor_mV` para re-evaluar). Las fotos de bajo voltaje del paso 6
+siguen marcadas `LIMB_LEADS_INCONSISTENT`; la de FA (Goldberger 0.28 mV, sin
+V3) también lo estaría con cualquier suelo ≤ 0.2 mV. Queda pendiente: con
+Kaggle (voltajes normales) no se puede ajustar un criterio para trazados de
+bajo voltaje; hacen falta más fotos reales de ese tipo.
+
+Limitaciones: 118 imágenes Kaggle de 10 registros; RR "impreso" derivado de
+la señal verdadera con el mismo detector; no es validación clínica.

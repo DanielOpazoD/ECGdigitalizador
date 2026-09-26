@@ -234,3 +234,15 @@ def test_rr_irregular_rhythm_uses_mean_like_the_device(tmp_path: Path) -> None:
     assert rep.n_beats == len(qrs)
     assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 1.0
     assert rep.rr_median_ms is not None and abs(rep.rr_median_ms / printed - 1) > 0.05
+
+
+def test_rr_mean_ignores_missed_beat(tmp_path: Path) -> None:
+    # a beat lost in the digitized trace (gap of ~2 RR) must not inflate the
+    # mean RR: with the plain mean F7 Kaggle had 7/104 strips > 5 % off the truth
+    qrs = np.delete(np.arange(0.3, 9.9, 0.8), 6)
+    page = _page()
+    page["II"] = _strip(qrs)
+    rep = run_qc(_write_run(tmp_path, page), printed_rr_ms=800.0)
+    assert rep.n_beats == len(qrs)
+    assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 1.0
+    assert "RR_MISMATCH_PRINTED" not in rep.flags
