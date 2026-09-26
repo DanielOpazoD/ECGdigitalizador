@@ -6,6 +6,7 @@ from typing import Protocol
 import numpy as np
 
 from ecg_photo.contracts import TransformChain, sha256_file
+from ecg_photo.paths import config_file
 
 
 class EngineNotReady(RuntimeError):
@@ -59,7 +60,8 @@ class Digitizer(Protocol):
     def run(self, image_path: Path, work_dir: Path) -> EngineOutput: ...
 
 
-def load_engine_specs(path: Path = Path("configs/checkpoints.json")) -> dict[str, EngineSpec]:
+def load_engine_specs(path: Path | None = None) -> dict[str, EngineSpec]:
+    path = path or config_file("checkpoints.json")
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     specs: dict[str, EngineSpec] = {}
     for e in data["engines"]:

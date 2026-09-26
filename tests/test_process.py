@@ -135,6 +135,11 @@ def test_cli_process(tmp_path: Path, monkeypatch, capsys) -> None:
     base += ["--author", "t", "--reason", "r", "--engines-config", str(tmp_path / "none.yml")]
     assert main([*base, "--out", str(tmp_path / "a"), "--engine", "nope"]) == 2
     assert "not configured" in capsys.readouterr().out
+    missing = ["process", str(tmp_path / "none.png"), *base[2:], "--engine", "fake"]
+    assert main([*missing, "--out", str(tmp_path / "m")]) == 2
+    assert "input not found" in capsys.readouterr().out
+    assert main([*base, "--out", str(tmp_path / "a"), "--engine", "nope"]) == 2
+    assert "not configured" in capsys.readouterr().out
     assert main([*base, "--out", str(tmp_path / "b"), "--engine", "fake", "--duration", "3"]) == 0
     res = json.loads(capsys.readouterr().out)
     assert res["time_source"] == "engine" and res["qc_label"] is not None

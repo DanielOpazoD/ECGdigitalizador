@@ -10,10 +10,11 @@ from pathlib import Path
 import yaml
 
 from ecg_photo.digitizers.base import Digitizer
+from ecg_photo.paths import config_file
 from ecg_photo.pipeline import apply_lead_corrections, confirm_scale, digitize_page
 from ecg_photo.process import write_overview
 from ecg_photo.qc import write_qc_report
-from ecg_photo.store import QueueFull, RunConfig, Store, _now
+from ecg_photo.store import QueueFull, RunConfig, Store, utc_now_iso
 
 EngineFactory = Callable[[RunConfig], Digitizer]
 
@@ -22,7 +23,7 @@ def default_engines(config_path: Path | None = None) -> dict[str, EngineFactory]
     """Engine registry: 'ahus'/'ecg-digitiser' from configs/engines.local.yml
     (external paths, not versioned); 'fake' only with ECG_PHOTO_ENABLE_FAKE_ENGINE=1."""
     engines: dict[str, EngineFactory] = {}
-    path = Path(config_path) if config_path else Path("configs/engines.local.yml")
+    path = Path(config_path) if config_path else config_file("engines.local.yml")
     if path.exists():
         cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         if cfg.get("ahus"):
@@ -115,7 +116,7 @@ class Worker(threading.Thread):
                 job.status = "failed"
                 job.stage = "failed"
                 job.error = f"{type(e).__name__}: {e}"[:500]
-                job.finished_at = _now()
+                job.finished_at = utc_now_iso()
                 self.store.write_job(study_id, job)
             except Exception:  # noqa: BLE001,S110 - job may already be gone
                 pass
@@ -126,7 +127,7 @@ class Worker(threading.Thread):
         if job.cancel_requested:
             job.status = "cancelled"
             job.stage = "cancelled"
-            job.finished_at = _now()
+            job.finished_at = utc_now_iso()
             store.write_job(study_id, job)
             return
         cfg = store.config_for(study_id, job.input_revision)
@@ -134,7 +135,7 @@ class Worker(threading.Thread):
             job.status = "failed"
             job.stage = "failed"
             job.error = f"engine {cfg.engine!r} not configured on this worker"
-            job.finished_at = _now()
+            job.finished_at = utc_now_iso()
             store.write_job(study_id, job)
             return
 
@@ -185,14 +186,14 @@ class Worker(threading.Thread):
         if job.cancel_requested:
             job.status = "cancelled"
             job.stage = "cancelled"
-            job.finished_at = _now()
+            job.finished_at = utc_now_iso()
             store.write_job(study_id, job)
             shutil.rmtree(final.run_dir, ignore_errors=True)
             return
 
         job.status = "completed"
         job.stage = "awaiting_publish"
-        job.finished_at = _now()
+        job.finished_at = utc_now_iso()
         store.write_job(study_id, job)
 
         if not store.late_worker_result(study_id, run_id, final.run_dir):

@@ -37,6 +37,7 @@ from ecg_photo.ingest import (
     ingest,
     safe_study_id,
 )
+from ecg_photo.paths import config_file
 
 
 class StoreError(RuntimeError):
@@ -177,7 +178,7 @@ class ExecutionLimits:
 
 
 def load_execution_limits(path: Path | None = None) -> ExecutionLimits:
-    path = path or Path("configs/default.yml")
+    path = path or config_file("default.yml")
     cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8"))["execution"]
     return ExecutionLimits(
         max_active_jobs=int(cfg["max_active_jobs"]),
@@ -196,13 +197,13 @@ MIME_BY_EXT = {
 }
 
 
-def _now() -> str:
+def utc_now_iso() -> str:
     import datetime
 
     return datetime.datetime.now(datetime.UTC).isoformat()
 
 
-def _atomic_json(path: Path, payload) -> None:
+def write_json_atomic(path: Path, payload) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     if isinstance(payload, BaseModel):
         tmp.write_text(payload.model_dump_json(indent=2), encoding="utf-8")
@@ -298,7 +299,7 @@ class Store:
         return StudyState(**json.loads(p.read_text(encoding="utf-8")))
 
     def _write_state(self, state: StudyState) -> None:
-        _atomic_json(self._state_path(state.study_id), state)
+        write_json_atomic(self._state_path(state.study_id), state)
 
     def _rev_dir(self, study_id: str, revision: int) -> Path:
         return self._study_dir(study_id) / f"rev{revision}"
@@ -319,7 +320,7 @@ class Store:
         return Job(**json.loads(p.read_text(encoding="utf-8")))
 
     def write_job(self, study_id: str, job: Job) -> None:
-        _atomic_json(self._job_path(study_id, run_id=job.run_id), job)
+        write_json_atomic(self._job_path(study_id, run_id=job.run_id), job)
 
     def run_dir(self, study_id: str, run_id: str) -> Path:
         return self._study_dir(study_id) / "runs" / run_id
@@ -592,7 +593,7 @@ class Store:
                 run_id=run_id,
                 input_revision=expected_revision,
                 config_hash=config_hash,
-                created_at=_now(),
+                created_at=utc_now_iso(),
             )
             self.run_dir(study_id, run_id).mkdir(parents=True)
             self.write_job(study_id, job)
@@ -614,7 +615,7 @@ class Store:
             if job.status == "queued":
                 job.status = "cancelled"
                 job.stage = "cancelled"
-                job.finished_at = _now()
+                job.finished_at = utc_now_iso()
             job.cancel_requested = True
             self.write_job(study_id, job)
             return job
@@ -648,7 +649,7 @@ class Store:
             if job is not None and job.status == "completed":
                 job.status = "completed_unpublished"
                 job.stage = "unpublished"
-                job.finished_at = _now()
+                job.finished_at = utc_now_iso()
                 self.write_job(study_id, job)
             return False
 
@@ -702,7 +703,7 @@ class Store:
                 )
                 arts[art.artifact_id] = art
                 out.append(art)
-            _atomic_json(
+            write_json_atomic(
                 self._artifacts_path(study_id),
                 {k: v.model_dump(mode="json") for k, v in arts.items()},
             )
@@ -762,7 +763,7 @@ class Store:
         job.status = status  # type: ignore[assignment]
         job.stage = stage
         job.error = error
-        job.finished_at = _now()
+        job.finished_at = utc_now_iso()
         self.write_job(study_id, job)
 
     def fail_job(self, study_id: str, run_id: str, error: str) -> None:
