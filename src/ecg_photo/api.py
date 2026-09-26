@@ -280,9 +280,10 @@ def create_app(store: Store, worker: Worker) -> FastAPI:
         return json.loads(path.read_text())
 
     def _run_result_dir(study_id: str, run_id: str) -> Path:
-        job = store._read_job(study_id, run_id)
-        if job is None:
-            raise _err(404, "RUN_NOT_FOUND", "run not in this study")
+        try:
+            store.get_job(study_id, run_id)
+        except RunNotFound:
+            raise _err(404, "RUN_NOT_FOUND", "run not in this study") from None
         result = store.run_dir(study_id, run_id) / "result"
         if not result.exists():
             raise _err(404, "RESULT_NOT_FOUND", "run has no published result")

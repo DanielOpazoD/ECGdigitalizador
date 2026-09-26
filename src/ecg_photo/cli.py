@@ -192,6 +192,9 @@ def _cmd_process(args: argparse.Namespace) -> int:
         printed_rr_ms=args.printed_rr_ms,
         printed_hr_bpm=args.printed_hr,
     )
+    if not Path(args.file).is_file():
+        print(json.dumps({"error": f"input not found: {args.file}"}, ensure_ascii=False))
+        return 2
     try:
         summary = process_file(Path(args.file), Path(args.out), digitizer, opts)
     except IngestRejected as e:

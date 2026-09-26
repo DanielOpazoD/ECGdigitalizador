@@ -1,3 +1,24 @@
+# Evaluaciones: resumen e índice
+
+Cada fase mide sobre datos reales y guarda las métricas en
+`benchmarks/results/`. Nada de esto es validación clínica. Resultado principal
+de cada una (r@lag: correlación por derivación con la verdad tras alinear
+±0.2 s; mediana):
+
+| Fase | Datos | Qué se midió | Resultado principal |
+|---|---|---|---|
+| [F6-a](#evaluación-f6-a-ptb-xl--ecg-image-kit--pipeline) | PTB-XL real → imágenes sintéticas | dos motores, pipeline completo | línea base sintética |
+| [F6-b](#evaluación-f6-b-imágenes-reales-kaggle-physionet-ecg-image-digitization) | Kaggle: impresiones, escaneos y fotos reales (10 × 9 tipos) | Ahus y ECG-Digitiser | Ahus 0.922; ECG-Digitiser falla en escaneos y fotos |
+| [F7 paso 1](#f7-rejilla-ambigua-1-mm-o-5-mm-resuelta-con-el-tamaño-de-página) | Kaggle | rejilla 1 mm / 5 mm por tamaño de página | escala propia en 10/10 escaneos |
+| [F7 paso 2–3](#f7-paso-2-control-de-calidad-sin-verdad-ecg_photoqc-ecg-photo-qc) | Kaggle + fotos MAC2000 | control de calidad sin verdad; RR impreso | `insufficient` 0.80 / 0.12 frente a `good` 0.93 / 0.97 |
+| [F7 paso 4](#f7-paso-4-resolución-de-la-foto-y-ampliación-al-ingresar) | Kaggle fotos reducidas | resolución y ampliación al ingresar | 1000 px: 0.740 → 0.847 |
+| [F7 paso 5](#f7-paso-5-perspectiva--rejilla-en-el-marco-alineado-del-motor) | Kaggle | rejilla en el marco corregido de perspectiva | eje propio 0.941 frente a 0.922 del motor |
+| [F7 paso 6–7](#f7-paso-6-detector-de-qrs-del-contraste-con-lo-impreso) | fotos MAC2000 + Kaggle | detector de QRS, RR medio recortado | RR: 1/104 tiras fuera de ±5 % |
+| [F8](#f8-formatos-distintos-de-34--ii-objetivo-o8-de-docsmissionmd) | PTB-XL impreso 3×4 y 6×2 + Kaggle | formatos de hoja | 6×2: 0.70 → 0.993 sin empeorar 3×4 |
+
+Las secciones siguen en orden cronológico; cuando una fase posterior cambia
+una conclusión anterior, la posterior lo dice.
+
 # Evaluación F6-a: PTB-XL → ECG-Image-Kit → pipeline
 
 Alcance: **señales 12 derivaciones reales (PTB-XL), imágenes sintéticas

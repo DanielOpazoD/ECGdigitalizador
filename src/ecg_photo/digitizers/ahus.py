@@ -19,6 +19,7 @@ from ecg_photo.digitizers.base import (
     load_engine_specs,
     verify_weights,
 )
+from ecg_photo.paths import config_file
 from ecg_photo.transforms import homography_folds, homography_from_points
 
 LEAD_NAMES_12 = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
@@ -28,7 +29,7 @@ PATCH_FILE = "src/digitize.py"
 
 # the George-Moody 3x4 layouts + standard_6x2; Ahus' own lead_layouts_all.yml
 # degraded real 3x4 images (F8, docs/evaluation.md)
-DEFAULT_LAYOUTS = Path(__file__).resolve().parents[3] / "configs" / "ahus_lead_layouts.yml"
+DEFAULT_LAYOUTS = config_file("ahus_lead_layouts.yml")
 
 
 class AhusDigitizer:

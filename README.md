@@ -27,29 +27,36 @@ pip install -e .[dev]
 ruff check src tests && ruff format --check src tests && mypy src && pytest -q
 ```
 
+## Documentación
+- `docs/mission.md` — misión, principios, objetivos medibles y su estado.
+- `docs/architecture.md` — capas, flujo de datos, dónde vive cada cosa, cómo extender.
+- `docs/pipeline.md` — las dos corridas (`digitize`, `confirm-scale`) y `ecg-photo process`.
+- `docs/geometry.md` — marcos de coordenadas, transformaciones, calibración.
+- `docs/api.md` — API local, worker, lotes, interfaz de revisión.
+- `docs/engines.md` — motores integrados y su evaluación inicial.
+- `docs/evaluation.md` — todos los bancos, con resumen e índice al inicio.
+- `docs/environment.md` — inventario del entorno, decisiones y bloqueos.
+
 ## Estructura
 - `src/ecg_photo/contracts.py` — contrato canónico v1 (pydantic, `extra="forbid"`), validación
   semántica del directorio de revisión, JSON estricto (`null`, nunca `NaN`).
-- `src/ecg_photo/geometry.py` — px ↔ s/mV; toda escala debe ser positiva y finita.
-- `src/ecg_photo/signal.py` — rejilla semiabierta `[0, n/fs)`, remuestreo sin puentear huecos.
-- `src/ecg_photo/measure.py` — RR/FC/PR/QRS/QT/QTc con nombres sufijados por unidad.
-- `src/ecg_photo/fixtures.py` — revisiones sintéticas deterministas (calibrada, hueco, ganancia
-  desconocida, tiempo desconocido, cola 2.503 s).
-- `src/ecg_photo/transforms.py` — cadenas ordenadas de transformaciones (EXIF, crop,
-  rotate90, affine, homografía) aplicables e invertibles punto a punto.
-- `src/ecg_photo/ingest.py` — admisión por bytes mágicos y límites (`supported_inputs.yml`),
-  EXIF, raster embebido o render PDF, `study_id` seguro.
-- `src/ecg_photo/grid.py` — estimador determinista del paso de rejilla por autocorrelación.
-- `src/ecg_photo/calibration.py` — resolución de escala por evidencias (manual > concordancia).
-- `src/ecg_photo/process.py` — cadena completa en un comando (`ecg-photo process`).
-- `src/ecg_photo/qc.py` — control de calidad sin verdad; `aligned.py` — rejilla en el marco
-  corregido de perspectiva del motor.
-- `src/ecg_photo/store.py`, `worker.py`, `api.py` — revisiones, worker único, API local,
-  recuperación tras reinicio; `batch.py` — lotes con informe reanudable.
-- `configs/` — configuración propuesta, entradas admitidas, inventario de motores/pesos,
-  perfiles de formato (`configs/profiles/`).
-- `external/` (ignorado) — checkouts de motores candidatos fijados por commit.
-- `patches/` — parches mínimos aplicados a `external/` (ver `patches/README.md`).
+- `src/ecg_photo/ingest.py` — admisión por bytes mágicos y límites, EXIF, raster o PDF,
+  ampliación de fotos pequeñas, rejilla de la página.
+- `src/ecg_photo/pipeline.py` — `digitize_page` (motor → corrida sin escala) y
+  `confirm_scale` (corrida nueva en mV y s, eje temporal por evidencia o supuesto del motor).
+- `src/ecg_photo/digitizers/` — adaptadores de motores (Ahus, ECG-Digitiser) tras un protocolo común.
+- `src/ecg_photo/grid.py`, `aligned.py`, `calibration.py`, `transforms.py`, `geometry.py`,
+  `signal.py` — rejilla, marco corregido de perspectiva, resolución de escalas, cadenas de
+  transformaciones, px ↔ s/mV, rejilla temporal y remuestreo sin puentear huecos.
+- `src/ecg_photo/qc.py` — control de calidad sin verdad; `measure.py` — RR/FC/PR/QRS/QT.
+- `src/ecg_photo/export.py`, `render.py` — CSV/WFDB/JSON y PNG/PDF.
+- `src/ecg_photo/process.py` — cadena completa en un comando y `overview.png`.
+- `src/ecg_photo/store.py`, `worker.py`, `api.py`, `batch.py`, `ui/` — estudios y revisiones,
+  worker único, API local, lotes reanudables, interfaz de revisión.
+- `src/ecg_photo/paths.py` — ubicación de `configs/` (independiente del directorio actual).
+- `configs/` — configuración, entradas admitidas, inventario de motores/pesos, formatos de Ahus.
+- `benchmarks/` — bancos reproducibles; `benchmarks/results/` — sus métricas.
+- `external/` (ignorado) — motores fijados por commit; `patches/` — parches mínimos aplicados.
 
 ## Comandos
 ```bash

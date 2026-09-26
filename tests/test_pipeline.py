@@ -317,8 +317,11 @@ def test_confirm_scale_evidence_requires_geometry_and_speed(tmp_path) -> None:
         study, "page-1", FakeDigitizer(_fake_output(truth)), engine_duration_s=3.0
     )
     # no geometry (engine-canonical raw frame) -> TIME_SCALE_UNKNOWN
+    runs_before = sorted(p.name for p in paths.run_dir.parent.iterdir())
     with pytest.raises(ValueError, match="TIME_SCALE_UNKNOWN"):
         confirm_scale(paths.run_dir, gain_mm_mV=10.0, author="t", reason="r", speed_mm_s=25.0)
+    # a refused confirmation leaves no half-written run directory behind
+    assert sorted(p.name for p in paths.run_dir.parent.iterdir()) == runs_before
 
     # geometry + grid but no speed evidence -> TIME_SCALE_UNKNOWN
     _write_grid(study, 8.0)

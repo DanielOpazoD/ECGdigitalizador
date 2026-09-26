@@ -1,6 +1,9 @@
 # F0 — Entorno real (inspeccionado, no supuesto)
 
-Fecha de inspección: 2026-09-25 (UTC).
+Fecha de inspección: 2026-09-25 (UTC). Las secciones de hardware, Python y
+motores describen la máquina de la inspección F0 (macOS). Los bancos F6-b a F8
+se ejecutaron después en un contenedor Linux x86-64 sin GPU (Python 3.12,
+motores instalados con `benchmarks/setup_engines.sh`); sus tiempos son de CPU.
 
 ## Hardware / SO
 | Ítem | Valor observado | Comando |
@@ -57,10 +60,11 @@ descargados** (`GIT_LFS_SKIP_SMUDGE=1`); se registran los OIDs sha256 declarados
 
 Hashes completos y comandos: `configs/checkpoints.json`.
 
-**Estado:** ningún motor ha sido ejecutado ni evaluado. No hay motor seleccionado. La comparación
-(F2) exige: `git lfs pull` con verificación de hash, instalación de torch/nnU-Net en CPU,
-y el banco sintético de `ecg-image-kit`. Requisitos del Ahus README: Python ≥3.12, probado sólo en
-Ubuntu/Debian con CUDA.
+**Estado en F0 (histórico):** ningún motor ejecutado todavía. **Estado actual:** Ahus y
+ECG-Digitiser integrados y evaluados en F2, F6-a, F6-b, F7 y F8 (`docs/engines.md`,
+`docs/evaluation.md`); Ahus es el motor por defecto de `ecg-photo process`. Instalación
+reproducible: `bash benchmarks/setup_engines.sh`. Requisitos del Ahus README: Python ≥3.12,
+probado sólo en Ubuntu/Debian con CUDA (aquí se usa en CPU).
 
 ## Registro de decisiones (F0)
 | ID | Decisión | Motivo |

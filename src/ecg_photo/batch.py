@@ -14,7 +14,7 @@ from pathlib import Path
 from ecg_photo.contracts import sha256_file
 from ecg_photo.ingest import IngestRejected
 from ecg_photo.qc import read_qc_report
-from ecg_photo.store import Job, RunNotFound, Store, StudyPatch, _atomic_json, _now
+from ecg_photo.store import Job, RunNotFound, Store, StudyPatch, utc_now_iso, write_json_atomic
 from ecg_photo.worker import EngineFactory, Worker
 
 SCHEMA = "ecg-photo-batch/1"
@@ -104,10 +104,10 @@ def run_batch(
         if old.get("options_hash") != opt_hash:
             raise BatchError("options differ from the report being resumed")
         previous = {e["input"]: e for e in old.get("entries", [])}
-        started_at = old.get("started_at", _now())
+        started_at = old.get("started_at", utc_now_iso())
     else:
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        started_at = _now()
+        started_at = utc_now_iso()
 
     worker = Worker(store, engines)  # not started: jobs run synchronously
     entries: list[dict] = []
@@ -124,9 +124,9 @@ def run_batch(
     }
 
     def _flush() -> None:
-        report["updated_at"] = _now()
+        report["updated_at"] = utc_now_iso()
         report["summary"] = _summary(entries)
-        _atomic_json(report_path, report)
+        write_json_atomic(report_path, report)
 
     # keep entries of inputs no longer present, so the report stays complete
     present = set(names)

@@ -30,6 +30,7 @@ from ecg_photo.contracts import (
     sha256_file,
 )
 from ecg_photo.grid import GridEstimate, estimate_grid, resolve_ambiguous_period
+from ecg_photo.paths import config_file
 from ecg_photo.transforms import exif_to_steps
 
 EXIF_ORIENTATION_TAG = 0x0112
@@ -63,10 +64,7 @@ class SupportedInputs:
 
 
 def load_supported_inputs(path: Path | None = None) -> SupportedInputs:
-    if path is None:
-        path = Path(__file__).resolve().parents[2] / "configs" / "supported_inputs.yml"
-        if not path.exists():
-            path = Path("configs/supported_inputs.yml")
+    path = path or config_file("supported_inputs.yml")
     cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     return SupportedInputs(
         max_file_mib=float(cfg["max_file_mib"]),

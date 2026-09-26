@@ -18,7 +18,6 @@ printed on the page).
 """
 
 import json
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -196,13 +195,12 @@ def render_overview(run_dir: Path, out_path: Path, *, title: str = "") -> None:
 
 def _confirm(run: RunPaths, opts: ProcessOptions) -> tuple[RunPaths, str, str | None]:
     """Confirmed run, time axis used and, if the evidence axis was refused,
-    why. A refused attempt leaves no partial run directory behind."""
+    why (confirm_scale leaves no partial run directory when it refuses)."""
     order: list[Literal["evidence", "engine"]] = (
         ["evidence", "engine"] if opts.time_source == "auto" else [opts.time_source]
     )
     refused: str | None = None
     for source in order:
-        before = {p.name for p in run.run_dir.parent.iterdir()}
         try:
             paths = confirm_scale(
                 run.run_dir,
@@ -215,9 +213,6 @@ def _confirm(run: RunPaths, opts: ProcessOptions) -> tuple[RunPaths, str, str | 
             )
             return paths, source, refused
         except ValueError as e:
-            for p in run.run_dir.parent.iterdir():
-                if p.name not in before:
-                    shutil.rmtree(p, ignore_errors=True)
             if source == order[-1]:
                 raise
             refused = str(e)[:300]
