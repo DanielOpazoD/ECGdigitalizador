@@ -596,8 +596,8 @@ Ahus; error de escala = duración de II por `evidence` / por `engine` − 1:
 | **todas** | | | **0.941** | 0.922 |
 
 - Con Ahus, el eje por rejilla propia supera ya al del motor en todos los
-  tipos (0.941 frente a 0.922), y funciona en fotos: antes se negaba en casi
-  todas.
+  tipos salvo la imagen original, donde empatan (global 0.941 frente a
+  0.922), y funciona en fotos: antes se negaba en casi todas.
 - Los dos casos extremos no son errores de escala silenciosos: en la foto de
   dos hojas la rejilla alineada sale a 6.7 px/mm frente a ~10.9 en las demás;
   en la foto de pantalla el motor colocó su lienzo de 10 s sobre 2.5 s de la
