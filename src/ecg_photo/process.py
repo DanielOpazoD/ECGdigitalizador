@@ -18,6 +18,7 @@ printed on the page).
 """
 
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -40,6 +41,7 @@ from ecg_photo.qc import (
     short_lead_s,
 )
 from ecg_photo.render import PaperSpec, RenderNotAllowed, render_segment_pdf, render_segment_png
+from ecg_photo.report import REPORT_FILENAME, write_report
 
 SUMMARY_SCHEMA = "ecg-photo-process/1"
 OVERVIEW_FILENAME = "overview.png"
@@ -258,6 +260,10 @@ def process_file(file: Path, out: Path, digitizer: Digitizer, opts: ProcessOptio
         title=f"{file.name} - calidad: {qc.label.value} - eje temporal: {used}",
     )
 
+    report = write_report(final.run_dir, source_name=file.name)
+    if report["ok"]:
+        shutil.copyfile(final.run_dir / REPORT_FILENAME, out / REPORT_FILENAME)
+
     confirmed = load_manifest(final.run_dir / "manifest.json")
     summary = {
         "schema": SUMMARY_SCHEMA,
@@ -293,6 +299,7 @@ def process_file(file: Path, out: Path, digitizer: Digitizer, opts: ProcessOptio
         },
         "export": {"dir": "export", **exported},
         "overview": "overview.png",
+        "report": REPORT_FILENAME if report["ok"] else report,
         "note": "guidance only; not clinical validation",
     }
     (out / "summary.json").write_text(

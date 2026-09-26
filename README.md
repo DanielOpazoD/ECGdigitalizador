@@ -9,7 +9,7 @@ verdad y banco con imágenes reales (Kaggle) y fotos de un GE MAC2000 (`docs/eva
 No hay validación clínica ni diagnósticos habilitados. Inventario del entorno, decisiones y
 bloqueos: `docs/environment.md`.
 
-Uso rápido (una foto → señal exportada + informe de calidad + `overview.png`):
+Uso rápido (una foto → señal exportada + informe PDF de una página + `overview.png`):
 ```bash
 bash benchmarks/setup_engines.sh          # motores y configs/engines.local.yml
 ecg-photo process foto.jpg --out salida --speed 25 --gain 10 \
@@ -19,8 +19,12 @@ ecg-photo process foto.jpg --out salida --speed 25 --gain 10 \
 ## Instalación
 ```bash
 python3.12 -m venv .venv && . .venv/bin/activate
-pip install -e .[dev]
+pip install -c requirements.lock -e .[dev]
 ```
+`requirements.lock` fija las versiones exactas con las que se probaron el código y los
+bancos (también las usa CI). Para actualizarlas: `uv pip compile pyproject.toml --extra dev
+--python-version 3.12 --no-header --no-annotate -o requirements.lock`, instalar, y volver a
+pasar las pruebas y los bancos afectados antes de fusionar.
 
 ## Verificación
 ```bash
@@ -51,7 +55,8 @@ ruff check src tests && ruff format --check src tests && mypy src && pytest -q
 - `src/ecg_photo/qc.py` — control de calidad sin verdad; `intervals.py` — PR/QRS/QT/QTc medidos
   en la señal; `measure.py` — aritmética de RR/FC/QTc.
 - `src/ecg_photo/export.py`, `render.py` — CSV/WFDB/JSON y PNG/PDF.
-- `src/ecg_photo/process.py` — cadena completa en un comando y `overview.png`.
+- `src/ecg_photo/process.py` — cadena completa en un comando y `overview.png`; `report.py` —
+  informe PDF de una página.
 - `src/ecg_photo/store.py`, `worker.py`, `api.py`, `batch.py`, `ui/` — estudios y revisiones,
   worker único, API local, lotes reanudables, interfaz de revisión.
 - `src/ecg_photo/paths.py` — ubicación de `configs/` (independiente del directorio actual).

@@ -52,8 +52,8 @@ Un médico que tiene el trazado en papel (o sólo su foto) y quiere:
 | O3 | Eje temporal por evidencia | error de duración de la tira ≤ 2 % en ≥ 90 % de las imágenes | **Parcial**: −1.0…+2.7 % salvo 2 fallos marcados por QC |
 | O4 | Control de calidad que separe | `insufficient` con r@lag claramente menor que `good`; ninguna digitalización inservible como `good` | **Cumplido en Kaggle** (0.80/0.12 frente a 0.93/0.97); falsas alarmas en trazados de bajo voltaje |
 | O5 | Contraste con lo impreso | RR medido dentro de ±5 % del RR impreso cuando la tira es buena | **Cumplido en Kaggle** (1/104 fuera) y en 7 fotos MAC2000 |
-| O6 | Uso real por el médico | de la foto al CSV/PDF/WFDB con **un solo comando** o desde la interfaz, con el informe de calidad a la vista | **Cumplido**: CLI `ecg-photo process` (con `summary.json` y `overview.png`); en la interfaz web, línea de calidad y `overview` del resultado publicado |
-| O7 | Mediciones básicas | RR/FC y, con evidencia suficiente, PR/QRS/QT, con su incertidumbre | **Parcial**: PR/QRS/QT/QTc con estado `ok`/`doubtful`/`unavailable`; en LUDB (hoja impresa, `ok`) QRS y QT dentro de la tolerancia CSE, PR con DE 11.5 ms (> 10) |
+| O6 | Uso real por el médico | de la foto al CSV/PDF/WFDB con **un solo comando** o desde la interfaz, con el informe de calidad a la vista | **Cumplido**: CLI `ecg-photo process` (con `summary.json`, `overview.png` e informe `report.pdf` de una página); en la interfaz web, línea de calidad, intervalos, `overview` e informe PDF del resultado publicado |
+| O7 | Mediciones básicas | RR/FC y, con evidencia suficiente, PR/QRS/QT, con su incertidumbre | **Parcial**: PR/QRS/QT/QTc con estado `ok`/`doubtful`/`unavailable`; en LUDB (hoja impresa, `ok`) QRS y QT dentro de la tolerancia CSE, PR con DE 11.5 ms (> 10); en escaneos y fotos Kaggle la digitalización añade ≈ 5 ms a PR y QT y ensancha el QRS ≈ 8 ms (F10) |
 | O8 | Formatos del flujo real | 3×4+1R (MAC2000) soportado; 6×2 y otros detectados y rechazados con motivo | **Parcial**: 3×4+1R y 6×2 (Ahus; 6×2 medido sólo en impresiones sintéticas, r@lag 0.993); otros formatos sin evaluar |
 
 ## Cómo se prioriza
