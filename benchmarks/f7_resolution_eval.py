@@ -60,7 +60,7 @@ def main() -> int:
         "--variants",
         nargs="+",
         default=["fullx1", "1600x1", "1000x1", "1000x2"],
-        help="WIDTHxUPSAMPLE (width 'full' keeps the original)",
+        help="WIDTHxUPSAMPLE[@label] (width 'full' keeps the original)",
     )
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
@@ -92,7 +92,8 @@ def main() -> int:
         for v in args.variants:
             if (rid, v) in done:
                 continue
-            w_s, up_s = v.split("x")
+            # "@label" suffix: same variant re-run under another code version
+            w_s, up_s = v.split("@")[0].split("x")
             width = None if w_s == "full" else int(w_s)
             case_dir = args.work / rid / v
             img = case_dir / "input.png"

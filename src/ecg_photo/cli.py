@@ -17,7 +17,7 @@ from ecg_photo.export import (
     export_wfdb,
 )
 from ecg_photo.fixtures import write_fixture_revision
-from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest
+from ecg_photo.ingest import IngestRejected, estimate_page_grids, ingest, page_upsample
 from ecg_photo.qc import qc_json, run_qc
 from ecg_photo.render import (
     PaperSpec,
@@ -238,6 +238,9 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
                 "extraction": str(pg.extraction),
                 "size_px": [pg.width_px, pg.height_px],
                 "exif_orientation": pg.exif_orientation,
+                # low-resolution photos are upsampled at ingest; the grid is
+                # measured on the page raster, so px/mm are page pixels
+                "upsample": page_upsample(manifest, pg.page_id),
                 "px_per_mm_x": grid.px_per_mm_x,
                 "px_per_mm_y": grid.px_per_mm_y,
             }

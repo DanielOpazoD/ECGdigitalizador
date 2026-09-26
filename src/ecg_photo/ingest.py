@@ -33,6 +33,16 @@ from ecg_photo.grid import GridEstimate, estimate_grid, resolve_ambiguous_period
 from ecg_photo.transforms import exif_to_steps
 
 EXIF_ORIENTATION_TAG = 0x0112
+# Low-resolution photos (e.g. re-compressed by messaging apps) are upsampled
+# before the engine. F7 (Kaggle phone photos, Ahus, 10 records): median r@lag
+# 0.831 at 4032 px, 0.834 at 1600 px, 0.740 at 1000 px and 0.845 at 1000 px
+# upsampled x2 (QC insufficient 9/10 -> 1/10). Integer factor so pixel centres
+# map exactly; recorded as an affine step of the file -> page transform.
+MIN_PAGE_WIDTH_PX = 1600
+TARGET_PAGE_WIDTH_PX = 2000
+MAX_UPSAMPLE = 4
+MIN_UPSAMPLE_SOURCE_PX = 400  # narrower is not a readable ECG page: left as is
+UPSAMPLE_VERSION = "f7-lanczos-upsample-v1"
 MAGIC = {
     SourceKind.image: (b"\xff\xd8\xff", b"\x89PNG"),
     SourceKind.pdf: (b"%PDF-",),
@@ -128,8 +138,43 @@ def admit(path: Path, limits: SupportedInputs) -> Source:
     raise IngestRejected(ReasonCode.UNSUPPORTED_TYPE)
 
 
-def _exif_chain(orientation: int, w: int, h: int, page_id: str) -> TransformChain:
+def upsample_factor(width_px: int) -> int:
+    """Integer factor that brings a page narrower than MIN_PAGE_WIDTH_PX to at
+    least TARGET_PAGE_WIDTH_PX (capped at MAX_UPSAMPLE); 1 otherwise."""
+    if width_px < MIN_UPSAMPLE_SOURCE_PX or width_px >= MIN_PAGE_WIDTH_PX:
+        return 1
+    return int(min(MAX_UPSAMPLE, -(-TARGET_PAGE_WIDTH_PX // width_px)))
+
+
+def page_upsample(manifest: Manifest, page_id: str) -> int:
+    """Upsampling factor applied to a page raster at ingest (1 if none)."""
+    for t in manifest.transforms:
+        if t.target_frame_id == f"rectified-{page_id}":
+            for st in t.steps:
+                if st.procedure_version == UPSAMPLE_VERSION:
+                    return int(st.parameters["upsample"])  # type: ignore[arg-type]
+    return 1
+
+
+def _upsample_step(k: int, w: int, h: int) -> TransformStep:
+    # pixel-centre convention of an integer Lanczos resize: x' = k (x + 0.5) - 0.5
+    c = 0.5 * k - 0.5
+    return TransformStep(
+        kind="affine",
+        parameters={"matrix": [float(k), 0.0, c, 0.0, float(k), c], "upsample": k},
+        input_size=(w, h),
+        output_size=(w * k, h * k),
+        procedure_version=UPSAMPLE_VERSION,
+    )
+
+
+def _exif_chain(
+    orientation: int, w: int, h: int, page_id: str, upsample: int = 1
+) -> TransformChain:
     steps: list[TransformStep] = exif_to_steps(orientation, w, h)
+    if upsample > 1:
+        ow, oh = (h, w) if orientation in (5, 6, 7, 8) else (w, h)
+        steps = [*steps, _upsample_step(upsample, ow, oh)]
     return TransformChain(
         transform_id=f"{page_id}-exif",
         source_frame_id="file",
@@ -232,6 +277,11 @@ def ingest(path: Path, out_dir: Path, *, render_dpi: float = 300.0) -> Manifest:
                 raise IngestRejected(ReasonCode.PIXEL_LIMIT) from None
             orientation = int(img.getexif().get(EXIF_ORIENTATION_TAG, 1) or 1)
             oriented = ImageOps_safe_transpose(img)
+            k = upsample_factor(oriented.size[0])
+            if k > 1:
+                oriented = oriented.resize(
+                    (oriented.size[0] * k, oriented.size[1] * k), Image.Resampling.LANCZOS
+                )
             ow, oh = oriented.size
             png_path = out_dir / "pages" / "page-1.png"
             oriented.save(png_path)
@@ -250,7 +300,7 @@ def ingest(path: Path, out_dir: Path, *, render_dpi: float = 300.0) -> Manifest:
                 render_dpi=None,
             )
         )
-        transforms.append(_exif_chain(orientation, w, h, "page-1"))
+        transforms.append(_exif_chain(orientation, w, h, "page-1", upsample=k))
     elif source.kind == SourceKind.pdf:
         for pg, chain in _ingest_pdf(path, out_dir / "pages", render_dpi):
             pages.append(pg)
