@@ -162,3 +162,23 @@ def test_page_prior_does_not_override_a_confirmed_grid() -> None:
     raw = estimate_grid(img)
     assert raw.px_per_mm_x is not None
     assert resolve_ambiguous_period(raw, img) is raw
+
+
+def test_page_prior_refused_on_perspective() -> None:
+    # 5 mm lines only, x period growing 12 % from top to bottom (phone photo
+    # taken at an angle): one global scale would be wrong along some rows
+    from ecg_photo.grid import resolve_ambiguous_period
+
+    h, w = 1700, 2200
+    img = np.full((h, w), 240, dtype=np.uint8)
+    for i in range(5):
+        p = 39.37 * (0.94 + 0.03 * i)
+        xs = np.clip(np.round(np.arange(0, w, p)).astype(int), 0, w - 1)
+        img[i * h // 5 : (i + 1) * h // 5, xs] = 60
+    img[np.clip(np.round(np.arange(0, h, 39.37)).astype(int), 0, h - 1), :] = 60
+    raw = estimate_grid(img)
+    assert raw.px_per_mm_x is None and raw.ambiguous_period_px_x is not None
+    est = resolve_ambiguous_period(raw, img)
+    assert est.px_per_mm_x is None and est.period_step_mm is None
+    assert est.band_spread_rel_x is not None and est.band_spread_rel_x > 0.03
+    assert "not applied" in est.limitations and "perspective" in est.limitations

@@ -39,6 +39,8 @@ class GridEstimate:
     ambiguous_period_px_y: float | None = None
     # set only by resolve_ambiguous_period (page-size prior): mm per ambiguous period
     period_step_mm: float | None = None
+    # (max-min)/median of the x period across horizontal bands (prior check)
+    band_spread_rel_x: float | None = None
 
 
 METHOD = "autocorr-fft-grid-v1"
@@ -340,6 +342,14 @@ def estimate_grid(
 # assumption; the measured strip duration must then disagree with the layout.
 PAGE_WIDTH_MM = (250.0, 300.0)
 PAGE_MIN_FILL = 0.35
+# A single global scale is only valid on a uniform grid. The x period is
+# re-measured in PRIOR_BANDS horizontal bands; the prior is applied only if at
+# least 3 bands agree within MAX_BAND_SPREAD ((max-min)/median). Observed
+# (F7, 2026-09-26): flat scans 0.1-2.6 %, their scale within 2.1 % of the known
+# 10 s strip (one mould scan 6.5 %); phone photos with perspective 3.9-13 %
+# gave +10.6 % and +24.8 % scale errors; a MAC2000 photo 5.8 % -> +6.3 %.
+PRIOR_BANDS = 5
+MAX_BAND_SPREAD = 0.03
 PAGE_PRIOR = (
     "1 mm/5 mm resolved by page-size prior: whole page in frame, page width "
     f"{PAGE_WIDTH_MM[0]:.0f}-{PAGE_WIDTH_MM[1]:.0f} mm filling >= {PAGE_MIN_FILL:.0%} "
@@ -360,12 +370,36 @@ def period_step_mm_from_page(width_px: int, period_px: float) -> float | None:
     return None
 
 
+def band_period_spread(a: np.ndarray, ink_bright: bool, period_px: float) -> float | None:
+    """(max-min)/median of the x period re-measured in PRIOR_BANDS horizontal
+    bands (search within +-20 %, >= +-2 px, of `period_px`); None if < 3 bands
+    give one."""
+    h = a.shape[0]
+    vals: list[float] = []
+    for i in range(PRIOR_BANDS):
+        band = a[i * h // PRIOR_BANDS : (i + 1) * h // PRIOR_BANDS]
+        prof = band.mean(axis=0) if ink_bright else -band.mean(axis=0)
+        # +-20 %, at least +-2 px so a small period keeps an interior peak
+        p = _autocorr_period(
+            prof, min(0.8 * period_px, period_px - 2.0), max(1.2 * period_px, period_px + 2.0)
+        )
+        if p is None:
+            continue
+        ref = _refine_period_by_lines(prof, p)
+        vals.append(ref[0] if ref is not None else p)
+    if len(vals) < 3:
+        return None
+    return float((max(vals) - min(vals)) / np.median(vals))
+
+
 def resolve_ambiguous_period(est: GridEstimate, img: np.ndarray) -> GridEstimate:
     """Resolve an ambiguous x period (see period_step_mm_from_page), refine it
     by line positions over the full width and apply the same step to y when
     the y period agrees within 15 %. Returns `est` unchanged when there is
-    nothing to resolve or the prior does not decide. The raw ambiguous periods
-    stay recorded; method/limitations name the prior."""
+    nothing to resolve or the prior does not decide, and with only a limitation
+    added when the grid is not uniform enough for one global scale (fewer than
+    3 bands measured, or spread > MAX_BAND_SPREAD: perspective). The raw
+    ambiguous periods stay recorded; method/limitations name the prior."""
     if est.px_per_mm_x is not None or est.ambiguous_period_px_x is None:
         return est
     a, ink_bright = _grid_channel(img)
@@ -374,6 +408,19 @@ def resolve_ambiguous_period(est: GridEstimate, img: np.ndarray) -> GridEstimate
     step = period_step_mm_from_page(w, period_x)
     if step is None:
         return est
+    spread = band_period_spread(a, ink_bright, period_x)
+    if spread is None or spread > MAX_BAND_SPREAD:
+        why = (
+            "fewer than 3 horizontal bands with a measurable period"
+            if spread is None
+            else f"x period varies {spread:.1%} between horizontal bands (perspective?)"
+        )
+        return replace(
+            est,
+            limitations=est.limitations
+            + f"; page-size prior not applied: {why}, one global scale would be wrong",
+            band_spread_rel_x=spread,
+        )
     col_full = a.mean(axis=0) if ink_bright else -a.mean(axis=0)
     ref_x = _refine_period_by_lines(col_full, period_x)
     if ref_x is not None:
@@ -398,4 +445,5 @@ def resolve_ambiguous_period(est: GridEstimate, img: np.ndarray) -> GridEstimate
         refine_n_lines_y=ref_y[2] if ref_y is not None else est.refine_n_lines_y,
         refine_rms_px_y=ref_y[1] if ref_y is not None else est.refine_rms_px_y,
         period_step_mm=step,
+        band_spread_rel_x=spread,
     )
