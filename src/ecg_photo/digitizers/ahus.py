@@ -26,6 +26,11 @@ PATCH_MARKER = "save_geometry_json"
 PATCH_FILE = "src/digitize.py"
 
 
+# the George-Moody 3x4 layouts + standard_6x2; Ahus' own lead_layouts_all.yml
+# degraded real 3x4 images (F8, docs/evaluation.md)
+DEFAULT_LAYOUTS = Path(__file__).resolve().parents[3] / "configs" / "ahus_lead_layouts.yml"
+
+
 class AhusDigitizer:
     def __init__(
         self,
@@ -34,7 +39,7 @@ class AhusDigitizer:
         base_config: Path,
         duration_s: float,
         device: str = "cpu",
-        layout_config: str = "lead_layouts_george-moody-2024.yml",
+        layout_config: str | None = None,
         target_num_samples: int | None = None,
         engine_spec: EngineSpec | None = None,
         expected_patches_applied: bool = True,
@@ -47,7 +52,8 @@ class AhusDigitizer:
         self.base_config = Path(base_config).resolve()
         self.duration_s = float(duration_s)
         self.device = device
-        self.layout_config = layout_config
+        # default: our layout set (3x4 + 6x2, F8 in docs/evaluation.md)
+        self.layout_config = layout_config or str(DEFAULT_LAYOUTS)
         self.target_num_samples = target_num_samples
         self.expected_patches_applied = expected_patches_applied
         if engine_spec is None:
@@ -61,12 +67,20 @@ class AhusDigitizer:
         if not digitize_py.exists() or PATCH_MARKER not in digitize_py.read_text(encoding="utf-8"):
             raise EngineNotReady("ahus geometry patch 0001 not applied")
 
+    def _layout_path(self) -> Path:
+        """Layout set file: a name in Ahus' src/config/, or a path to our own
+        (e.g. configs/ahus_lead_layouts.yml)."""
+        own = Path(self.layout_config)
+        if own.suffix in (".yml", ".yaml") and own.exists() and own.parent != Path("."):
+            return own.resolve()
+        return self.ahus_root / "src" / "config" / self.layout_config
+
     def _effective_config(self, work_dir: Path) -> Path:
         cfg = yaml.safe_load(self.base_config.read_text(encoding="utf-8"))
         kw = cfg["MODEL"]["KWARGS"]
         kw["device"] = self.device
         kw["config"]["LAYOUT_IDENTIFIER"]["KWARGS"]["device"] = self.device
-        kw["config"]["LAYOUT_IDENTIFIER"]["config_path"] = f"src/config/{self.layout_config}"
+        kw["config"]["LAYOUT_IDENTIFIER"]["config_path"] = str(self._layout_path())
         if self.target_num_samples is not None:
             kw["config"]["LAYOUT_IDENTIFIER"]["KWARGS"]["target_num_samples"] = (
                 self.target_num_samples
@@ -88,7 +102,11 @@ class AhusDigitizer:
         work_dir = Path(work_dir).resolve()
         work_dir.mkdir(parents=True, exist_ok=True)
         cfg_path = self._effective_config(work_dir)
-        config_hash = hashlib.sha256(cfg_path.read_bytes()).hexdigest()
+        # the layout set is part of the configuration: hash its content too
+        config_hash = hashlib.sha256(
+            cfg_path.read_bytes()
+            + (self._layout_path().read_bytes() if self._layout_path().exists() else b"")
+        ).hexdigest()
 
         in_dir = work_dir / "in"
         shutil.copy2(image_path, in_dir / Path(image_path).name)

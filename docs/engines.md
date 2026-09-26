@@ -25,6 +25,10 @@ Observaciones: La tira de ritmo (II) alcanza ~99.8 % de cobertura; las demás de
 
 Análisis de alineación (ahora computado en el banco, derivación II): el mejor desplazamiento fijo es **+58–63 ms** con r≈0.95–0.96 (frente a r≈0.13 sin desplazar); el **RR estimado es 1.008 s frente a 1.000 s** de verdad (error de escala temporal ≈0.8 %, acumulativo a lo largo de la tira) y la amplitud de pico R ≈0.85×. Es decir, el resto de error tras el desfase se explica sobre todo por deriva de escala temporal, no por la forma de la traza. Conclusión operativa para F3/F4: la rejilla canónica de Ahus (`target_num_samples` sobre el ancho detectado) **no** puede tomarse como escala temporal confirmada; la calibración horizontal debe derivarse de nuestra propia detección de rejilla o de evidencia explícita, y el desfase inicial exige registrar `study_start_s` por segmento.
 
+**Formatos (F8):** el adaptador pasa a Ahus `configs/ahus_lead_layouts.yml` (los tres 3×4 de
+`lead_layouts_george-moody-2024.yml` + `standard_6x2`); el conjunto completo de Ahus reconoce 6×2
+pero empeora imágenes 3×4 reales. Evaluación en `docs/evaluation.md`, «F8».
+
 ## ECG-Digitiser (Krones)
 - Commit `e6f62aa7…`; 3 checkpoints verificados por sha256 (M1 fold_0 final `d0e0d4c5…`, M3 fold_all best `60020c47…`, M3 fold_all final `8e4bae0b…`; ver `configs/checkpoints.json`). LFS del proxy agotado → descarga vía `media.githubusercontent.com` + verificación.
 - Requiere **parche 0001** (`patches/ecg-digitiser-0001-rotate-float-angle.patch`, `float(rot_angle)` en `src/run/digitize.py:352`): torchvision `rotate` rechaza `np.float32` y sin el parche la línea falla siempre. El adaptador comprueba el texto del parche antes de verificar pesos.

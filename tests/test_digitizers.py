@@ -144,7 +144,9 @@ def test_ahus_relative_work_dir_and_stderr_tail(tmp_path, monkeypatch) -> None:
         cfg = Path(cmd[-1])
         seen["cfg_absolute"] = cfg.is_absolute()
         seen["cfg_exists_from_cwd"] = (Path(cwd) / cfg).exists()
-        seen["images_path"] = yaml.safe_load(cfg.read_text())["DATA"]["images_path"]
+        eff = yaml.safe_load(cfg.read_text())
+        seen["images_path"] = eff["DATA"]["images_path"]
+        seen["layouts"] = eff["MODEL"]["KWARGS"]["config"]["LAYOUT_IDENTIFIER"]["config_path"]
         return subprocess.CompletedProcess(
             cmd, 1, stdout="", stderr="12%|###| progress\n" * 50 + "ValueError: boom"
         )
@@ -166,3 +168,8 @@ def test_ahus_relative_work_dir_and_stderr_tail(tmp_path, monkeypatch) -> None:
     assert seen["cfg_absolute"] and seen["cfg_exists_from_cwd"]
     assert Path(seen["images_path"]).is_absolute()
     assert d.python_exe.is_absolute() and d.ahus_root.is_absolute()
+    # F8: default layout set = our 3x4 + 6x2 file, by absolute path (cwd is
+    # the Ahus checkout for the engine, the tmp dir here)
+    layouts = Path(seen["layouts"])
+    assert layouts.is_absolute() and layouts.name == "ahus_lead_layouts.yml"
+    assert {"3x4+1R", "standard_6x2"} <= set(yaml.safe_load(layouts.read_text()))

@@ -23,6 +23,7 @@ RR_TOL is not usable for timing.
 """
 
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -30,7 +31,7 @@ import numpy as np
 from scipy.ndimage import uniform_filter1d  # type: ignore[import-untyped]
 from scipy.signal import butter, filtfilt, find_peaks  # type: ignore[import-untyped]
 
-from ecg_photo.contracts import QualityLabel, load_manifest
+from ecg_photo.contracts import Manifest, QualityLabel, load_manifest
 
 STANDARD_LEADS = ("I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6")
 # GE MAC2000 "4x2.5x3_25_R1" / PhysioNet image layout: 12 leads x 2.5 s + II x 10 s
@@ -58,6 +59,7 @@ QRS_FLOOR = 0.3
 QRS_KEEP = 0.4
 # RR intervals kept for the mean, as fractions of the median RR
 RR_KEEP = (0.5, 1.8)
+MIN_RR_STRIP_S = 5.0  # shortest printed lead used for RR when there is no 10 s strip
 
 
 @dataclass
@@ -85,7 +87,32 @@ class RunQC:
     rr_median_ms: float | None = None
     rr_printed_ms: float | None = None
     rr_error_pct: float | None = None
+    rr_lead: str | None = None
+    layout: str | None = None  # engine-reported page layout, if any
     note: str = "guidance only; not clinical validation"
+
+
+_LAYOUT_RE = re.compile(r"engine layout '([^']+)'")
+
+
+def engine_layout(manifest: Manifest) -> str | None:
+    """Page layout reported by the engine (kept in each segment's
+    representation_evidence by digitize_page), or None."""
+    for seg in manifest.segments:
+        m = _LAYOUT_RE.search(seg.representation_evidence or "")
+        if m:
+            return m.group(1)
+    return None
+
+
+def short_lead_s(layout: str | None) -> float:
+    """Printed duration of a non-rhythm lead: the 10 s page split into the
+    layout's columns (3x4 -> 2.5 s, 6x2 -> 5 s, 12x1 -> 10 s); 2.5 s (3x4, the
+    GE MAC2000 format) when the layout is unknown."""
+    m = re.search(r"(\d+)x(\d+)", layout or "")
+    if m and int(m.group(2)) > 0:
+        return RHYTHM_S / int(m.group(2))
+    return SHORT_LEAD_S
 
 
 def observed_span(x: np.ndarray, fs: float) -> tuple[np.ndarray, float | None]:
@@ -185,6 +212,8 @@ def run_qc(
         raise ValueError("printed_rr_ms must be > 0")
     run_dir = Path(run_dir)
     manifest = load_manifest(run_dir / "manifest.json")
+    layout = engine_layout(manifest)
+    short_s = short_lead_s(layout)
     signals: dict[str, tuple[np.ndarray, float]] = {}
     for seg in manifest.segments:
         if seg.signal_path is None or seg.working_fs_hz is None:
@@ -207,7 +236,7 @@ def run_qc(
             leads.append(LeadQC(lead=name, status="no_signal", flags=["NO_SIGNAL"]))
             continue
         extent = len(span) / fs
-        expected = RHYTHM_S if extent > (SHORT_LEAD_S + RHYTHM_S) / 2 else SHORT_LEAD_S
+        expected = RHYTHM_S if extent > (short_s + RHYTHM_S) / 2 else short_s
         finite = span[np.isfinite(span)]
         rng = float(np.percentile(finite, 99.5) - np.percentile(finite, 0.5))
         q = LeadQC(
@@ -241,6 +270,14 @@ def run_qc(
 
     n_beats = rr_ms = rr_err = rr_median = None
     rhythm = [q.lead for q in leads if q.status == "ok" and q.expected_s == RHYTHM_S]
+    if not rhythm:
+        # no 10 s strip (e.g. 6x2: every lead 5 s): the longest printed
+        # leads, II first, still hold several beats
+        rhythm = sorted(
+            (q.lead for q in leads if q.status == "ok" and (q.expected_s or 0) >= MIN_RR_STRIP_S),
+            key=lambda n: n != "II",
+        )
+    rr_lead = rhythm[0] if rhythm else None
     if rhythm:
         x, fs = signals[rhythm[0]]
         beats = detect_qrs(observed_span(x, fs)[0], fs)
@@ -309,6 +346,8 @@ def run_qc(
         rr_median_ms=None if rr_median is None else round(rr_median, 1),
         rr_printed_ms=None if printed_rr_ms is None else round(printed_rr_ms, 1),
         rr_error_pct=None if rr_err is None else round(rr_err, 2),
+        rr_lead=rr_lead,
+        layout=layout,
     )
 
 

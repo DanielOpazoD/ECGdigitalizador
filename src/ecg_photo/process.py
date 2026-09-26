@@ -30,12 +30,22 @@ from ecg_photo.digitizers.base import Digitizer
 from ecg_photo.export import ExportNotAllowed, export_csv, export_json, export_wfdb
 from ecg_photo.ingest import estimate_page_grids, ingest, page_upsample
 from ecg_photo.pipeline import RunPaths, confirm_scale, digitize_page
-from ecg_photo.qc import QC_FILENAME, RHYTHM_S, SHORT_LEAD_S, qc_json, run_qc
+from ecg_photo.qc import (
+    QC_FILENAME,
+    RHYTHM_S,
+    STANDARD_LEADS,
+    engine_layout,
+    qc_json,
+    run_qc,
+    short_lead_s,
+)
 from ecg_photo.render import PaperSpec, RenderNotAllowed, render_segment_pdf, render_segment_png
 
 SUMMARY_SCHEMA = "ecg-photo-process/1"
+OVERVIEW_FILENAME = "overview.png"
 TimeSource = Literal["auto", "evidence", "engine"]
 
+LEADS_12 = STANDARD_LEADS
 # 3x4 + II rhythm (GE MAC2000 / ECG-image-kit): column of each short lead
 COLUMNS = (("I", "II", "III"), ("aVR", "aVL", "aVF"), ("V1", "V2", "V3"), ("V4", "V5", "V6"))
 
@@ -113,21 +123,46 @@ def _lead_signals(run_dir: Path) -> dict[str, tuple[np.ndarray, float]]:
     return out
 
 
+def write_overview(run_dir: Path) -> bool:
+    """`overview.png` next to a confirmed run's manifest (worker / API); the
+    overview is display only, so a failure is reported, never raised."""
+    try:
+        render_overview(run_dir, Path(run_dir) / OVERVIEW_FILENAME)
+    except Exception:  # noqa: BLE001 - advisory image, the run stands
+        return False
+    return True
+
+
+def overview_columns(short_s: float) -> tuple[tuple[str, ...], ...]:
+    """Columns of the printout for leads printed `short_s` seconds each."""
+    if short_s >= RHYTHM_S:
+        return (LEADS_12,)
+    if short_s >= RHYTHM_S / 2:
+        return (LEADS_12[:6], LEADS_12[6:])
+    return COLUMNS
+
+
 def render_overview(run_dir: Path, out_path: Path, *, title: str = "") -> None:
-    """Redraw the digitized leads as a 3x4 + II-rhythm page at 25 mm/s and
-    10 mm/mV on a millimetre grid (display only; the signals are in mV and s).
-    Each short lead is drawn from the start of its 2.5 s slot; a lead that is
-    missing leaves its slot empty."""
+    """Redraw the digitized leads as the printed page (3x4 + II rhythm, 6x2 or
+    12x1, from the engine-reported layout) at 25 mm/s and 10 mm/mV on a
+    millimetre grid (display only; the signals are in mV and s). Each lead is
+    drawn from the start of its column; a missing lead leaves its slot empty."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    run_dir = Path(run_dir)
     signals = _lead_signals(run_dir)
-    row_mm, speed, gain = 30.0, 25.0, 10.0  # layout only
-    width_mm, height_mm = RHYTHM_S * speed, 4 * row_mm
+    short_s = short_lead_s(engine_layout(load_manifest(run_dir / "manifest.json")))
+    columns = overview_columns(short_s)
+    ii = signals.get("II")
+    rhythm = short_s < RHYTHM_S and ii is not None and len(ii[0]) / ii[1] > (short_s + RHYTHM_S) / 2
+    n_rows = max(len(c) for c in columns) + int(rhythm)
+    row_mm, speed, gain = 30.0 if n_rows <= 7 else 20.0, 25.0, 10.0  # layout only
+    width_mm, height_mm = RHYTHM_S * speed, n_rows * row_mm
     fig = plt.figure(figsize=(width_mm / 25.4 * 1.1, height_mm / 25.4 * 1.1))
-    ax = fig.add_axes((0.0, 0.0, 1.0, 0.95 if title else 1.0))
+    ax = fig.add_axes((0.0, 0.0, 1.0, 1.0 - 0.3 / (height_mm / 25.4 * 1.1) if title else 1.0))
     for x in np.arange(0, width_mm + 0.01, 1.0):
         ax.axvline(x, color="#f4c7c7", lw=0.3 if x % 5 else 0.7, zorder=0)
     for y in np.arange(0, height_mm + 0.01, 1.0):
@@ -143,10 +178,12 @@ def render_overview(run_dir: Path, out_path: Path, *, title: str = "") -> None:
         t = t0_s + np.arange(n) / fs
         ax.plot(t * speed, base_mm + sig[:n] * gain, color="black", lw=0.6, zorder=2)
 
-    for col, names in enumerate(COLUMNS):
+    col_s = RHYTHM_S / len(columns)
+    for col, names in enumerate(columns):
         for row, name in enumerate(names):
-            _draw(name, col * SHORT_LEAD_S, SHORT_LEAD_S, height_mm - (row + 0.5) * row_mm)
-    _draw("II", 0.0, RHYTHM_S, 0.5 * row_mm)
+            _draw(name, col * col_s, col_s, height_mm - (row + 0.5) * row_mm)
+    if rhythm:
+        _draw("II", 0.0, RHYTHM_S, 0.5 * row_mm)
     ax.set_xlim(0, width_mm)
     ax.set_ylim(0, height_mm)
     ax.set_aspect("equal")

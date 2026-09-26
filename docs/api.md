@@ -45,6 +45,7 @@ worker se descarta y nunca recrea el estudio.
 | `GET /studies/{id}/runs/{run_id}/segments` | resumen de segmentos del result del run (has_geometry, source_region, statuses); 404 si el run no pertenece o no tiene result |
 | `GET /studies/{id}/runs/{run_id}/segments/{segment_id}/trace` | traza JSON: `x_px` sólo si `frame=="file"`, `values` con `null` en huecos (nunca 0), `t_s` sólo si hay `signal_path`; si n>20000 devuelve cada k-ésima muestra con `"decimation": k` (sólo presentación, no altera la señal) |
 | `GET /studies/{id}/runs/{run_id}/qc` | informe de calidad sin verdad (`qc.json`, F7) que el worker escribe tras `confirm_scale`: etiqueta `good`/`acceptable`/`insufficient`, marcas por derivación, residuos de Einthoven/Goldberger, RR medido; 404 `QC_NOT_FOUND` si la escala no se confirmó. La interfaz lo muestra sobre la tabla de segmentos; los lotes copian `qc_label`/`qc_flags` a su informe |
+| `GET /studies/{id}/runs/{run_id}/overview` | `overview.png`: las derivaciones publicadas redibujadas en formato 3×4 + II sobre papel milimetrado (25 mm/s, 10 mm/mV; sólo presentación), escrito por el worker junto a `qc.json`; 404 `OVERVIEW_NOT_FOUND` si la escala no se confirmó. La interfaz lo muestra bajo la línea de calidad |
 | `GET /health` | `{"status":"ok"}` únicamente |
 
 `PATCH` acepta además `lead_labels: {segment_id: etiqueta}` con etiquetas

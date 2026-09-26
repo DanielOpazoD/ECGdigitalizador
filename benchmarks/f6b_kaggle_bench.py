@@ -113,6 +113,7 @@ def build_digitizers(args) -> dict[str, tuple[Digitizer, Path]]:
                 base_config=args.base_config.resolve(),
                 duration_s=ENGINE_DURATION_S,
                 device="cpu",
+                layout_config=args.ahus_layout_config,
             ),
             args.ahus_root.resolve(),
         )
@@ -286,6 +287,12 @@ def main() -> int:
         "--base-config",
         type=Path,
         default=Path("external/ahus/src/config/inference_wrapper_george-moody-2024.yml"),
+    )
+    ap.add_argument(
+        "--ahus-layout-config",
+        default=None,
+        help="layout set of the Ahus layout identifier: a name in Ahus src/config/ or a "
+        "path (default: the adapter's, configs/ahus_lead_layouts.yml)",
     )
     ap.add_argument("--digitiser-root", type=Path, default=Path("external/ecg-digitiser"))
     ap.add_argument(

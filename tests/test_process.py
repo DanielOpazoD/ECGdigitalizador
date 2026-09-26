@@ -9,7 +9,7 @@ from ecg_photo.cli import main
 from ecg_photo.contracts import TransformChain, TransformStep
 from ecg_photo.digitizers.base import EngineOutput, LeadGeometry
 from ecg_photo.fixtures import write_fixture_revision
-from ecg_photo.process import ProcessOptions, process_file
+from ecg_photo.process import COLUMNS, ProcessOptions, overview_columns, process_file
 from ecg_photo.render import PaperSpec, render_segment_png
 
 LEADS = ("I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6")
@@ -25,15 +25,18 @@ def _page(tmp_path: Path) -> Path:
     return png
 
 
-def _engine_output(*, geometry: bool) -> EngineOutput:
+def _engine_output(*, geometry: bool, layout: str = "3x4+1R") -> EngineOutput:
     """12 leads on the engine's 10 s canvas; short leads observed only in
-    their 2.5 s slot, II over the whole strip (beats every 0.8 s)."""
+    their 2.5 s slot, II over the whole strip (beats every 0.8 s); with
+    layout 6x2, limb leads 0-5 s and V1-V6 5-10 s."""
     t = np.arange(N) / FS
     beat = np.exp(-(((t % 0.8) - 0.4) ** 2) / (2 * 0.012**2))
     leads, observed, geo = {}, {}, {}
     for k, name in enumerate(LEADS):
         obs = np.ones(N, bool)
-        if name != "II":
+        if layout == "standard_6x2":
+            obs = t < 5.0 if k < 6 else t >= 5.0
+        elif name != "II":
             col = next(
                 c
                 for c, grp in enumerate(("I III", "aVR aVL aVF", "V1 V2 V3", "V4 V5 V6"))
@@ -73,7 +76,7 @@ def _engine_output(*, geometry: bool) -> EngineOutput:
         fs_hz=FS,
         leads=leads,
         observed=observed,
-        layout_detected="3x4+1R",
+        layout_detected=layout,
         geometry=geo or None,
     )
 
@@ -136,3 +139,19 @@ def test_cli_process(tmp_path: Path, monkeypatch, capsys) -> None:
     res = json.loads(capsys.readouterr().out)
     assert res["time_source"] == "engine" and res["qc_label"] is not None
     assert Path(res["overview"]).exists()
+
+
+def test_process_6x2_layout(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    dig = FakeDigitizer(_engine_output(geometry=False, layout="standard_6x2"))
+    s = process_file(_page(tmp_path), out, dig, OPTS)
+    assert s["layout_detected"] == "standard_6x2" and s["qc"]["layout"] == "standard_6x2"
+    assert {q["expected_s"] for q in s["qc"]["leads"]} == {5.0}
+    assert s["qc"]["rr_lead"] == "II" and abs(s["qc"]["rr_error_pct"]) < 2
+    assert (out / "overview.png").stat().st_size > 0
+
+
+def test_overview_columns() -> None:
+    assert overview_columns(2.5) == COLUMNS
+    assert [len(c) for c in overview_columns(5.0)] == [6, 6]
+    assert [len(c) for c in overview_columns(10.0)] == [12]
