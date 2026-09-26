@@ -529,3 +529,40 @@ Fotos del GE MAC2000 (eje `engine`):
 En ritmos con disociación AV el equipo imprime RR y PP distintos; el
 contraste usa el RR (frecuencia de QRS). Tolerancia fijada con 3 fotos; no es
 validación clínica.
+
+# F7 paso 4: resolución de la foto y ampliación al ingresar
+
+Las fotos que llegan por mensajería se recomprimen a ~1000–1600 px de ancho;
+una foto del GE MAC2000 recibida a 1036 px perdió aVL, cortó V6 y dio +4 %
+de RR. `benchmarks/f7_resolution_eval.py` reduce las 10 fotos Kaggle `0005`
+(4032 px) a esos anchos (Lanczos), opcionalmente las amplía de nuevo, pasa
+Ahus por el pipeline normal (eje `engine`) y puntúa contra la verdad.
+Resultados: `benchmarks/results/f7_resolution_kaggle_2026-09-26.json`.
+
+| entrada al motor | ok/filas | r@lag med [IQR] | SNR dB | QC acceptable / insufficient |
+|---|---|---|---|---|
+| original 4032 px | 115/120 | 0.831 [0.68–0.95] | 4.7 | 8 / 2 |
+| reducida a 1600 px | 120/120 | 0.834 [0.69–0.93] | 5.1 | 9 / 1 |
+| reducida a 1000 px | 119/120 | 0.740 [0.55–0.87] | 3.2 | 1 / 9 |
+| 1000 px ampliada ×2 (a mano) | 120/120 | 0.845 [0.69–0.94] | 5.3 | 9 / 1 |
+| 1000 px con el ingreso nuevo (amplía ×2 solo) | 120/120 | 0.847 [0.68–0.94] | 5.3 | 8 / 2 |
+
+- Hasta 1600 px no se pierde calidad; a 1000 px sí, y el control de calidad
+  lo detecta (9/10 `insufficient`).
+- Ampliar antes del motor la recupera entera. Desde `ab76d68`, `ingest`
+  amplía las fotos de 400–1599 px de ancho por el factor entero que llega a
+  ≥ 2000 px (máx. ×4), registrado como paso afín de la transformación
+  archivo → página (`f7-lanczos-upsample-v1`), así que la geometría sigue
+  refiriéndose al archivo. Los PDF no cambian.
+- Sin ampliar, el motor no aprovecha la resolución extra de la original
+  (4032 px no mejora a 1600 px): el cuello está en ~1000 px de ancho de hoja.
+
+Al montar el experimento apareció un fallo de los adaptadores de motor
+(`0b40ae5`): con una carpeta de trabajo relativa, la configuración que recibía
+el subproceso de Ahus (que corre con `cwd` en su propio directorio) no
+existía, y el error llegaba como `exit status 1` sin la salida del motor.
+Ahora ambos adaptadores usan rutas absolutas y Ahus devuelve la cola de su
+stderr.
+
+Limitaciones: 10 fotos de un tipo (foto de impresión); reducción sintética
+con Lanczos, no la compresión JPEG real de cada aplicación.
