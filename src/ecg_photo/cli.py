@@ -46,7 +46,10 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_qc(args: argparse.Namespace) -> int:
-    text = qc_json(run_qc(Path(args.run_dir)))
+    report = run_qc(
+        Path(args.run_dir), printed_rr_ms=args.printed_rr_ms, printed_hr_bpm=args.printed_hr
+    )
+    text = qc_json(report)
     if args.out:
         Path(args.out).write_text(text + "\n", encoding="utf-8")
     print(text)
@@ -376,6 +379,10 @@ def build_parser() -> argparse.ArgumentParser:
     q = sub.add_parser("qc", help="informe de calidad de una corrida confirmada (sin verdad)")
     q.add_argument("run_dir")
     q.add_argument("--out", default=None, help="escribe el informe JSON en este archivo")
+    q.add_argument(
+        "--printed-rr-ms", type=float, default=None, help="RR impreso por el equipo (ms)"
+    )
+    q.add_argument("--printed-hr", type=float, default=None, help="FC impresa por el equipo (lpm)")
     q.set_defaults(func=_cmd_qc)
 
     e = sub.add_parser("export")

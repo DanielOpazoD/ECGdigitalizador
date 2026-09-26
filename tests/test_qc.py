@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from ecg_photo.contracts import QualityLabel, dump_json
 from ecg_photo.fixtures import write_fixture_revision
@@ -124,3 +125,25 @@ def test_identity_residual_tolerates_small_row_offset() -> None:
     r = identity_residual([a, b], target, FS)
     assert r is not None and r < 0.05
     assert identity_residual([a[:5], b[:5]], target[:5], FS) is None
+
+
+def test_rr_compared_with_printed_values(tmp_path: Path) -> None:
+    # synthetic beats every 1/1.2 s = 833.3 ms (72 bpm) on the II rhythm strip
+    run = _write_run(tmp_path, _page())
+    rep = run_qc(run, printed_hr_bpm=72)
+    assert rep.n_beats is not None and rep.n_beats >= 10
+    assert rep.rr_measured_ms is not None and abs(rep.rr_measured_ms - 833.3) < 5
+    assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 1
+    assert "RR_MISMATCH_PRINTED" not in rep.flags and rep.label == QualityLabel.good
+    # the time axis of a digitization 10 % off the printout is not usable
+    bad = run_qc(run, printed_rr_ms=750)
+    assert bad.rr_error_pct is not None and bad.rr_error_pct > 5
+    assert "RR_MISMATCH_PRINTED" in bad.flags and bad.label == QualityLabel.insufficient
+    assert run_qc(run).rr_error_pct is None  # nothing printed, nothing compared
+
+
+def test_rr_not_measurable_without_rhythm_strip(tmp_path: Path) -> None:
+    rep = run_qc(_write_run(tmp_path, _page(), drop=("II",)), printed_rr_ms=800)
+    assert "RR_NOT_MEASURABLE" in rep.flags
+    with pytest.raises(ValueError):
+        run_qc(tmp_path, printed_hr_bpm=0)

@@ -15,6 +15,11 @@ r@lag 0.85-0.95 in 0.7-1.0) and degrade above it (Goldberger > 1.0: median
 photos: 0.08 good photo; 1.06 low-res photo with an empty aVL; 1.06 on an
 unsupported 6x2 layout. A report is guidance for a human reader, not clinical
 validation.
+
+Optionally the RR interval measured on the digitized rhythm strip is compared
+with the one the electrocardiograph printed (entered by the user: RR in ms or
+heart rate in bpm): a digitization whose time axis disagrees by more than
+RR_TOL is not usable for timing.
 """
 
 import json
@@ -22,6 +27,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import numpy as np
+from scipy.signal import find_peaks  # type: ignore[import-untyped]
 
 from ecg_photo.contracts import QualityLabel, load_manifest
 
@@ -35,6 +41,8 @@ RHYTHM_DURATION_TOL = 0.05
 IDENTITY_GOOD = 0.35
 IDENTITY_BAD = 1.0
 MAX_ALIGN_S = 0.04
+RR_TOL = 0.05  # vs printed RR; printed HR is an integer (+-1 bpm ~ 1-2 %)
+MIN_RR_S = 0.3  # 200 bpm
 
 
 @dataclass
@@ -57,6 +65,10 @@ class RunQC:
     goldberger_residual: float | None
     flags: list[str]
     thresholds: dict[str, float]
+    n_beats: int | None = None
+    rr_measured_ms: float | None = None
+    rr_printed_ms: float | None = None
+    rr_error_pct: float | None = None
     note: str = "guidance only; not clinical validation"
 
 
@@ -66,6 +78,25 @@ def observed_span(x: np.ndarray, fs: float) -> tuple[np.ndarray, float | None]:
     if len(idx) == 0:
         return x[:0], None
     return x[idx[0] : idx[-1] + 1], idx[0] / fs
+
+
+def detect_qrs(x: np.ndarray, fs: float) -> np.ndarray:
+    """Sample indices of QRS complexes on a rhythm strip: the dominant
+    deflection (sign chosen by the larger excursion from the median), peaks at
+    >= MIN_RR_S apart rising above half of the 99.5th percentile. Unobserved
+    samples (NaN) never become peaks."""
+    v = np.where(np.isfinite(x), x, np.nan)
+    if np.isfinite(v).sum() < fs:
+        return np.zeros(0, dtype=int)
+    v = v - np.nanmedian(v)
+    if abs(np.nanmin(v)) > abs(np.nanmax(v)):
+        v = -v
+    v = np.nan_to_num(v, nan=0.0)
+    height = 0.5 * float(np.percentile(v, 99.5))
+    if not height > 0:
+        return np.zeros(0, dtype=int)
+    peaks, _ = find_peaks(v, height=height, distance=max(1, int(MIN_RR_S * fs)))
+    return np.asarray(peaks, dtype=int)
 
 
 def identity_residual(
@@ -104,8 +135,21 @@ def identity_residual(
     return best
 
 
-def run_qc(run_dir: Path) -> RunQC:
-    """Quality report of a confirmed run (segments with signals in mV)."""
+def run_qc(
+    run_dir: Path,
+    *,
+    printed_rr_ms: float | None = None,
+    printed_hr_bpm: float | None = None,
+) -> RunQC:
+    """Quality report of a confirmed run (segments with signals in mV).
+    printed_rr_ms / printed_hr_bpm: values printed by the electrocardiograph
+    (RR preferred when both are given), compared with the rhythm strip."""
+    if printed_rr_ms is None and printed_hr_bpm is not None:
+        if not printed_hr_bpm > 0:
+            raise ValueError("printed_hr_bpm must be > 0")
+        printed_rr_ms = 60000.0 / printed_hr_bpm
+    if printed_rr_ms is not None and not printed_rr_ms > 0:
+        raise ValueError("printed_rr_ms must be > 0")
     run_dir = Path(run_dir)
     manifest = load_manifest(run_dir / "manifest.json")
     signals: dict[str, tuple[np.ndarray, float]] = {}
@@ -161,13 +205,35 @@ def run_qc(run_dir: Path) -> RunQC:
             parts = [trimmed[k] for k in ("aVR", "aVL", "aVF")]
             gold = identity_residual(parts, None, common_fs)
 
+    n_beats = rr_ms = rr_err = None
+    rhythm = [q.lead for q in leads if q.status == "ok" and q.expected_s == RHYTHM_S]
+    if rhythm:
+        x, fs = signals[rhythm[0]]
+        beats = detect_qrs(observed_span(x, fs)[0], fs)
+        n_beats = len(beats)
+        if n_beats >= 3:
+            rr_ms = float(np.median(np.diff(beats)) / fs * 1000.0)
+
     flags = sorted({f for q in leads for f in q.flags})
+    if printed_rr_ms is not None:
+        if rr_ms is None:
+            flags.append("RR_NOT_MEASURABLE")
+        else:
+            rr_err = 100.0 * (rr_ms / printed_rr_ms - 1.0)
+            if abs(rr_err) > 100.0 * RR_TOL:
+                flags.append("RR_MISMATCH_PRINTED")
     worst = max((v for v in (ein, gold) if v is not None), default=None)
     if worst is not None and worst > IDENTITY_BAD:
         flags.append("LIMB_LEADS_INCONSISTENT")
     elif worst is not None and worst > IDENTITY_GOOD:
         flags.append("LIMB_LEADS_DOUBTFUL")
-    hard = {"MISSING_LEAD", "NO_SIGNAL", "FLAT_TRACE", "LIMB_LEADS_INCONSISTENT"}
+    hard = {
+        "MISSING_LEAD",
+        "NO_SIGNAL",
+        "FLAT_TRACE",
+        "LIMB_LEADS_INCONSISTENT",
+        "RR_MISMATCH_PRINTED",
+    }
     if hard & set(flags):
         label = QualityLabel.insufficient
     elif flags:
@@ -187,7 +253,12 @@ def run_qc(run_dir: Path) -> RunQC:
             "rhythm_duration_tol": RHYTHM_DURATION_TOL,
             "identity_good": IDENTITY_GOOD,
             "identity_bad": IDENTITY_BAD,
+            "rr_tol": RR_TOL,
         },
+        n_beats=n_beats,
+        rr_measured_ms=None if rr_ms is None else round(rr_ms, 1),
+        rr_printed_ms=None if printed_rr_ms is None else round(printed_rr_ms, 1),
+        rr_error_pct=None if rr_err is None else round(rr_err, 2),
     )
 
 

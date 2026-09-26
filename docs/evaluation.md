@@ -507,3 +507,25 @@ las identidades sólo cubren derivaciones de miembros (V1–V6 sólo tienen
 cobertura/planitud); un fallo que respete las identidades (p. ej. las tres de
 una columna escaladas igual) no se detecta. Guía para quien lee, no
 validación clínica.
+
+## F7 paso 3: contraste con lo impreso por el equipo
+
+`ecg-photo qc RUN_DIR --printed-rr-ms 742` (o `--printed-hr 81`): detecta los
+QRS en la tira de ritmo digitalizada (deflexión dominante, ≥ 0.3 s entre
+latidos), mide el RR mediano y lo compara con el valor que el usuario copia
+del encabezado del electrocardiógrafo. Con más de ±5 % de diferencia marca
+`RR_MISMATCH_PRINTED` (etiqueta `insufficient`: el eje temporal no sirve para
+medir intervalos); sin tira medible, `RR_NOT_MEASURABLE`. Se prefiere el RR
+impreso a la FC (entera, ±1 lpm ≈ 1–2 %).
+
+Fotos del GE MAC2000 (eje `engine`):
+
+| foto | latidos | RR medido | RR impreso | error | etiqueta |
+|---|---|---|---|---|---|
+| 81/min | 13 | 739 ms | 742 ms | −0.4 % | good |
+| 96/min | 16 | 624 ms | 622 ms | +0.3 % | acceptable (aVR/aVL/aVF dudosas) |
+| 48/min, 1036 px | 8 | 1305 ms | 1252 ms | +4.2 % | insufficient (aVL plana, V6 cortada) |
+
+En ritmos con disociación AV el equipo imprime RR y PP distintos; el
+contraste usa el RR (frecuencia de QRS). Tolerancia fijada con 3 fotos; no es
+validación clínica.
