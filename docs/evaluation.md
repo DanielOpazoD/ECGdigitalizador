@@ -16,6 +16,7 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F7 paso 6–7](#f7-paso-6-detector-de-qrs-del-contraste-con-lo-impreso) | fotos MAC2000 + Kaggle | detector de QRS, RR medio recortado | RR: 1/104 tiras fuera de ±5 % |
 | [F8](#f8-formatos-distintos-de-34--ii-objetivo-o8-de-docsmissionmd) | PTB-XL impreso 3×4 y 6×2 + Kaggle | formatos de hoja | 6×2: 0.70 → 0.993 sin empeorar 3×4 |
 | [F9](#f9-intervalos-pr-qrs-qt-objetivo-o7-de-docsmissionmd) | LUDB (anotaciones de cardiólogos) | PR, QRS, QT | hoja impresa, valores `ok`: QRS +1.6 ± 9.8 ms, QT −13.7 ± 13.2 ms (CSE sí), PR −3.6 ± 11.5 ms |
+| [F10](#f10-intervalos-en-imágenes-reales-kaggle) | Kaggle escaneos y fotos reales | error que añade la digitalización a PR/QRS/QT | PR y QT \|dif.\| ≈ 5 ms; QRS +8 ms más ancho |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -832,3 +833,48 @@ impresión sintética limpia, no una foto; ritmos con marcapasos y bloqueos
 incluidos pero no analizados por separado; la tolerancia CSE se aplicó a
 nuestra agregación (mediana entre derivaciones), no al protocolo CSE
 original. No es validación clínica.
+
+# F10: intervalos en imágenes reales (Kaggle)
+
+Pregunta: ¿cuánto error añade la digitalización de escaneos y fotos reales a
+PR, QRS y QT? Estas imágenes no tienen anotaciones de cardiólogos; la
+referencia es el mismo algoritmo (`ecg_photo.intervals`) aplicado a la señal
+verdadera recortada tal como se imprimió. El error del algoritmo frente a
+cardiólogos es F9 (LUDB). Corridas Ahus confirmadas con eje por evidencia de
+imagen de F7 paso 5 (sin re-ejecutar motores); 88 de 90 imágenes confirmadas
+(`benchmarks/f10_intervals_kaggle.py`,
+`benchmarks/results/f10_intervals_kaggle_2026-09-26.json`).
+
+Diferencia digitalizado − señal verdadera (ms; n · media ± DE · \|dif.\| mediana):
+
+| grupo | PR | QRS | QT |
+|---|---|---|---|
+| 0001 imagen generada | 10 · +2 ± 14 · 4 | 10 · +5 ± 5 · 4 | 10 · +6 ± 10 · 4 |
+| 0003 / 0004 escaneos | 20 · +3 ± 13 · 6 | 20 · +6 ± 6 · 5 | 20 · +1 ± 11 · 5 |
+| 0005 foto de impresión | 10 · +9 ± 14 · 6 | 10 · +8 ± 7 · 8 | 9 · +16 ± 29 · 11 |
+| 0006 foto de pantalla | 7 · −5 ± 25 · 9 | 7 · +8 ± 5 · 8 | 7 · +3 ± 8 · 5 |
+| 0009 / 0010 fotos dañadas | 18 · −1 ± 9 · 6 | 18 · +10 ± 5 · 9 | 18 · +4 ± 10 · 7 |
+| 0011 / 0012 escaneos con moho | 20 · +4 ± 16 · 6 | 20 · +9 ± 6 · 8 | 20 · −1 ± 9 · 6 |
+| todas | 85 · +2 ± 14 · 5 | 85 · +8 ± 6 · 8 | 84 · +4 ± 13 · 6 |
+| estado `ok` y calidad ≠ `insufficient` | 49 · −1 ± 9 · 5 | 66 · +7 ± 6 · 7 | 36 · +1 ± 7 · 5 |
+| calidad `insufficient` | 17 · +3 ± 22 · 6 | 17 · +12 ± 6 · 13 | 16 · +3 ± 8 · 4 |
+
+(Filas 0003/0004 y similares agrupan los dos tipos; valores por tipo en el JSON.)
+
+- PR y QT: la digitalización añade poco (\|dif.\| mediana ≈ 5 ms); los valores
+  `ok` con calidad aceptable quedan en −1 ± 9 ms (PR) y +1 ± 7 ms (QT).
+- **QRS sale 5–10 ms más ancho** en todos los tipos, también en la imagen
+  generada limpia: los dos límites se desplazan (inicio ≈ 4 ms antes, fin
+  ≈ 2–4 ms después, 916 derivaciones), lo que apunta al trazo digitalizado
+  más suave, no a ruido. Se probó un umbral de límites adaptado al ruido de
+  la línea de base: no lo corrige de forma consistente entre las dos mitades
+  de los registros y empeora LUDB (sesgo −4 a −26 ms); **descartado**. Sumado
+  al sesgo propio del algoritmo en LUDB (+1.6 ms), el QRS de una foto queda
+  unos +8 ms por encima de lo que marcaría un cardiólogo, dentro de la
+  tolerancia CSE de media (10 ms) pero sin margen.
+- **Cambio:** con calidad `insufficient`, ningún intervalo sale `ok`
+  (`intervals.demote_on_qc`); el valor sigue visible como `doubtful` con el
+  motivo. En esas imágenes el error de PR tenía DE 22 ms y el QRS +12 ms.
+
+Limitaciones: 10 registros; la referencia es el algoritmo, no cardiólogos;
+fs de la verdad variable (250–1025 Hz). No es validación clínica.

@@ -308,17 +308,34 @@ def intervals_json(iv: Intervals) -> dict:
 INTERVALS_FILENAME = "intervals.json"
 
 
+def demote_on_qc(iv: Intervals, qc_label: str | None) -> Intervals:
+    """`ok` intervals become `doubtful` when the digitization's quality label
+    is `insufficient`."""
+    if qc_label != "insufficient":
+        return iv
+    for key, st in iv.status.items():
+        if st == "ok":
+            iv.status[key] = "doubtful"
+            iv.reasons[key] = "digitization quality insufficient"
+    return iv
+
+
 def write_intervals_report(run_dir: Path) -> dict:
     """Write `intervals.json` next to a confirmed run's manifest, using the RR
     of its quality report (qc.json) when present. Never raises: a failure is
-    written as {"error": ...} so its absence is explicit."""
+    written as {"error": ...} so its absence is explicit. When the quality
+    report says `insufficient`, no interval is `ok` (F10: those images had
+    about twice the interval error)."""
     run_dir = Path(run_dir)
     try:
         rr = None
+        qc_label = None
         qc_path = run_dir / "qc.json"
         if qc_path.exists():
-            rr = json.loads(qc_path.read_text(encoding="utf-8")).get("rr_measured_ms")
-        d = intervals_json(measure_run(run_dir, rr_ms=rr))
+            qc = json.loads(qc_path.read_text(encoding="utf-8"))
+            rr = qc.get("rr_measured_ms")
+            qc_label = qc.get("label")
+        d = intervals_json(demote_on_qc(measure_run(run_dir, rr_ms=rr), qc_label))
     except Exception as e:  # noqa: BLE001 - measurements are advisory, the run stands
         d = {"error": f"{type(e).__name__}: {e}"[:300]}
     (run_dir / INTERVALS_FILENAME).write_text(

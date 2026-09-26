@@ -6,6 +6,7 @@ import pytest
 
 from ecg_photo.intervals import (
     INTERVALS_FILENAME,
+    demote_on_qc,
     measure_signals,
     read_intervals_report,
     write_intervals_report,
@@ -74,6 +75,15 @@ def test_short_printed_leads(tmp_path: Path) -> None:
     page = {n: (x[:1250] if n != "II" else x, fs) for n, (x, fs) in _page().items()}
     iv = measure_signals(page)
     assert iv.qrs_ms == pytest.approx(90, abs=12) and iv.n_leads["qrs_ms"] >= 10
+
+
+def test_insufficient_quality_demotes_ok() -> None:
+    iv = demote_on_qc(measure_signals(_page(), rr_ms=RR * 1000), "insufficient")
+    assert set(iv.status.values()) == {"doubtful"}
+    assert iv.reasons["qt_ms"] == "digitization quality insufficient"
+    assert iv.qt_ms is not None  # the value stays visible, only its status changes
+    good = demote_on_qc(measure_signals(_page()), "good")
+    assert set(good.status.values()) == {"ok"}
 
 
 def test_report_never_raises(tmp_path: Path) -> None:
