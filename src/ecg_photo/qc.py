@@ -27,7 +27,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import find_peaks  # type: ignore[import-untyped]
+from scipy.ndimage import uniform_filter1d  # type: ignore[import-untyped]
+from scipy.signal import butter, filtfilt, find_peaks  # type: ignore[import-untyped]
 
 from ecg_photo.contracts import QualityLabel, load_manifest
 
@@ -42,7 +43,16 @@ IDENTITY_GOOD = 0.35
 IDENTITY_BAD = 1.0
 MAX_ALIGN_S = 0.04
 RR_TOL = 0.05  # vs printed RR; printed HR is an integer (+-1 bpm ~ 1-2 %)
-MIN_RR_S = 0.3  # 200 bpm
+MIN_RR_S = 0.2  # 300 bpm refractory: a 0.3 s limit halved an SVT at 207 bpm (RR 290 ms)
+# QRS detector (Pan-Tompkins-like): slope energy of the 5-25 Hz band over 100 ms,
+# amplitude-scaled (sqrt); candidates above QRS_FLOOR x p99.5, beats above
+# QRS_KEEP x the candidates' median. On 4 GE MAC2000 photos (sinus with 0.9 mV
+# baseline drift, 2:1 AV block with tall T, SVT RR 290 ms, AF with aberrant
+# beats) the beat count was exact for floors 0.25-0.35 and windows 80-150 ms.
+QRS_BAND_HZ = (5.0, 25.0)
+QRS_WINDOW_S = 0.1
+QRS_FLOOR = 0.3
+QRS_KEEP = 0.4
 
 
 @dataclass
@@ -66,7 +76,8 @@ class RunQC:
     flags: list[str]
     thresholds: dict[str, float]
     n_beats: int | None = None
-    rr_measured_ms: float | None = None
+    rr_measured_ms: float | None = None  # mean RR of the rhythm strip
+    rr_median_ms: float | None = None
     rr_printed_ms: float | None = None
     rr_error_pct: float | None = None
     note: str = "guidance only; not clinical validation"
@@ -81,22 +92,37 @@ def observed_span(x: np.ndarray, fs: float) -> tuple[np.ndarray, float | None]:
 
 
 def detect_qrs(x: np.ndarray, fs: float) -> np.ndarray:
-    """Sample indices of QRS complexes on a rhythm strip: the dominant
-    deflection (sign chosen by the larger excursion from the median), peaks at
-    >= MIN_RR_S apart rising above half of the 99.5th percentile. Unobserved
-    samples (NaN) never become peaks."""
-    v = np.where(np.isfinite(x), x, np.nan)
-    if np.isfinite(v).sum() < fs:
+    """Sample indices of QRS complexes on a rhythm strip.
+
+    Slope energy of the QRS band (steep QRS; slow P/T waves and baseline
+    drift from curved paper stay low), smoothed over QRS_WINDOW_S and
+    amplitude-scaled; peaks >= MIN_RR_S apart above QRS_FLOOR x p99.5 are
+    candidates, and those above QRS_KEEP x the candidates' median are beats
+    (the median, unlike the maximum, is not moved by one large aberrant beat).
+    Unobserved samples (NaN) are bridged for filtering only and never become
+    beats. The index is the energy peak (within ~50 ms of the QRS)."""
+    v = np.asarray(x, dtype=np.float64)
+    ok = np.isfinite(v)
+    if ok.sum() < fs:
         return np.zeros(0, dtype=int)
-    v = v - np.nanmedian(v)
-    if abs(np.nanmin(v)) > abs(np.nanmax(v)):
-        v = -v
-    v = np.nan_to_num(v, nan=0.0)
-    height = 0.5 * float(np.percentile(v, 99.5))
-    if not height > 0:
+    idx = np.arange(len(v))
+    v = np.interp(idx, idx[ok], v[ok])
+    nyq = fs / 2.0
+    lo, hi = QRS_BAND_HZ[0] / nyq, min(QRS_BAND_HZ[1], 0.8 * nyq) / nyq
+    if not 0.0 < lo < hi < 1.0 or len(v) <= 15:
         return np.zeros(0, dtype=int)
-    peaks, _ = find_peaks(v, height=height, distance=max(1, int(MIN_RR_S * fs)))
-    return np.asarray(peaks, dtype=int)
+    b, a = butter(2, [lo, hi], btype="band")
+    slope = np.gradient(filtfilt(b, a, v))
+    energy = np.sqrt(uniform_filter1d(slope**2, size=max(1, int(QRS_WINDOW_S * fs))))
+    energy[~ok] = 0.0
+    floor = QRS_FLOOR * float(np.percentile(energy, 99.5))
+    if not floor > 0:
+        return np.zeros(0, dtype=int)
+    cand, props = find_peaks(energy, height=floor, distance=max(1, int(MIN_RR_S * fs)))
+    if len(cand) == 0:
+        return np.zeros(0, dtype=int)
+    heights = props["peak_heights"]
+    return np.asarray(cand[heights >= QRS_KEEP * float(np.median(heights))], dtype=int)
 
 
 def identity_residual(
@@ -205,14 +231,18 @@ def run_qc(
             parts = [trimmed[k] for k in ("aVR", "aVL", "aVF")]
             gold = identity_residual(parts, None, common_fs)
 
-    n_beats = rr_ms = rr_err = None
+    n_beats = rr_ms = rr_err = rr_median = None
     rhythm = [q.lead for q in leads if q.status == "ok" and q.expected_s == RHYTHM_S]
     if rhythm:
         x, fs = signals[rhythm[0]]
         beats = detect_qrs(observed_span(x, fs)[0], fs)
         n_beats = len(beats)
         if n_beats >= 3:
-            rr_ms = float(np.median(np.diff(beats)) / fs * 1000.0)
+            rr = np.diff(beats) / fs * 1000.0
+            # the electrocardiograph prints the mean RR; in an irregular rhythm
+            # (AF) the median differs from it by more than the tolerance
+            rr_ms = float(np.mean(rr))
+            rr_median = float(np.median(rr))
 
     flags = sorted({f for q in leads for f in q.flags})
     if printed_rr_ms is not None:
@@ -254,9 +284,13 @@ def run_qc(
             "identity_good": IDENTITY_GOOD,
             "identity_bad": IDENTITY_BAD,
             "rr_tol": RR_TOL,
+            "min_rr_s": MIN_RR_S,
+            "qrs_floor": QRS_FLOOR,
+            "qrs_keep": QRS_KEEP,
         },
         n_beats=n_beats,
         rr_measured_ms=None if rr_ms is None else round(rr_ms, 1),
+        rr_median_ms=None if rr_median is None else round(rr_median, 1),
         rr_printed_ms=None if printed_rr_ms is None else round(printed_rr_ms, 1),
         rr_error_pct=None if rr_err is None else round(rr_err, 2),
     )

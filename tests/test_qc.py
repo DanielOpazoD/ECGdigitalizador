@@ -27,7 +27,9 @@ SLOTS = {
 
 def _limb_page(t: np.ndarray) -> dict[str, np.ndarray]:
     """A physically consistent 12-lead page (Einthoven/Goldberger hold)."""
-    beat = np.sin(2 * np.pi * 1.2 * t) ** 15
+    # one steep positive complex per 833 ms cycle (sin**15 alone also has an
+    # equally steep negative lobe: two QRS-like complexes per cycle)
+    beat = np.maximum(np.sin(2 * np.pi * 1.2 * t), 0.0) ** 15
     lead_i = 0.6 * beat + 0.1 * np.sin(2 * np.pi * 0.3 * t)
     lead_ii = 1.0 * beat + 0.2 * np.sin(2 * np.pi * 1.2 * t + 1.0)
     v = {f"V{k}": (0.3 + 0.2 * k) * np.roll(beat, 5 * k) for k in range(1, 7)}
@@ -147,3 +149,88 @@ def test_rr_not_measurable_without_rhythm_strip(tmp_path: Path) -> None:
     assert "RR_NOT_MEASURABLE" in rep.flags
     with pytest.raises(ValueError):
         run_qc(tmp_path, printed_hr_bpm=0)
+
+
+def _strip(
+    qrs_times: np.ndarray,
+    *,
+    t_amp: float = 0.35,
+    p_times: np.ndarray | None = None,
+    drift_mV: float = 0.0,
+    qrs_amp: np.ndarray | None = None,
+    t_delay: float = 0.25,
+) -> np.ndarray:
+    """10 s rhythm strip at FS: narrow QRS, broad T 0.25 s later, optional P
+    waves and linear baseline drift (curved paper in a photo)."""
+    t = np.arange(int(10 * FS)) / FS
+    x = drift_mV * (0.5 - t / 10.0)
+    amps = np.ones(len(qrs_times)) if qrs_amp is None else qrs_amp
+    for tq, a in zip(qrs_times, amps, strict=True):
+        x += a * (
+            np.exp(-((t - tq) ** 2) / (2 * 0.012**2))
+            - 0.25 * np.exp(-((t - tq - 0.03) ** 2) / (2 * 0.01**2))
+        )
+        x += t_amp * np.exp(-((t - tq - t_delay) ** 2) / (2 * 0.06**2))
+    for tp in p_times if p_times is not None else qrs_times - 0.16:
+        x += 0.15 * np.exp(-((t - tp) ** 2) / (2 * 0.025**2))
+    return x
+
+
+@pytest.mark.parametrize(
+    "case,qrs,kw,printed",
+    [
+        # SVT at 207 bpm: the former 0.3 s refractory counted every other beat
+        ("svt_rr290", np.arange(0.2, 9.9, 0.29), {}, 290.0),
+        # sinus 77 bpm on curved paper: 0.9 mV drift and tall T waves
+        ("drift_tall_t", np.arange(0.3, 9.9, 0.776), {"drift_mV": 0.9, "t_amp": 0.6}, 776.0),
+        # 2:1 AV block: P every 0.696 s, QRS every 1.392 s, tall late T (QT 500 ms)
+        (
+            "avb_2to1",
+            np.arange(0.5, 9.9, 1.392),
+            {"p_times": np.arange(0.34, 9.9, 0.696), "t_amp": 0.55, "t_delay": 0.35},
+            1392.0,
+        ),
+    ],
+)
+def test_rr_detector_real_photo_failures(tmp_path: Path, case, qrs, kw, printed) -> None:
+    page = _page()
+    page["II"] = _strip(qrs, **kw)
+    rep = run_qc(_write_run(tmp_path / case, page), printed_rr_ms=printed)
+    assert rep.n_beats == len(qrs), case
+    assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 2.0, case
+    assert "RR_MISMATCH_PRINTED" not in rep.flags
+
+
+def test_rr_irregular_rhythm_uses_mean_like_the_device(tmp_path: Path) -> None:
+    # AF-like: irregular RR plus one large aberrant beat; the device prints the
+    # mean RR, which the median misses by more than the 5 % tolerance here
+    rr = np.array(
+        [
+            0.38,
+            0.62,
+            0.41,
+            0.70,
+            0.36,
+            0.66,
+            0.40,
+            0.58,
+            0.39,
+            0.72,
+            0.37,
+            0.60,
+            0.42,
+            0.68,
+            0.40,
+            0.55,
+        ]
+    )
+    qrs = 0.3 + np.concatenate([[0.0], np.cumsum(rr)])
+    amp = np.ones(len(qrs))
+    amp[4] = 3.0  # aberrant beat must not hide the normal ones
+    page = _page()
+    page["II"] = _strip(qrs, qrs_amp=amp)
+    printed = float(np.mean(rr) * 1000)
+    rep = run_qc(_write_run(tmp_path, page), printed_rr_ms=printed)
+    assert rep.n_beats == len(qrs)
+    assert rep.rr_error_pct is not None and abs(rep.rr_error_pct) < 1.0
+    assert rep.rr_median_ms is not None and abs(rep.rr_median_ms / printed - 1) > 0.05

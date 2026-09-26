@@ -607,3 +607,38 @@ Ahus; error de escala = duración de II por `evidence` / por `engine` − 1:
 
 Limitaciones: depende de la rectificación de Ahus (si su cuadrilátero es
 erróneo, la escala también); 10 registros por tipo; no es validación clínica.
+
+# F7 paso 6: detector de QRS del contraste con lo impreso
+
+Cuatro fotos nuevas del GE MAC2000 (usuario; no versionadas, sin datos del
+paciente en el repositorio) con ritmos difíciles: sinusal 77/min con papel
+curvado, taquicardia supraventricular (RR 290 ms), bloqueo AV 2:1 (RR 1392 ms,
+PP 759 ms) y fibrilación auricular 114/min con extrasístoles aberrantes.
+La digitalización de Ahus (eje `engine`) reproducía bien las tiras de ritmo;
+el contraste con el RR impreso fallaba en las cuatro por el detector:
+
+| foto | antes: latidos / RR / error | causa | ahora: latidos / RR / error |
+|---|---|---|---|
+| sinusal 77/min | 6 / 526 ms / −32.2 % | deriva de 0.9 mV por el papel curvado y T altas: umbral fijo | 13 / 793 ms / +2.2 % |
+| TSV RR 290 ms | 17 / 581 ms / +100 % | refractario de 0.3 s: contaba un latido de cada dos | 34 / 292 ms / +0.6 % |
+| bloqueo AV 2:1 | 9 / 1065 ms / −23.5 % | ondas T (0.23 mV frente a R 0.43) contadas como QRS | 7 / 1384 ms / −0.6 % |
+| FA 114/min | 16 / 566 ms / +7.6 % | se comparaba la mediana; el equipo imprime la media | 19 / 520 ms / −1.1 % |
+
+Detector nuevo (`ecg_photo.qc.detect_qrs`): energía de pendiente de la
+banda 5–25 Hz en 100 ms (raíz, escala de amplitud); candidatos ≥ 0.2 s
+aparte por encima de 0.3 × p99.5 y latidos por encima de 0.4 × la mediana de
+los candidatos (una extrasístole grande no oculta las demás). El número de
+latidos fue exacto en las cuatro fotos para suelos 0.25–0.35 y ventanas
+80–150 ms. El RR comparado es la media (`rr_measured_ms`); la mediana queda
+en `rr_median_ms`. Pruebas sintéticas reproducen los cuatro fallos (fallan
+con el detector anterior).
+
+**Pendiente — identidades de miembros en fotos de bajo voltaje.** Tres de las
+cuatro fotos siguen `insufficient` por `LIMB_LEADS_INCONSISTENT` aunque las
+trazas son plausibles: el residuo se normaliza por el rms de la señal, que en
+estos trazados es 0.06–0.14 mV, frente a errores absolutos de 0.08–0.16 mV
+(≈ 1 mm en el papel). Un filtro paso alto de 0.56 Hz (el del equipo) no lo
+resuelve. Cambiar la normalización (p. ej. un suelo absoluto en mV) exige
+recalibrar los umbrales con las corridas Kaggle de `f7_qc_eval.py`; no se
+cambia sin esa evaluación. En la foto de FA el error de Goldberger es
+0.28 mV y falta V3: ahí la marca sí parece merecida.
