@@ -377,3 +377,78 @@ el que se entrenó y con el que F6-a dio 0.988); no se interpreta hasta ver
 imágenes de la competición. Coste a planificar: ≈10 min por imagen y motor
 para ambos motores → 10 registros × 12 variantes ≈ 20 h; empezar por un
 subconjunto de variantes.
+
+# F7: rejilla ambigua (1 mm o 5 mm) resuelta con el tamaño de página
+
+## Problema
+
+Desde `4eb56fc` el estimador de rejilla se niega cuando sólo ve un periodo P
+(sin estructura menor/mayor): P puede ser 1 mm o 5 mm. En F6-b eso dejó el eje
+`evidence` sin escala en casi todos los escaneos y fotos.
+
+## Cambio (`src/ecg_photo/grid.py`, aplicado en `estimate_page_grids`)
+
+`estimate_grid` no cambia. Un paso aparte, `resolve_ambiguous_period`:
+
+1. **Supuesto de página**: la hoja entera está en la imagen, mide 250–300 mm
+   de ancho (tira de 10 s a 25 mm/s = 250 mm) y ocupa ≥ 35 % del ancho. Así
+   `ancho_px / P` sólo encaja en una hipótesis: 250–857 → P = 1 mm;
+   50–171 → P = 5 mm; fuera de eso, sin decidir. Observado: 56.7–82.9 para
+   periodos de 5 mm (escaneos y fotos Kaggle, fotos del GE MAC2000), 264–270
+   para 1 mm (renders limpios de página completa).
+2. **Rejilla uniforme**: P se vuelve a medir en 5 franjas horizontales; el
+   supuesto sólo se aplica si ≥ 3 franjas coinciden dentro del 3 %
+   ((máx−mín)/mediana). Una escala global es falsa con perspectiva.
+3. La escala fina sale de la rejilla medida (refinada por posición de
+   líneas); el supuesto sólo elige ×1 o ×5 y queda en `method`/`limitations`
+   (`period_step_mm`, `band_spread_rel_x`, periodos ambiguos conservados).
+
+## Evaluación (Kaggle F6-b, eje `evidence` re-confirmado sin re-ejecutar motores)
+
+`benchmarks/f7_grid_prior_eval.py` → `benchmarks/results/f7_grid_prior_kaggle_2026-09-26.json`.
+Error de escala = duración de la tira II por eje `evidence` / por eje
+`engine` (10 s exactos en esta competición) − 1, sobre la misma traza (no
+depende de la cobertura). Ahus:
+
+| tipo | con escala propia (antes → ahora) | error de escala (%) |
+|---|---|---|
+| 0001 original | 10/10 → 10/10 | −0.2 … 0.0 |
+| 0003 escaneo color | 0/10 → 10/10 | −1.0 … +0.3 |
+| 0004 escaneo B/N | 2/10 → 10/10 | −2.1 … +1.9 |
+| 0011 escaneo color con moho | 0/10 → 10/10 | −0.9 … +1.5 |
+| 0012 escaneo B/N con moho | 0/10 → 10/10 | −2.3 … **+6.5** (3 de 10 > 2.5 %) |
+| 0005 foto de impresión | 0/10 → 2/10 | +0.2, +1.1 |
+| 0006 foto de pantalla | 0/10 → 3/10 | +1.0 (otro: el motor sólo devolvió 2.5 s de II; no medible) |
+| 0010 foto con daño | 0/10 → 3/10 | +0.9 … +2.4 |
+| 0009 foto manchada | 0/10 → 0/10 | – (sin periodo) |
+
+r@lag por derivación en el eje `evidence` (mediana, Ahus): escaneo color
+0.938 (eje `engine` 0.910), B/N 0.910 (0.919), moho color 0.868 (0.899), moho
+B/N 0.788 (0.834). ECG-Digitiser: 0.974 / 0.979 / 0.930 / 0.883.
+
+Sin la condición de rejilla uniforme (primera versión, `c7570e9`) dos fotos
+con perspectiva (dispersión entre franjas 3.9 % y 13 %) daban +24.8 % y
++10.6 % de error de escala; ahora se niegan.
+
+## Fotos reales del GE MAC2000 (3 fotos del usuario; no versionadas)
+
+Las tres dan periodo de 5 mm por el supuesto de página (cociente 58–76),
+pero **se niegan** por la condición de uniformidad: en una la escala varía
+6.54 → 7.37 px/mm de arriba abajo (perspectiva, dispersión 5.8 %); en las
+otras dos no hay 3 franjas medibles. Sin la condición, su FC por eje
+`evidence` se desviaba +0.4 %, +9.2 % y +6.3 % del RR impreso por el equipo;
+por eje `engine` (10 s del formato `4x2.5x3_25_R1`), −0.4 %, +4.2 % y +0.3 %.
+
+Conclusión: para el formato del MAC2000 el eje `engine` es hoy el más fiable
+en fotos; el eje `evidence` es fiable en escaneos planos y sirve como control
+(detecta errores gruesos como el ×5). Para fotos con perspectiva hace falta
+escala local por derivación o rectificación de la página.
+
+## Limitaciones
+
+- Una foto de cerca de parte de la hoja rompe el supuesto de página y
+  podría elegir ×5 cuando es ×1; la duración de la tira medida debe entonces
+  discrepar del formato (control pendiente, F7 paso 2).
+- El escaneo B/N con moho (0012) llega a +6.5 % con rejilla uniforme.
+- Umbrales ajustados con 90 imágenes Kaggle + 3 fotos; no es validación
+  clínica.
