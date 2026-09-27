@@ -129,8 +129,16 @@ digitalización o de una diferencia de método con el equipo; en ambos casos,
 
 - Todo corre en su computador; nada se envía a internet.
 - Los estudios quedan en el directorio `--store`. Cuando ya no los necesite,
-  bórrelos con la API (`DELETE /studies/{id}`; la interfaz aún no tiene botón)
-  o eliminando el directorio del almacén.
+  bórrelos con el botón **«Borrar estudio»** de la interfaz (o
+  `DELETE /studies/{id}`): se eliminan la imagen, los resultados, las
+  exportaciones y el nombre del archivo; queda sólo una marca de «borrado».
+- El archivo `audit.jsonl` del almacén registra quién creó, corrigió,
+  publicó, exportó o borró cada estudio y cuándo (sin nombres de archivo ni
+  valores clínicos).
+- Si necesita abrir la interfaz desde otro equipo de la red, use
+  `ecg-photo serve --host 0.0.0.0 --allow-non-loopback --new-token` y abra la
+  URL con `#token=…` que imprime; sin token no arranca. Comparta esa URL sólo
+  con quien corresponda.
 - No suba imágenes con datos de pacientes a repositorios ni a servicios
   externos.
 

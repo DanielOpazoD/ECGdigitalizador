@@ -178,7 +178,9 @@ def results_router(store: Store) -> APIRouter:
         result = _run_result_dir(study_id, run_id)
         if read_intervals_report(result) is None:
             raise _err(409, "SCALE_NOT_CONFIRMED", "run has no calibrated signal to compare")
-        return apply_printed(result, body.values, author=body.author)
+        out = apply_printed(result, body.values, author=body.author)
+        store.audit("printed_recorded", study_id, run_id=run_id, author=body.author)
+        return out
 
     @router.get("/studies/{study_id}/runs/{run_id}/printed")
     def get_printed(study_id: str, run_id: str) -> dict:

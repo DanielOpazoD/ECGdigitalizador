@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -147,12 +148,21 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         loopback = ipaddress.ip_address(host).is_loopback
     except ValueError:
         loopback = host in ("localhost",)
+    token = args.token or os.environ.get("ECG_PHOTO_TOKEN") or None
+    if args.new_token:
+        import secrets
+
+        token = secrets.token_urlsafe(24)
     if not loopback and not args.allow_non_loopback:
         print(
             json.dumps(
                 {"error": "refusing non-loopback host; pass --allow-non-loopback to override (F9)"}
             )
         )
+        return 2
+    if not loopback and not token:
+        # other devices on the network would reach every study without it
+        print(json.dumps({"error": "a non-loopback host needs an access token (--new-token)"}))
         return 2
     store = Store(
         Path(args.store),
@@ -167,7 +177,15 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     worker = Worker(store, default_engines())
     worker.start()
     print(json.dumps({"recovery": resume_after_restart(store, worker)}))
-    app = create_app(store, worker)
+    app = create_app(store, worker, token=token)
+    if token:
+        shown = "127.0.0.1" if loopback else host
+        print(
+            json.dumps(
+                {"ui": f"http://{shown}:{args.port}/ui#token={token}", "token": token},
+                ensure_ascii=False,
+            )
+        )
     import uvicorn
 
     uvicorn.run(app, host=host, port=args.port)
@@ -569,8 +587,14 @@ def build_parser() -> argparse.ArgumentParser:
     sv.add_argument(
         "--allow-non-loopback",
         action="store_true",
-        help="permitir bind fuera de loopback (F9; desactivado por defecto)",
+        help="permitir bind fuera de loopback (F9; desactivado por defecto; exige token)",
     )
+    sv.add_argument(
+        "--token",
+        default=None,
+        help="token de acceso (o variable ECG_PHOTO_TOKEN); obligatorio fuera de loopback",
+    )
+    sv.add_argument("--new-token", action="store_true", help="generar un token aleatorio")
     sv.set_defaults(func=_cmd_serve)
 
     pr = sub.add_parser(
