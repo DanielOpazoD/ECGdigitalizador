@@ -60,8 +60,9 @@ ruff check src tests && ruff format --check src tests && mypy src && pytest -q
 - `src/ecg_photo/export.py`, `render.py` — CSV/WFDB/JSON y PNG/PDF.
 - `src/ecg_photo/process.py` — cadena completa en un comando y `overview.png`; `report.py` —
   informe PDF de una página.
-- `src/ecg_photo/store.py`, `worker.py`, `api.py`, `batch.py`, `ui/` — estudios y revisiones,
-  worker único, API local, lotes reanudables, interfaz de revisión.
+- `src/ecg_photo/store.py` (+ `store_models.py`), `worker.py`, `api.py` (+ `api_results.py`,
+  `api_common.py`), `batch.py`, `ui/` — estudios y revisiones, worker único, API local, lotes
+  reanudables, interfaz de revisión.
 - `src/ecg_photo/paths.py` — ubicación de `configs/` (independiente del directorio actual).
 - `configs/` — configuración, entradas admitidas, inventario de motores/pesos, formatos de Ahus.
 - `benchmarks/` — bancos reproducibles; `benchmarks/results/` — sus métricas.
