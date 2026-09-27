@@ -6,6 +6,7 @@ import pytest
 
 from ecg_photo.intervals import (
     INTERVALS_FILENAME,
+    compare_printed,
     demote_on_qc,
     measure_signals,
     read_intervals_report,
@@ -84,6 +85,20 @@ def test_insufficient_quality_demotes_ok() -> None:
     assert iv.qt_ms is not None  # the value stays visible, only its status changes
     good = demote_on_qc(measure_signals(_page()), "good")
     assert set(good.status.values()) == {"ok"}
+
+
+def test_compare_with_printed_values() -> None:
+    iv = measure_signals(_page(), rr_ms=RR * 1000)
+    assert iv.qrs_ms is not None and iv.qt_ms is not None
+    printed = {"qrs_ms": iv.qrs_ms, "qt_ms": iv.qt_ms + 200.0, "pr_ms": None}
+    iv = compare_printed(iv, printed)
+    assert iv.printed["qrs_ms"]["agrees"] is True and iv.status["qrs_ms"] == "ok"
+    # far from the printed QT: the doubt is on the measurement, the value stays
+    assert iv.printed["qt_ms"]["agrees"] is False and iv.printed["qt_ms"]["diff_ms"] < -150
+    assert iv.status["qt_ms"] == "doubtful" and "printed qt_ms" in iv.reasons["qt_ms"]
+    assert "pr_ms" not in iv.printed  # not printed -> not compared
+    with pytest.raises(ValueError):
+        compare_printed(measure_signals(_page()), {"qt_ms": -1.0})
 
 
 def test_report_never_raises(tmp_path: Path) -> None:

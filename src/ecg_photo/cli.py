@@ -199,6 +199,12 @@ def _cmd_process(args: argparse.Namespace) -> int:
         fs_hz=args.fs,
         printed_rr_ms=args.printed_rr_ms,
         printed_hr_bpm=args.printed_hr,
+        printed_intervals_ms={
+            "pr_ms": args.printed_pr_ms,
+            "qrs_ms": args.printed_qrs_ms,
+            "qt_ms": args.printed_qt_ms,
+            "qtc_bazett_ms": args.printed_qtc_ms,
+        },
     )
     if not Path(args.file).is_file():
         print(json.dumps({"error": f"input not found: {args.file}"}, ensure_ascii=False))
@@ -497,6 +503,10 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--page", default="page-1")
     pr.add_argument("--printed-rr-ms", type=float, default=None)
     pr.add_argument("--printed-hr", type=float, default=None)
+    for name in ("pr", "qrs", "qt", "qtc"):
+        pr.add_argument(
+            f"--printed-{name}-ms", type=float, default=None, help=f"{name.upper()} impreso (ms)"
+        )
     pr.add_argument("--engines-config", type=Path, default=None)
     pr.set_defaults(func=_cmd_process)
 
