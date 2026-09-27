@@ -101,6 +101,8 @@
     <section>
       <h2>Estudio</h2>
       <div id="state" class="hint">—</div>
+      <button id="deleteStudy" style="margin-top:6px; display:none">Borrar estudio</button>
+      <div class="hint">Borra imágenes, señales, informes y exportaciones de este estudio; sólo queda la marca de que existió (sin nombre de archivo).</div>
     </section>
     <section>
       <h2>Configuración congelada (nueva revisión)</h2>
@@ -149,8 +151,21 @@
   const S = { id:null, study:null, page:null, img:null, segs:[], seg:null, trace:null, grid:null,
               view:{scale:1, tx:0, ty:0}, drag:null, pollTimer:null };
 
+  // access token (serve --token): taken once from the link (#token=...), kept
+  // only for this tab, sent with every request; images and downloads that
+  // cannot send headers get it as ?token=
+  const TOKEN = (() => {
+    const m = location.hash.match(/token=([^&]+)/);
+    if (m) history.replaceState(null, '', location.pathname);  // never read as a study id
+    try {
+      if (m) sessionStorage.setItem('ecgToken', decodeURIComponent(m[1]));
+      return sessionStorage.getItem('ecgToken') || '';
+    } catch (e) { return m ? decodeURIComponent(m[1]) : ''; }
+  })();
+  const withToken = (url) => TOKEN ? url + (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN) : url;
+
   async function api(method, path, body, isForm=false) {
-    const opt = { method, headers:{} };
+    const opt = { method, headers: TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {} };
     if (body !== undefined) {
       if (isForm) opt.body = body; else { opt.headers['Content-Type']='application/json'; opt.body = JSON.stringify(body); }
     }
@@ -180,6 +195,15 @@
     } catch (err) { msg(err.message, true); }
   });
   $('open').addEventListener('click', () => openStudy($('studyId').value.trim()));
+  $('deleteStudy').addEventListener('click', async () => {
+    if (!S.id) return;
+    if (!confirm(`¿Borrar el estudio ${S.id}? Se eliminan la imagen, las señales, los informes y las exportaciones. No se puede deshacer.`)) return;
+    try {
+      await api('DELETE', `/studies/${S.id}`);
+      msg(`Estudio ${S.id} borrado.`);
+      setTimeout(() => location.reload(), 800);
+    } catch (err) { msg(err.message, true); }
+  });
   $('pSave').addEventListener('click', async () => {
     const run = S.study && S.study.published_run_id; if (!run) return;
     const num = (id) => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
@@ -205,6 +229,7 @@
 
   function renderState() {
     const s = S.study;
+    $('deleteStudy').style.display = s ? '' : 'none';
     $('state').innerHTML =
       `<div><b>${s.study_id}</b></div>
        <div>revisión activa: <b>${s.active_revision}</b> · config_hash <code>${s.config_hash.slice(0,12)}…</code></div>
@@ -237,7 +262,7 @@
     try { S.grid = await api('GET', `/studies/${S.id}/pages/${pageId}/grid`); } catch (_) {}
     const img = new Image();
     img.onload = () => { S.img = img; fitView(); draw(); };
-    img.src = `/studies/${S.id}/pages/${pageId}/raster?ts=${Date.now()}`;
+    img.src = withToken(`/studies/${S.id}/pages/${pageId}/raster?ts=${Date.now()}`);
     const g = S.grid;
     $('geomNote').textContent = g && g.px_per_mm_x ? `rejilla estimada: ${g.px_per_mm_x.toFixed(3)} px/mm (x), ${g.px_per_mm_y ? g.px_per_mm_y.toFixed(3) : '—'} px/mm (y); método: ${g.method}` : 'sin estimación de rejilla para esta página';
   }
@@ -390,9 +415,9 @@
     const rl = $('reportLink'); rl.style.display = 'none';
     if (run) {
       const url = `/studies/${S.id}/runs/${run}/report`;
-      fetch(url).then(r => { if (r.ok) { rl.href = url; rl.style.display = ''; } }).catch(() => {});
+      fetch(withToken(url)).then(r => { if (r.ok) { rl.href = withToken(url); rl.style.display = ''; } }).catch(() => {});
     }
-    if (run) { ov.onload = () => { ov.style.display = ''; }; ov.onerror = () => { ov.style.display = 'none'; }; ov.src = `/studies/${S.id}/runs/${run}/overview?t=${Date.now()}`; }
+    if (run) { ov.onload = () => { ov.style.display = ''; }; ov.onerror = () => { ov.style.display = 'none'; }; ov.src = withToken(`/studies/${S.id}/runs/${run}/overview?t=${Date.now()}`); }
     const tb = $('segTable').querySelector('tbody'); tb.innerHTML = '';
     const sel = $('segSel'); sel.innerHTML = '';
     for (const s of S.segs) {
@@ -474,7 +499,7 @@
     try {
       const r = await api('POST', `/studies/${S.id}/exports`, { revision: job.input_revision, run_id: S.study.published_run_id, formats });
       const ul = $('arts'); ul.innerHTML = '';
-      for (const a of (r.artifacts || r)) { const li = document.createElement('li'); li.innerHTML = `<a href="/studies/${S.id}/artifacts/${a.artifact_id}" download="${a.filename_safe}">${a.filename_safe}</a> <span class="hint">${a.mime}</span>`; ul.appendChild(li); }
+      for (const a of (r.artifacts || r)) { const li = document.createElement('li'); li.innerHTML = `<a href="${withToken(`/studies/${S.id}/artifacts/${a.artifact_id}`)}" download="${a.filename_safe}">${a.filename_safe}</a> <span class="hint">${a.mime}</span>`; ul.appendChild(li); }
       msg(`${(r.artifacts || r).length} artefactos registrados (rev ${job.input_revision}, run ${S.study.published_run_id.slice(0,12)}).`);
     } catch (err) { msg(err.message, true); }
   });

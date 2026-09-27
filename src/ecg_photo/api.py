@@ -1,11 +1,12 @@
 """FastAPI app — routes per spec (API, CLI y operacion privada)."""
 
+import hmac
 import json
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from ecg_photo.api_common import api_error as _err
@@ -61,8 +62,37 @@ class ExportRequest(BaseModel):
     formats: list[str] = Field(default_factory=list)
 
 
-def create_app(store: Store, worker: Worker) -> FastAPI:
+# routes that carry no study data: reachable without the access token
+PUBLIC_PATHS = ("/", "/ui", "/health")
+
+
+def create_app(store: Store, worker: Worker, token: str | None = None) -> FastAPI:
+    """With `token`, every request except PUBLIC_PATHS must carry it, as
+    `Authorization: Bearer <token>` or, for images and downloads that cannot
+    send headers, as `?token=`. Required to serve beyond this computer."""
     app = FastAPI(title="ecg-photo")
+
+    if token:
+        expected = token.encode("utf-8")
+
+        @app.middleware("http")
+        async def require_token(request: Request, call_next):
+            if request.url.path in PUBLIC_PATHS:
+                return await call_next(request)
+            auth = request.headers.get("authorization", "")
+            given = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+            given = given or request.query_params.get("token", "")
+            if not hmac.compare_digest(given.encode("utf-8"), expected):
+                return JSONResponse(
+                    {
+                        "detail": {
+                            "code": "UNAUTHORIZED",
+                            "message": "missing or wrong access token",
+                        }
+                    },
+                    status_code=401,
+                )
+            return await call_next(request)
 
     @app.exception_handler(IngestRejected)
     async def _ingest_rejected(_req, exc: IngestRejected):

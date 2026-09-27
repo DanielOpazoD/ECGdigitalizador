@@ -23,8 +23,25 @@ inferencia en su ciclo.
 cancelación, `active_revision == input_revision`, `config_hash` igual,
 `selected_run_id == run_id` y `validate_revision_dir(result)` sin problemas;
 si no, `completed_unpublished` (resultado conservado, nunca promovido).
-`delete` marca `deleted` y borra revs/runs/artefactos; una salida tardía del
-worker se descarta y nunca recrea el estudio.
+`delete` marca `deleted`, borra revs/runs/artefactos y el nombre original del
+archivo (sólo queda `state.json` como lápida, sin datos del paciente); una
+salida tardía del worker se descarta y nunca recrea el estudio.
+
+**Registro de auditoría** (`STORE/audit.jsonl`, una línea JSON por evento,
+sólo se agrega): `study_created`, `revision_created`, `run_requested`,
+`run_published`, `exports_created`, `printed_recorded`, `study_deleted`, con
+`at` (UTC), `study_id` y, según el evento, `author`, `reason`, `revision`,
+`run_id` o `formats`. No guarda nombres de archivo ni valores clínicos; un
+error de escritura del registro no interrumpe la operación.
+
+**Acceso con token.** Por defecto `serve` sólo escucha en `127.0.0.1` y no pide
+token. Con `--token T` (o `ECG_PHOTO_TOKEN`) o `--new-token`, toda ruta salvo
+`/`, `/ui` y `/health` exige `Authorization: Bearer T` (o `?token=T` para los
+enlaces de descarga); sin él responde 401 `UNAUTHORIZED`. Escuchar fuera de
+`127.0.0.1` exige `--allow-non-loopback` **y** un token. La comparación es de
+tiempo constante (`hmac.compare_digest`). `serve` imprime la URL de la interfaz
+con `#token=…`; la interfaz lo guarda en `sessionStorage` y lo quita de la barra
+de direcciones.
 
 ## Rutas
 

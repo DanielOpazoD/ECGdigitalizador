@@ -110,6 +110,7 @@ ecg-photo confirm-scale estudio/runs/run-XXX --gain 10 \
 ecg-photo export estudio/runs/run-YYY --out export_dir
 ecg-photo serve --store STORE_DIR [--port 8000]   # API local 127.0.0.1 + worker único
 # luego abrir http://127.0.0.1:8000/ui para la revisión local
+# fuera de este computador: --host 0.0.0.0 --allow-non-loopback --new-token (ver docs/api.md)
 ecg-photo batch DIR --store STORE_DIR --report lote.json --engine ahus --duration 10 \
     [--gain 10 --speed 25 --author NOMBRE --reason "..."] [--resume]
 ```

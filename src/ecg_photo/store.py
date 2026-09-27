@@ -67,6 +67,7 @@ class Store:
         self._locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
         self._process_lock: IO[str] | None = None
+        self._audit_lock = threading.Lock()
 
     # -- process lock --------------------------------------------------
     def acquire_process_lock(self) -> None:
@@ -154,6 +155,23 @@ class Store:
         return None
 
     # -- studies -------------------------------------------------------
+    # -- audit -----------------------------------------------------------
+    AUDIT_FILENAME = "audit.jsonl"
+
+    def audit(self, event: str, study_id: str, **fields: object) -> None:
+        """Append one line to STORE/audit.jsonl: when, what, on which study,
+        by whom. Never file names or clinical values (the log outlives a
+        deleted study). Append-only; a failure to log never fails the action."""
+        entry = {"at": utc_now_iso(), "event": event, "study_id": study_id, **fields}
+        try:
+            with (
+                self._audit_lock,
+                open(self.root / self.AUDIT_FILENAME, "a", encoding="utf-8") as fh,
+            ):
+                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+
     def create_study(
         self,
         upload_path: Path,
@@ -219,6 +237,7 @@ class Store:
             original_filename=escape_filename(original_filename),
         )
         self._write_state(state)
+        self.audit("study_created", study_id, author=author, revision=1)
         return state
 
     def _default_config(self, engine: str | None) -> RunConfig:
@@ -387,6 +406,7 @@ class Store:
                 }
             )
             self._write_state(state)
+            self.audit("revision_created", study_id, author=author, reason=reason, revision=new_rev)
             return state
 
     # -- runs ----------------------------------------------------------
@@ -415,6 +435,7 @@ class Store:
             self.write_job(study_id, job)
             state = state.model_copy(update={"selected_run_id": run_id})
             self._write_state(state)
+            self.audit("run_requested", study_id, run_id=run_id, revision=expected_revision)
             return job
 
     def get_job(self, study_id: str, run_id: str) -> Job:
@@ -461,6 +482,7 @@ class Store:
             if ok and state is not None:
                 state = state.model_copy(update={"published_run_id": run_id})
                 self._write_state(state)
+                self.audit("run_published", study_id, run_id=run_id)
                 return True
             if job is not None and job.status == "completed":
                 job.status = "completed_unpublished"
@@ -523,6 +545,7 @@ class Store:
                 self._artifacts_path(study_id),
                 {k: v.model_dump(mode="json") for k, v in arts.items()},
             )
+            self.audit("exports_created", study_id, run_id=run_id, formats=sorted(formats))
             return out
 
     def artifact_path(self, study_id: str, artifact_id: str) -> tuple[Path, Artifact] | None:
@@ -541,9 +564,11 @@ class Store:
             state = self._read_state(study_id)
             if state is None or state.deleted:
                 return
-            state = state.model_copy(update={"deleted": True})
+            # the tombstone keeps no file name: it could name the patient
+            state = state.model_copy(update={"deleted": True, "original_filename": None})
             self._write_state(state)
             self._wipe(study_id)
+            self.audit("study_deleted", study_id)
 
     def _wipe(self, study_id: str) -> bool:
         """Remove everything but state.json; True if something was removed."""
