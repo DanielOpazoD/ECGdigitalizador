@@ -50,8 +50,12 @@ QTC_RR_RANGE_S = (0.3, 2.0)
 # flagged values had about twice the error of the kept ones)
 MIN_LEADS = 3
 MAX_SPREAD_MS = {"pr_ms": 40.0, "qrs_ms": 30.0, "qt_ms": 40.0}
-# percentile over leads reported for each interval (50 = median)
-AGG_PERCENTILE = {"pr_ms": 50.0, "qrs_ms": 50.0, "qt_ms": 50.0}
+# percentile over leads reported for each interval. QT is a global interval
+# (earliest QRS onset to latest T end): the median over leads read 19-22 ms
+# shorter than the GE 12SL QT a GE electrocardiograph prints; the 75th
+# percentile has no bias against it (F11, PTB-XL+). PR and QRS: the median
+# agrees with 12SL within a few ms.
+AGG_PERCENTILE = {"pr_ms": 50.0, "qrs_ms": 50.0, "qt_ms": 75.0}
 
 
 @dataclass
