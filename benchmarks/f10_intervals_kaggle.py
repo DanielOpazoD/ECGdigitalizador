@@ -31,7 +31,7 @@ from ecg_photo.contracts import load_manifest
 from ecg_photo.intervals import intervals_json, measure_run, measure_signals
 from ecg_photo.qc import STANDARD_LEADS, run_qc
 
-KEYS = ("pr_ms", "qrs_ms", "qt_ms")
+KEYS = ("pr_ms", "qrs_ms", "qt_ms", "qrs_axis_deg")  # axis in degrees (F12)
 
 
 def confirmed_run(case_dir: Path) -> Path | None:
@@ -101,6 +101,8 @@ def main() -> int:
             if dig[k] is None or tr[k] is None:
                 continue
             d = dig[k] - tr[k]
+            if k == "qrs_axis_deg":  # angles wrap at +-180
+                d = (d + 180.0) % 360.0 - 180.0
             by_type[r["image_type"]][k].append(d)
             groups[f"status={dig['status'][k]}"][k].append(d)
             groups[f"qc={r['qc_label']}"][k].append(d)
@@ -148,8 +150,8 @@ def main() -> int:
         return f"| {label} | " + " | ".join(cells) + " |"
 
     print(f"imágenes {res['n_images']}, confirmadas {res['n_confirmed']}, halladas {found}")
-    print("| grupo | PR n · media ± DE · |dif.| med | QRS | QT |")
-    print("|---|---|---|---|")
+    print("| grupo | PR n · media ± DE · |dif.| med | QRS | QT | eje (°) |")
+    print("|---|---|---|---|---|")
     for t, s in res["by_type"].items():
         print(line(t, s))
     for g, s in res["groups"].items():

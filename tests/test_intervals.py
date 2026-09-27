@@ -6,6 +6,7 @@ import pytest
 
 from ecg_photo.intervals import (
     INTERVALS_FILENAME,
+    LIMB_LEAD_ANGLES,
     compare_printed,
     demote_on_qc,
     measure_signals,
@@ -52,9 +53,54 @@ def test_intervals_of_known_beats() -> None:
     assert iv.pr_ms == pytest.approx(160, abs=15)
     assert iv.qrs_ms == pytest.approx(90, abs=12)
     assert iv.qt_ms == pytest.approx(380, abs=25)
-    assert iv.status == {"pr_ms": "ok", "qrs_ms": "ok", "qt_ms": "ok"}
+    assert {k: iv.status[k] for k in ("pr_ms", "qrs_ms", "qt_ms")} == {
+        "pr_ms": "ok",
+        "qrs_ms": "ok",
+        "qt_ms": "ok",
+    }
     assert iv.qtc_bazett_ms == pytest.approx(iv.qt_ms / RR**0.5)
     assert iv.hr_bpm == pytest.approx(75)
+
+
+@pytest.mark.parametrize("true_axis", [60.0, -45.0, 110.0, 0.0])
+def test_qrs_axis_of_a_known_heart_vector(true_axis: float) -> None:
+    # every limb lead is the projection of one heart vector on its hexaxial
+    # angle; a negative projection is an inverted complex
+    rng = np.random.default_rng(1)
+    page = {}
+    for name, angle in LIMB_LEAD_ANGLES.items():
+        proj = float(np.cos(np.radians(true_axis - angle)))
+        page[name] = (proj * _beat_train(10.0) + 0.003 * rng.standard_normal(5000), FS)
+    iv = measure_signals(page)
+    assert iv.qrs_axis_deg is not None
+    err = (iv.qrs_axis_deg - true_axis + 180) % 360 - 180
+    assert abs(err) < 8, (iv.qrs_axis_deg, true_axis)
+    assert iv.status["qrs_axis_deg"] == "ok"
+
+
+def test_printed_axis_comparison_wraps_around() -> None:
+    rng = np.random.default_rng(2)
+    page = {
+        name: (
+            float(np.cos(np.radians(175.0 - angle))) * _beat_train(10.0)
+            + 0.003 * rng.standard_normal(5000),
+            FS,
+        )
+        for name, angle in LIMB_LEAD_ANGLES.items()
+    }
+    # printed -175 deg is 10 deg away from +175, not 350
+    iv = compare_printed(measure_signals(page), {"qrs_axis_deg": -175.0})
+    assert iv.printed["qrs_axis_deg"]["unit"] == "deg"
+    assert abs(iv.printed["qrs_axis_deg"]["diff"]) < 20 and iv.printed["qrs_axis_deg"]["agrees"]
+    iv = compare_printed(measure_signals(page), {"qrs_axis_deg": 60.0})
+    assert iv.printed["qrs_axis_deg"]["agrees"] is False
+    assert iv.status["qrs_axis_deg"] == "doubtful"
+
+
+def test_axis_needs_limb_leads() -> None:
+    page = _page()
+    iv = measure_signals({k: page[k] for k in ("V1", "V2", "V3", "I")})
+    assert iv.qrs_axis_deg is None and iv.status["qrs_axis_deg"] == "unavailable"
 
 
 def test_no_p_wave_means_no_pr() -> None:
@@ -94,7 +140,7 @@ def test_compare_with_printed_values() -> None:
     iv = compare_printed(iv, printed)
     assert iv.printed["qrs_ms"]["agrees"] is True and iv.status["qrs_ms"] == "ok"
     # far from the printed QT: the doubt is on the measurement, the value stays
-    assert iv.printed["qt_ms"]["agrees"] is False and iv.printed["qt_ms"]["diff_ms"] < -150
+    assert iv.printed["qt_ms"]["agrees"] is False and iv.printed["qt_ms"]["diff"] < -150
     assert iv.status["qt_ms"] == "doubtful" and "printed qt_ms" in iv.reasons["qt_ms"]
     assert "pr_ms" not in iv.printed  # not printed -> not compared
     with pytest.raises(ValueError):

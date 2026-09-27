@@ -18,6 +18,7 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F9](#f9-intervalos-pr-qrs-qt-objetivo-o7-de-docsmissionmd) | LUDB (anotaciones de cardiólogos) | PR, QRS, QT | hoja impresa, valores `ok`: QRS +1.6 ± 9.8 ms, QT −13.7 ± 13.2 ms (CSE sí), PR −3.6 ± 11.5 ms |
 | [F10](#f10-intervalos-en-imágenes-reales-kaggle) | Kaggle escaneos y fotos reales | error que añade la digitalización a PR/QRS/QT | PR y QT \|dif.\| ≈ 5 ms; QRS +8 ms más ancho |
 | [F11](#f11-coinciden-nuestros-intervalos-con-los-que-imprime-el-electrocardiógrafo) | PTB-XL + medidas GE 12SL (PTB-XL+) | acuerdo con lo que imprime un GE | QT corregido (−20 → ≈ 0 ms de sesgo); tolerancias para contrastar con la cabecera impresa |
+| [F12](#f12-eje-eléctrico-del-qrs) | PTB-XL + 12SL + etiquetas de cardiólogos; Kaggle | eje del QRS | \|dif.\| mediana 5.6° frente a 12SL; categoría = cardiólogos 87 % (12SL 88 %) |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -950,3 +951,47 @@ de ajuste (LUDB impares, primera mitad 12SL) y comprobado en las otras:
 Con hojas impresas cada derivación tiene 2.5 s (2–4 latidos) y la onda P es
 pequeña; la DE de ~11–12 ms frente a cardiólogos y frente a 12SL parece el
 límite de este método. Los valores con PR poco fiable ya salen `doubtful`.
+
+# F12: eje eléctrico del QRS
+
+`intervals.qrs_axis`: área neta del QRS del latido mediano (sobre la línea
+isoeléctrica, entre inicio y fin del QRS) en las seis derivaciones de
+miembros; cada una es la proyección de un mismo vector sobre su ángulo del
+sistema hexaxial (I 0°, II 60°, III 120°, aVR −150°, aVL −30°, aVF 90°) y el
+vector se ajusta por mínimos cuadrados con todas las disponibles (más robusto
+que I y aVF solas). `ok` con ≥ 4 derivaciones de miembros; `doubtful` con
+menos o si el vector neto es casi nulo (eje indeterminado); nada con < 2.
+Sin parámetros ajustados a los datos de evaluación.
+
+**Referencias** (muestra F11: 300 registros PTB-XL, hoja 3×4 + II;
+`benchmarks/f12_axis.py`, `benchmarks/results/f12_axis_ptbxl_2026-09-27.json`):
+el eje frontal de GE 12SL (PTB-XL+) y la etiqueta de eje de los cardiólogos
+de PTB-XL. PTB-XL usa los tipos de eje alemanes: `LAD` («Linkstyp», mediana
+−13° tanto por nosotros como por 12SL) es una variante normal y `ALAD`
+(«überdrehter Linkstyp», mediana −45° / −40°) la desviación izquierda; tomar
+`LAD` como desviación rebajaba artificialmente el acuerdo (75 % → 87 %).
+
+| hoja impresa | n | frente a 12SL: media · \|dif.\| mediana · p90 · ≤ 15° | categoría = 12SL | categoría = cardiólogos (12SL = cardiólogos) |
+|---|---|---|---|---|
+| todos | 289 | −1.6° · 5.6° · 23° · 82 % | 91 % | 87 % (88 %) |
+| `ok` | 268 | −1.9° · 5.4° · 20° · 85 % | 92 % | 88 % (89 %) |
+
+Categorías: normal −30°…+90°, izquierda −90°…−30°, derecha +90°…180° y
+cuadrante noroeste. El acuerdo con los cardiólogos es el mismo que el del
+propio 12SL; los desacuerdos están en el borde de −30°.
+
+**Digitalización real** (F10 ampliado, escaneos y fotos Kaggle, referencia el
+mismo algoritmo sobre la señal verdadera): el eje cambia poco (\|dif.\|
+mediana 1–2° en todos los tipos; `ok` con calidad aceptable +1 ± 4°); los
+`doubtful` tienen \|dif.\| mediana 35°, es decir, la marca retiene los
+casos malos.
+
+**Contraste con lo impreso:** `ecg-photo process ... --printed-axis-deg`;
+tolerancia 39° (p95 de la primera mitad frente a 12SL, valores `ok`; en la
+segunda mitad quedan dentro el 96 %), con diferencia angular (±180°).
+`intervals.json` (`qrs_axis_deg`, estado propio), la interfaz y el informe
+PDF (fila «Eje QRS» con la categoría) lo muestran.
+
+Limitaciones: 300 registros de un solo equipo de adquisición; la categoría de
+los cardiólogos existe en 173 de ellos; hoja limpia (el efecto de la foto está
+en F10). No es validación clínica.

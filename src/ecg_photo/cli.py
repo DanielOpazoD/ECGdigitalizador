@@ -204,6 +204,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
             "qrs_ms": args.printed_qrs_ms,
             "qt_ms": args.printed_qt_ms,
             "qtc_bazett_ms": args.printed_qtc_ms,
+            "qrs_axis_deg": args.printed_axis_deg,
         },
     )
     if not Path(args.file).is_file():
@@ -507,6 +508,7 @@ def build_parser() -> argparse.ArgumentParser:
         pr.add_argument(
             f"--printed-{name}-ms", type=float, default=None, help=f"{name.upper()} impreso (ms)"
         )
+    pr.add_argument("--printed-axis-deg", type=float, default=None, help="eje QRS impreso (°)")
     pr.add_argument("--engines-config", type=Path, default=None)
     pr.set_defaults(func=_cmd_process)
 

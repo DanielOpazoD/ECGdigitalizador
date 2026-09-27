@@ -1,0 +1,4011 @@
+{
+  "generated": "2026-09-27T02:42:38.618222+00:00",
+  "scope": "PTB-XL (F11 sample) axis vs GE 12SL and cardiologist labels; not clinical validation",
+  "commit": "1bec4f4845f8da2a4149205e6beee112036772d2",
+  "n_records": 300,
+  "summary": {
+    "printed": {
+      "all": {
+        "n": 289,
+        "vs_12sl_deg": {
+          "n": 289,
+          "mean": -1.5727368211656312,
+          "median_abs": 5.56714780838459,
+          "p90_abs": 23.250961154847857,
+          "within_15": 0.8235294117647058
+        },
+        "category_agree_12sl": 0.9100346020761245,
+        "category_agree_cardiologists": 0.8728323699421965,
+        "n_cardiologists": 173,
+        "12sl_category_agree_cardiologists": 0.8786127167630058,
+        "confusion_vs_cardiologists": {
+          "normal->left": 15,
+          "left->left": 20,
+          "normal->normal": 126,
+          "right->right": 5,
+          "right->left": 1,
+          "normal->right": 3,
+          "left->right": 1,
+          "right->normal": 1,
+          "left->normal": 1
+        }
+      },
+      "ok": {
+        "n": 268,
+        "vs_12sl_deg": {
+          "n": 268,
+          "mean": -1.9421314451709484,
+          "median_abs": 5.369535515387639,
+          "p90_abs": 20.031643404386564,
+          "within_15": 0.8470149253731343
+        },
+        "category_agree_12sl": 0.9216417910447762,
+        "category_agree_cardiologists": 0.8789808917197452,
+        "n_cardiologists": 157,
+        "12sl_category_agree_cardiologists": 0.89171974522293,
+        "confusion_vs_cardiologists": {
+          "normal->left": 13,
+          "left->left": 17,
+          "normal->normal": 118,
+          "right->right": 3,
+          "right->left": 1,
+          "normal->right": 3,
+          "right->normal": 1,
+          "left->normal": 1
+        }
+      }
+    },
+    "full": {
+      "all": {
+        "n": 292,
+        "vs_12sl_deg": {
+          "n": 292,
+          "mean": -1.4638295040486289,
+          "median_abs": 5.931364742697184,
+          "p90_abs": 22.277019085601207,
+          "within_15": 0.815068493150685
+        },
+        "category_agree_12sl": 0.9006849315068494,
+        "category_agree_cardiologists": 0.8554913294797688,
+        "n_cardiologists": 173,
+        "12sl_category_agree_cardiologists": 0.884393063583815,
+        "confusion_vs_cardiologists": {
+          "normal->left": 15,
+          "left->left": 18,
+          "normal->normal": 125,
+          "right->right": 5,
+          "normal->right": 5,
+          "left->normal": 3,
+          "right->normal": 1,
+          "left->right": 1
+        }
+      },
+      "ok": {
+        "n": 276,
+        "vs_12sl_deg": {
+          "n": 276,
+          "mean": -2.113942801681229,
+          "median_abs": 5.663185958263213,
+          "p90_abs": 20.386461613882574,
+          "within_15": 0.8333333333333334
+        },
+        "category_agree_12sl": 0.9057971014492754,
+        "category_agree_cardiologists": 0.8711656441717791,
+        "n_cardiologists": 163,
+        "12sl_category_agree_cardiologists": 0.8957055214723927,
+        "confusion_vs_cardiologists": {
+          "left->left": 18,
+          "normal->left": 13,
+          "normal->normal": 120,
+          "right->right": 4,
+          "normal->right": 4,
+          "left->normal": 2,
+          "right->normal": 1,
+          "left->right": 1
+        }
+      }
+    }
+  },
+  "records": [
+    {
+      "ecg_id": 15,
+      "ge_deg": 59.0,
+      "cardio": null,
+      "printed": {
+        "deg": 66.66483882383667,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 55.0130206495463,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 102,
+      "ge_deg": 24.0,
+      "cardio": null,
+      "printed": {
+        "deg": 23.274274582546994,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 24.13402852748881,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 113,
+      "ge_deg": 7.0,
+      "cardio": null,
+      "printed": {
+        "deg": 1.6640364413181818,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 0.022857033510615583,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 297,
+      "ge_deg": 107.0,
+      "cardio": null,
+      "printed": {
+        "deg": 108.38639407926303,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 115.1087127787717,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 541,
+      "ge_deg": -20.0,
+      "cardio": null,
+      "printed": {
+        "deg": -44.177966348888845,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -31.954153148324583,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 657,
+      "ge_deg": 28.0,
+      "cardio": null,
+      "printed": {
+        "deg": 26.705653425869375,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 32.76841139344421,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 660,
+      "ge_deg": 47.0,
+      "cardio": null,
+      "printed": {
+        "deg": 42.53776784643768,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 49.93123082187961,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 743,
+      "ge_deg": 8.0,
+      "cardio": null,
+      "printed": {
+        "deg": 17.979106656529027,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.765695167810037,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 754,
+      "ge_deg": 34.0,
+      "cardio": null,
+      "printed": {
+        "deg": 32.87548165677146,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 40.62173556821898,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 989,
+      "ge_deg": 31.0,
+      "cardio": null,
+      "printed": {
+        "deg": 29.550309796775238,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 30.68041243220069,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1036,
+      "ge_deg": 46.0,
+      "cardio": null,
+      "printed": {
+        "deg": -18.033130082184236,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -26.719748179952806,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1202,
+      "ge_deg": 31.0,
+      "cardio": null,
+      "printed": {
+        "deg": 34.018513145810815,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 32.20770203424345,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1231,
+      "ge_deg": 29.0,
+      "cardio": null,
+      "printed": {
+        "deg": 31.432807636008818,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 27.687151254741654,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1393,
+      "ge_deg": 21.0,
+      "cardio": null,
+      "printed": {
+        "deg": 22.154098880364813,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 19.377970071562785,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1441,
+      "ge_deg": 11.0,
+      "cardio": null,
+      "printed": {
+        "deg": 16.53114649712589,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 13.948355978894421,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1528,
+      "ge_deg": -56.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -47.79592426222033,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -64.06605347427048,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 1625,
+      "ge_deg": -6.0,
+      "cardio": null,
+      "printed": {
+        "deg": 140.55660881606548,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 138.48534806729364,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1661,
+      "ge_deg": 4.0,
+      "cardio": null,
+      "printed": {
+        "deg": 6.135214052026666,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 6.344699444854367,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1678,
+      "ge_deg": 81.0,
+      "cardio": null,
+      "printed": {
+        "deg": 78.47269153263161,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 77.46294373147057,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1728,
+      "ge_deg": 40.0,
+      "cardio": null,
+      "printed": {
+        "deg": 41.6833184613375,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 47.53701729940966,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1765,
+      "ge_deg": 11.0,
+      "cardio": null,
+      "printed": {
+        "deg": 11.385955303722783,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 8.500140519783155,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1780,
+      "ge_deg": 73.0,
+      "cardio": null,
+      "printed": {
+        "deg": 65.09207193676822,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 49.97130955337826,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1796,
+      "ge_deg": 46.0,
+      "cardio": null,
+      "printed": {
+        "deg": 32.686491104796666,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 47.2785162790683,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1825,
+      "ge_deg": 43.0,
+      "cardio": null,
+      "printed": {
+        "deg": 48.049928142610746,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 43.66916873000094,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1854,
+      "ge_deg": 22.0,
+      "cardio": null,
+      "printed": {
+        "deg": 14.865663473206986,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 17.877288927043846,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1941,
+      "ge_deg": -60.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -61.64943046502756,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -61.581409572936685,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 1942,
+      "ge_deg": 24.0,
+      "cardio": null,
+      "printed": {
+        "deg": 29.4211446449655,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 35.46635321600991,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2042,
+      "ge_deg": -51.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -76.19747650364394,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -72.50149297149795,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2074,
+      "ge_deg": 24.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 22.722554816265273,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 15.927186897387454,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2083,
+      "ge_deg": 71.0,
+      "cardio": null,
+      "printed": {
+        "deg": 68.1000805050877,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 70.45265143116139,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2173,
+      "ge_deg": 22.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 9.93358222848252,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 32.40045177913093,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2210,
+      "ge_deg": 7.0,
+      "cardio": null,
+      "printed": {
+        "deg": -10.121540133469825,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -4.234537109855365,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2221,
+      "ge_deg": 4.0,
+      "cardio": null,
+      "printed": {
+        "deg": 0.56579927532415,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -3.6239816909062483,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2232,
+      "ge_deg": -17.0,
+      "cardio": null,
+      "printed": {
+        "deg": -18.348269441401648,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -26.102970388618093,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2280,
+      "ge_deg": -2.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -6.212688658373384,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.286017644716815,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2334,
+      "ge_deg": 59.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 63.72595676563355,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 59.56327045079989,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2341,
+      "ge_deg": 7.0,
+      "cardio": null,
+      "printed": {
+        "deg": 18.976243055697537,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 21.456553629777368,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2414,
+      "ge_deg": 44.0,
+      "cardio": null,
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 2430,
+      "ge_deg": 69.0,
+      "cardio": null,
+      "printed": {
+        "deg": 3.6033306391326074,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -26.67870772242008,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2471,
+      "ge_deg": 17.0,
+      "cardio": null,
+      "printed": {
+        "deg": 13.683822147927817,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.91679210050856,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2555,
+      "ge_deg": 3.0,
+      "cardio": null,
+      "printed": {
+        "deg": 8.16460401036707,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 8.910404728471987,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2602,
+      "ge_deg": 8.0,
+      "cardio": null,
+      "printed": {
+        "deg": 3.835615418082728,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 2.705819364321339,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2651,
+      "ge_deg": 16.0,
+      "cardio": null,
+      "printed": {
+        "deg": 12.975724898827952,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 14.449098999204637,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2715,
+      "ge_deg": -30.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -35.89723248785628,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -34.05026144247305,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2865,
+      "ge_deg": 21.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 20.01098582307529,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 21.37548769384327,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 2882,
+      "ge_deg": -14.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -11.122333247187886,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -12.973460901188604,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3090,
+      "ge_deg": 10.0,
+      "cardio": null,
+      "printed": {
+        "deg": 9.78461921218042,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 11.482656029525602,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3105,
+      "ge_deg": 52.0,
+      "cardio": null,
+      "printed": {
+        "deg": 53.70334439240543,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 51.53061412945706,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3240,
+      "ge_deg": -24.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -42.78113673872488,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -42.88201135094296,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3299,
+      "ge_deg": -7.0,
+      "cardio": null,
+      "printed": {
+        "deg": -5.6605273444257165,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -4.95421692054882,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3465,
+      "ge_deg": 49.0,
+      "cardio": null,
+      "printed": {
+        "deg": 39.66981645629625,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 38.92953409117647,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3472,
+      "ge_deg": 0.0,
+      "cardio": null,
+      "printed": {
+        "deg": -13.55867259228145,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -1.3505354875307165,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3507,
+      "ge_deg": 10.0,
+      "cardio": null,
+      "printed": {
+        "deg": 6.814106027533681,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 5.527758998377661,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3510,
+      "ge_deg": 24.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 25.151744133742,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 24.6553365634579,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3723,
+      "ge_deg": -39.0,
+      "cardio": null,
+      "printed": {
+        "deg": -74.62609212786,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -61.36318865383488,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3735,
+      "ge_deg": 25.0,
+      "cardio": null,
+      "printed": {
+        "deg": 26.98416821694236,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 28.129927526373145,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3823,
+      "ge_deg": 17.0,
+      "cardio": null,
+      "printed": {
+        "deg": 19.47865021956601,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 15.46686487304642,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3843,
+      "ge_deg": 34.0,
+      "cardio": null,
+      "printed": {
+        "deg": 32.72266591926167,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 36.61865371501013,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3872,
+      "ge_deg": 37.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 26.898358064410864,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 26.590270605031,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 3928,
+      "ge_deg": -16.0,
+      "cardio": null,
+      "printed": {
+        "deg": -19.70192649988873,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -21.66121398970942,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4041,
+      "ge_deg": 43.0,
+      "cardio": null,
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": 7.8422325452561505,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 4047,
+      "ge_deg": 32.0,
+      "cardio": null,
+      "printed": {
+        "deg": 38.73925295908035,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 39.83537167250701,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4169,
+      "ge_deg": 51.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 44.2787157526566,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 40.522227024100566,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4298,
+      "ge_deg": 2.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -8.195101457090141,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.527829116004164,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4333,
+      "ge_deg": -29.0,
+      "cardio": null,
+      "printed": {
+        "deg": -38.79000528216375,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -44.63672656401749,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4343,
+      "ge_deg": 48.0,
+      "cardio": null,
+      "printed": {
+        "deg": 59.53980307242765,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 60.509150808154075,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4365,
+      "ge_deg": 15.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 19.326697065645657,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 15.325713239222122,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4370,
+      "ge_deg": 9.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -7.472860295152119,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.385221183726605,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4544,
+      "ge_deg": 4.0,
+      "cardio": null,
+      "printed": {
+        "deg": 10.242577438855312,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 12.84852231753397,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4564,
+      "ge_deg": 62.0,
+      "cardio": null,
+      "printed": {
+        "deg": 75.64478969031747,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 77.28363355339272,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4702,
+      "ge_deg": 0.0,
+      "cardio": null,
+      "printed": {
+        "deg": -5.7489180858152285,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -2.8969259917489234,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 4834,
+      "ge_deg": 24.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 42.000885685645606,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 28.24589877120587,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5039,
+      "ge_deg": -7.0,
+      "cardio": null,
+      "printed": {
+        "deg": -8.85898473391761,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -9.498373751322513,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5091,
+      "ge_deg": 69.0,
+      "cardio": null,
+      "printed": {
+        "deg": 80.66925248135472,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 80.97429716074534,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5161,
+      "ge_deg": 65.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 64.71129100879546,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 65.19369902017499,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5202,
+      "ge_deg": 6.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 12.859988057655432,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 11.216643901764188,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5257,
+      "ge_deg": 62.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 17.550169095266167,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 50.80833784841759,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5355,
+      "ge_deg": 66.0,
+      "cardio": null,
+      "printed": {
+        "deg": 72.25989797177841,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 64.16300162413818,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5372,
+      "ge_deg": 76.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 85.35949290165436,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 86.57007486210279,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5423,
+      "ge_deg": 16.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 20.30168127807292,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 19.17418487776645,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5467,
+      "ge_deg": 51.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 53.85353049930661,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 55.99525049149947,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5513,
+      "ge_deg": -40.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -41.427852770080776,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -42.867908371809584,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5544,
+      "ge_deg": -23.0,
+      "cardio": null,
+      "printed": {
+        "deg": -85.34520093642395,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -78.63679052342745,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 5553,
+      "ge_deg": 19.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 52.93437490272763,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 23.792460476278134,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5673,
+      "ge_deg": -60.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -58.714407859245455,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -59.613730673962664,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5709,
+      "ge_deg": -47.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -54.57569770922466,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -54.63651567813668,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 5960,
+      "ge_deg": 0.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 0.7312951458218161,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -0.7029980906894474,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 6458,
+      "ge_deg": 6.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 7.3907833714781335,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 14.551489579011976,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 6496,
+      "ge_deg": 66.0,
+      "cardio": null,
+      "printed": {
+        "deg": 75.73012924920343,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 72.08446774597655,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 6714,
+      "ge_deg": -17.0,
+      "cardio": null,
+      "printed": {
+        "deg": -62.625531943919256,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -72.64714219144128,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 6929,
+      "ge_deg": -12.0,
+      "cardio": null,
+      "printed": {
+        "deg": -6.432852191615416,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -9.900043697615311,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7101,
+      "ge_deg": 59.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 63.841110778879326,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 64.20738803574183,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7163,
+      "ge_deg": 16.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 38.65169992472735,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 53.00593234495433,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7199,
+      "ge_deg": 16.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 25.75837808958001,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 24.28625645540101,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7243,
+      "ge_deg": 57.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 60.32188108479922,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 59.26850671007581,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7320,
+      "ge_deg": 34.0,
+      "cardio": null,
+      "printed": {
+        "deg": 18.735251617184318,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 13.631908370403782,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7340,
+      "ge_deg": 40.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 44.54538482820775,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 39.99379234107867,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 7401,
+      "ge_deg": 49.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 64.73365076632125,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 60.99339738418791,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 7604,
+      "ge_deg": -19.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -32.56402058613578,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -30.366883078010893,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7656,
+      "ge_deg": 72.0,
+      "cardio": null,
+      "printed": {
+        "deg": 59.3963435006538,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 64.58990319644153,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7686,
+      "ge_deg": -47.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 7689,
+      "ge_deg": 42.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 42.86372038352942,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 41.453878678787795,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7745,
+      "ge_deg": -12.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -20.99795582666485,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -21.676181435521634,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7783,
+      "ge_deg": -67.0,
+      "cardio": null,
+      "printed": {
+        "deg": -131.25050976863383,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -81.77062545267123,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 7918,
+      "ge_deg": 80.0,
+      "cardio": null,
+      "printed": {
+        "deg": 81.40759815430374,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 83.20169595716212,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8071,
+      "ge_deg": 52.0,
+      "cardio": null,
+      "printed": {
+        "deg": 47.12912154691044,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 43.978125079458856,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8108,
+      "ge_deg": 12.0,
+      "cardio": null,
+      "printed": {
+        "deg": 15.46594477323748,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 16.433218144015644,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8135,
+      "ge_deg": 63.0,
+      "cardio": null,
+      "printed": {
+        "deg": 67.94382460775353,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 57.43249642744673,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8159,
+      "ge_deg": 44.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 41.467060788169135,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 46.695024657608336,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8205,
+      "ge_deg": 28.0,
+      "cardio": null,
+      "printed": {
+        "deg": 24.053653462105043,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.778093638715948,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8258,
+      "ge_deg": 25.0,
+      "cardio": null,
+      "printed": {
+        "deg": 43.99384104394829,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 28.107129994056532,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8283,
+      "ge_deg": 9.0,
+      "cardio": null,
+      "printed": {
+        "deg": 14.678860251427531,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 16.269965988757562,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8286,
+      "ge_deg": 113.0,
+      "cardio": "right",
+      "printed": {
+        "deg": 129.09133628432303,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 131.4270376079146,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8449,
+      "ge_deg": -84.0,
+      "cardio": null,
+      "printed": {
+        "deg": -117.23175890353951,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -134.3447603701018,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8450,
+      "ge_deg": 17.0,
+      "cardio": null,
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": 52.453258154293444,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 8468,
+      "ge_deg": 33.0,
+      "cardio": null,
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": 26.461968974726606,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 8531,
+      "ge_deg": 37.0,
+      "cardio": null,
+      "printed": {
+        "deg": 46.95393039413148,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 45.474287224878005,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8624,
+      "ge_deg": -30.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -13.051827168077287,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -22.686661606610297,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8654,
+      "ge_deg": 32.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 55.73252884328561,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 51.58468585234146,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8817,
+      "ge_deg": 16.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 19.050976931838363,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.559475730054878,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8866,
+      "ge_deg": -60.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -72.41489231731454,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -67.36118425672846,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8931,
+      "ge_deg": 7.0,
+      "cardio": null,
+      "printed": {
+        "deg": -36.31954097939561,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -32.075961769189206,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 8998,
+      "ge_deg": 2.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 2.968544820929572,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 3.422344315988967,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9133,
+      "ge_deg": 18.0,
+      "cardio": null,
+      "printed": {
+        "deg": 14.798203714716054,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 9.583389230133792,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9163,
+      "ge_deg": -19.0,
+      "cardio": null,
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": -17.735520366382982,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 9171,
+      "ge_deg": 34.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 38.116250100908125,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 36.25282945712994,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9216,
+      "ge_deg": -87.0,
+      "cardio": "right",
+      "printed": {
+        "deg": -89.58489549534328,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -94.98862731561768,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9266,
+      "ge_deg": 11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 36.218653443108416,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 36.69626670734904,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9319,
+      "ge_deg": -2.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -5.049987037536387,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.4753808040957255,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9463,
+      "ge_deg": 13.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -6.709477651692163,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -2.099906654806827,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9760,
+      "ge_deg": 26.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 18.688467222363002,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 26.338471323918352,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9795,
+      "ge_deg": -11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -16.96304604357646,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -15.892146365208646,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9827,
+      "ge_deg": -48.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -72.62518914699017,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -65.09664930158735,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9871,
+      "ge_deg": -25.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -21.698444637592576,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -19.334842073182987,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9892,
+      "ge_deg": 24.0,
+      "cardio": null,
+      "printed": {
+        "deg": 31.505909058512568,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 31.159232653976748,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9963,
+      "ge_deg": 55.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 47.03725972208222,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 39.250130016183206,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 9983,
+      "ge_deg": 30.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 27.96772369380957,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 29.449437423502975,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10084,
+      "ge_deg": -16.0,
+      "cardio": null,
+      "printed": {
+        "deg": -20.736095839893984,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -19.00974509344378,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10127,
+      "ge_deg": 35.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 26.103716871373962,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 28.330425113990845,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10138,
+      "ge_deg": 36.0,
+      "cardio": null,
+      "printed": {
+        "deg": 20.100547173095617,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 25.085156587665725,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10208,
+      "ge_deg": -10.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -16.405422812244744,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -18.163692139807768,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10221,
+      "ge_deg": -13.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -12.450559008099447,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -16.34390369882594,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10241,
+      "ge_deg": 37.0,
+      "cardio": null,
+      "printed": {
+        "deg": 42.19155236144907,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 40.95358667344832,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10250,
+      "ge_deg": 21.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 27.196227301827385,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 22.772504033487007,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10386,
+      "ge_deg": 14.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 7.178910401119066,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 5.987193061764588,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10623,
+      "ge_deg": -55.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -61.337780849230235,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -59.41008883868623,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10628,
+      "ge_deg": 97.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 111.3242799338804,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 112.06492191608109,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10629,
+      "ge_deg": 7.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 1.7327332505531794,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -4.8444993908759955,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10631,
+      "ge_deg": 21.0,
+      "cardio": null,
+      "printed": {
+        "deg": 18.241912965479905,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.190027602901637,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10707,
+      "ge_deg": -44.0,
+      "cardio": null,
+      "printed": {
+        "deg": 88.38875978528695,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 85.40211879087093,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10772,
+      "ge_deg": 23.0,
+      "cardio": null,
+      "printed": {
+        "deg": 24.19083098741876,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 28.015506036413342,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10792,
+      "ge_deg": -62.0,
+      "cardio": null,
+      "printed": {
+        "deg": -76.51162364907012,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -78.7557097846904,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10936,
+      "ge_deg": -51.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -38.04329257329545,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 101.98613354267732,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 10978,
+      "ge_deg": -20.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -28.65895988179611,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -27.603683397338877,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 10996,
+      "ge_deg": 22.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 24.86398531422844,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 25.714964348103393,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11030,
+      "ge_deg": -21.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -44.131641447859664,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -39.68348811290915,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11041,
+      "ge_deg": 9.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 11.298175599488074,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 12.404718079364294,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11042,
+      "ge_deg": -47.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -61.2375301002475,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -61.50552673387262,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11203,
+      "ge_deg": -40.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -33.046559508712015,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -22.110804996659,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11223,
+      "ge_deg": -24.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -35.150647542229464,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -35.98646599780172,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11254,
+      "ge_deg": 19.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 18.52819380354564,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 21.494877992295923,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11260,
+      "ge_deg": -17.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -52.11326605005111,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -59.87104541661119,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11352,
+      "ge_deg": 40.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": 70.21708776232855,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 11713,
+      "ge_deg": 17.0,
+      "cardio": null,
+      "printed": {
+        "deg": 4.442829511860463,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 7.216797749508693,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11718,
+      "ge_deg": 83.0,
+      "cardio": null,
+      "printed": {
+        "deg": 80.76554312439538,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 81.43948449296904,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11722,
+      "ge_deg": 80.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 80.01072422092601,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 78.28939289173991,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11812,
+      "ge_deg": 13.0,
+      "cardio": null,
+      "printed": {
+        "deg": 33.783363494006764,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 33.84711122597468,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11813,
+      "ge_deg": 52.0,
+      "cardio": null,
+      "printed": {
+        "deg": 61.031137614344786,
+        "status": "ok"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 11829,
+      "ge_deg": 84.0,
+      "cardio": null,
+      "printed": {
+        "deg": 89.61770775363526,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 90.37694566804711,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11872,
+      "ge_deg": 10.0,
+      "cardio": null,
+      "printed": {
+        "deg": 15.106175563036908,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 19.59164863057796,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 11967,
+      "ge_deg": 56.0,
+      "cardio": null,
+      "printed": {
+        "deg": 62.757669565237144,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 59.404591671326855,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12010,
+      "ge_deg": 44.0,
+      "cardio": null,
+      "printed": {
+        "deg": 41.67819926192927,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 42.5439669757307,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12242,
+      "ge_deg": 87.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 12601,
+      "ge_deg": 72.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 79.12962667583106,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 95.92803685343358,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12847,
+      "ge_deg": 20.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 12.077894996928327,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 10.571264139310365,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12877,
+      "ge_deg": 12.0,
+      "cardio": null,
+      "printed": {
+        "deg": 2.4892169440521763,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 4.583989673282347,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12893,
+      "ge_deg": -87.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -96.8584600184846,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -96.05300399794517,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12949,
+      "ge_deg": 11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 14.55207283042391,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 12.504006512323624,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12997,
+      "ge_deg": -52.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -57.418886370352716,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -59.047377820878914,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 12999,
+      "ge_deg": 23.0,
+      "cardio": null,
+      "printed": {
+        "deg": 17.894096629187043,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.378726458897926,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13217,
+      "ge_deg": 67.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 63.40986773505729,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 66.24976064815512,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13258,
+      "ge_deg": 84.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 87.51667437927988,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 86.59078356198823,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13310,
+      "ge_deg": 74.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 71.88495680045182,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 71.38718651635703,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13322,
+      "ge_deg": 70.0,
+      "cardio": null,
+      "printed": {
+        "deg": 74.21356674909056,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 77.65323576336685,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13506,
+      "ge_deg": 1.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 1.358375026800401,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 1.9237930080449954,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13532,
+      "ge_deg": -16.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -25.87612814431458,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -22.310807359766695,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13622,
+      "ge_deg": 22.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 20.041471274326625,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 22.791081882646555,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13641,
+      "ge_deg": 88.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 89.8019022931765,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 91.64380527455741,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13702,
+      "ge_deg": 119.0,
+      "cardio": "right",
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 13802,
+      "ge_deg": 23.0,
+      "cardio": null,
+      "printed": {
+        "deg": 31.903747427158443,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 35.70827798991596,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13872,
+      "ge_deg": -41.0,
+      "cardio": null,
+      "printed": {
+        "deg": -43.010518421245685,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -42.65857866916335,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13886,
+      "ge_deg": -20.0,
+      "cardio": null,
+      "printed": {
+        "deg": -10.62813856933231,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -14.039424997367538,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13898,
+      "ge_deg": 69.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 61.91457659894663,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 67.76035112905484,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13925,
+      "ge_deg": 22.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 16.318656747090813,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 15.934387571521754,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13932,
+      "ge_deg": 63.0,
+      "cardio": null,
+      "printed": {
+        "deg": 57.04693734431254,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 57.76274610664425,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 13935,
+      "ge_deg": 42.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 13.61447540512646,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 0.7444179478134929,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14021,
+      "ge_deg": -11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -19.738148266588404,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -16.232816188965266,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14311,
+      "ge_deg": -57.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 14403,
+      "ge_deg": 14.0,
+      "cardio": null,
+      "printed": {
+        "deg": 12.592034059390027,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 24.97059678442653,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 14506,
+      "ge_deg": 0.0,
+      "cardio": null,
+      "printed": {
+        "deg": 1.601738945798474,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 2.6947123450691297,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14531,
+      "ge_deg": 64.0,
+      "cardio": null,
+      "printed": {
+        "deg": 71.20220332572644,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 69.54201973622807,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14615,
+      "ge_deg": 49.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 86.43790526907884,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -40.05676266415452,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14617,
+      "ge_deg": 56.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 53.63980547139962,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 50.43654098427326,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14753,
+      "ge_deg": 4.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 8.955297548193956,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -4.182123262564226,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14759,
+      "ge_deg": -35.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -35.26195920060287,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -33.4603124420489,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14774,
+      "ge_deg": 1.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -1.2073859540574745,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 2.8899823469788717,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14796,
+      "ge_deg": -11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -10.795545083345862,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -9.675936720625172,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14825,
+      "ge_deg": 57.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 47.907868076565634,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 49.048240248205616,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14900,
+      "ge_deg": 21.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 29.24931844105657,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 31.42823026896418,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14934,
+      "ge_deg": 12.0,
+      "cardio": null,
+      "printed": {
+        "deg": 18.188032690434653,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 19.092537886974725,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14990,
+      "ge_deg": -1.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -6.425957585494393,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.840518368545288,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 14991,
+      "ge_deg": 31.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -5.788073450031542,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -8.326768808194915,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15069,
+      "ge_deg": 12.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 15.367729340761231,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 10.285858989257482,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15436,
+      "ge_deg": 72.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 86.68977905880347,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 72.46789005632101,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15487,
+      "ge_deg": 59.0,
+      "cardio": null,
+      "printed": {
+        "deg": 55.0759199036261,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 56.85626076658567,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15592,
+      "ge_deg": 82.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 90.51897408604857,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 86.32167484329949,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15621,
+      "ge_deg": -34.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -36.24694455372136,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -35.30571339369728,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15631,
+      "ge_deg": -7.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -8.951244962794588,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 15647,
+      "ge_deg": 19.0,
+      "cardio": "left",
+      "printed": {
+        "deg": 105.73831538519117,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 70.8837442645854,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 15719,
+      "ge_deg": 68.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 68.51279784145676,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 63.49410246313046,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15977,
+      "ge_deg": -4.0,
+      "cardio": null,
+      "printed": {
+        "deg": -4.934494901834548,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 1.1353594110097107,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 15985,
+      "ge_deg": 67.0,
+      "cardio": "right",
+      "printed": {
+        "deg": 67.2393745305396,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 70.05584552389772,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16123,
+      "ge_deg": 10.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 41.01369306507237,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 33.29447681726256,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16181,
+      "ge_deg": 21.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 32.33225763168393,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 29.771002660026976,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16345,
+      "ge_deg": -88.0,
+      "cardio": "right",
+      "printed": {
+        "deg": -111.72823998280066,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": null,
+        "status": "unavailable"
+      }
+    },
+    {
+      "ecg_id": 16394,
+      "ge_deg": 62.0,
+      "cardio": null,
+      "printed": {
+        "deg": 68.1058386336824,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 71.33864830134492,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16608,
+      "ge_deg": 5.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 15.182620835125087,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": 9.862388161336671,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 16619,
+      "ge_deg": -43.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -28.929604308157295,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -30.02791608128803,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16666,
+      "ge_deg": -33.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -72.20506524068219,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -46.31076040738972,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16682,
+      "ge_deg": -29.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -34.4160132937129,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -33.96427075098864,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16752,
+      "ge_deg": 19.0,
+      "cardio": null,
+      "printed": {
+        "deg": 12.039101172911074,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 11.28853521569586,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16810,
+      "ge_deg": 63.0,
+      "cardio": null,
+      "printed": {
+        "deg": 64.15326704827521,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 62.31308615951296,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16869,
+      "ge_deg": 38.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 19.22788371927284,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 38.992084896196175,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 16922,
+      "ge_deg": -8.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -16.022675724210117,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -17.796030204100326,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17074,
+      "ge_deg": 33.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 38.377964755490275,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 38.10767177079015,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17075,
+      "ge_deg": 44.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 35.03132861824576,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 32.837466064693714,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17138,
+      "ge_deg": 0.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 5.3561671380194,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 5.332815338283148,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17292,
+      "ge_deg": 95.0,
+      "cardio": "right",
+      "printed": {
+        "deg": 105.47715701096527,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 104.55418092765862,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17656,
+      "ge_deg": 39.0,
+      "cardio": null,
+      "printed": {
+        "deg": 40.004344788051135,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 43.49038960097565,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17695,
+      "ge_deg": 4.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -5.155832032051329,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.426040882828354,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17731,
+      "ge_deg": 28.0,
+      "cardio": null,
+      "printed": {
+        "deg": 43.367548958422034,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 41.3635545720681,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17747,
+      "ge_deg": -38.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -36.236849359534084,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -35.1067682734586,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17756,
+      "ge_deg": 36.0,
+      "cardio": null,
+      "printed": {
+        "deg": 38.26124965537351,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 41.75926606400996,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17759,
+      "ge_deg": -19.0,
+      "cardio": null,
+      "printed": {
+        "deg": -20.90748117154837,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -19.52406644281301,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17775,
+      "ge_deg": -36.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -40.9155917103105,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -35.32007651915466,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17895,
+      "ge_deg": 12.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 21.270353284197384,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 18.479783165061725,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 17903,
+      "ge_deg": -40.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -78.29925536222883,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -71.30880035439553,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18011,
+      "ge_deg": 83.0,
+      "cardio": null,
+      "printed": {
+        "deg": 81.65352368710195,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 79.7314529454936,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18051,
+      "ge_deg": 27.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 39.409680095587596,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 38.59122599777765,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18215,
+      "ge_deg": -15.0,
+      "cardio": null,
+      "printed": {
+        "deg": -18.171870854640563,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -18.124444649403436,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18248,
+      "ge_deg": 34.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 24.912396543414637,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -0.7341986985628035,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18273,
+      "ge_deg": -6.0,
+      "cardio": null,
+      "printed": {
+        "deg": -8.19964356493684,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -11.420423157715385,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18378,
+      "ge_deg": -39.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -31.508305532898223,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -32.09471791145349,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18399,
+      "ge_deg": 67.0,
+      "cardio": null,
+      "printed": {
+        "deg": 64.44625909188908,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 47.82261407094389,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18519,
+      "ge_deg": -7.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -7.27683822912626,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.593253170240896,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18564,
+      "ge_deg": 54.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 53.45203845032692,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 52.58950116295099,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18777,
+      "ge_deg": -17.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": null,
+        "status": "unavailable"
+      },
+      "full": {
+        "deg": -13.903287857253149,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 18778,
+      "ge_deg": 43.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 25.81443045306556,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 41.01639750381333,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18963,
+      "ge_deg": 250.0,
+      "cardio": "right",
+      "printed": {
+        "deg": -151.80299086484825,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -136.28168370382141,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 18980,
+      "ge_deg": 4.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 2.4453455436855833,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -11.7181511413681,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19225,
+      "ge_deg": 67.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 66.7311450572072,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 75.2405286918741,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19241,
+      "ge_deg": 12.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 6.878971229527674,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 7.160149964386011,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19278,
+      "ge_deg": 1.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 6.252925916003499,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 4.240287205379608,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19281,
+      "ge_deg": -33.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -32.32746940708288,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -31.90004312838382,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19301,
+      "ge_deg": 240.0,
+      "cardio": "right",
+      "printed": {
+        "deg": -105.6433944902038,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -138.88458019592127,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 19395,
+      "ge_deg": 51.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 43.77943634859784,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 50.51062981952972,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19586,
+      "ge_deg": 37.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 35.97734431638207,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 31.047675243077613,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19699,
+      "ge_deg": 21.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 25.726797972796916,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 34.19626621716026,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19823,
+      "ge_deg": -50.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -66.83859915940543,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -93.95434093986646,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19844,
+      "ge_deg": 60.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 71.27926553836414,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 66.66568032665117,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 19856,
+      "ge_deg": 36.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 58.227166753838056,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 28.25649343813696,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20357,
+      "ge_deg": -27.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -44.820735617699064,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -47.580737123775556,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20362,
+      "ge_deg": 45.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 38.343849542696155,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 36.891567520896544,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20512,
+      "ge_deg": -28.0,
+      "cardio": null,
+      "printed": {
+        "deg": -33.361106275284996,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -10.222497092199577,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20633,
+      "ge_deg": 11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 10.270505954267486,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 14.250400314252092,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20674,
+      "ge_deg": -18.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -18.50628062020622,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -15.643932082678333,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20764,
+      "ge_deg": -60.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -59.25692383309783,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -60.37513110737749,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 20983,
+      "ge_deg": -7.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 5.727165854893218,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 1.1331159650833547,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21119,
+      "ge_deg": -50.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -45.75050800872525,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -29.59516840183108,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21128,
+      "ge_deg": 77.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 79.27848019591599,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 79.05051182476895,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21140,
+      "ge_deg": -29.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -49.665524265561274,
+        "status": "doubtful"
+      },
+      "full": {
+        "deg": -51.42836941582228,
+        "status": "doubtful"
+      }
+    },
+    {
+      "ecg_id": 21169,
+      "ge_deg": 42.0,
+      "cardio": null,
+      "printed": {
+        "deg": 23.995812540432656,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 12.098691100528095,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21244,
+      "ge_deg": 51.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 49.04570553550538,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 45.356386333091905,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21246,
+      "ge_deg": -11.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -13.879517803881207,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -12.654855742662996,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21256,
+      "ge_deg": 67.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 70.51833826921045,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 69.8141567098435,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21289,
+      "ge_deg": 6.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 5.1556016685505766,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 9.540926261150126,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21303,
+      "ge_deg": 47.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -12.566582647129826,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 26.32441316747051,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21343,
+      "ge_deg": -30.0,
+      "cardio": "left",
+      "printed": {
+        "deg": -30.082880002842767,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -31.208669337659163,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21390,
+      "ge_deg": 78.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 70.17646476403583,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 65.60621619804914,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21419,
+      "ge_deg": -70.0,
+      "cardio": null,
+      "printed": {
+        "deg": -149.89331644875003,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -152.30794163865158,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21428,
+      "ge_deg": 42.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 49.040622220142104,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 58.90368730384626,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21451,
+      "ge_deg": 53.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 55.91900755803984,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 49.832996853194146,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21514,
+      "ge_deg": 39.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 47.94068343616519,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 47.74252584979027,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21528,
+      "ge_deg": -39.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -37.236766569476956,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -36.76819847613647,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21536,
+      "ge_deg": 66.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 57.896267769155685,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 57.541811533553066,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21561,
+      "ge_deg": 41.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 40.082390502509085,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 41.97132997441932,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21630,
+      "ge_deg": 15.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 15.940907625667444,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 12.52333958600979,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21666,
+      "ge_deg": 29.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 26.323492935500607,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 27.236452906989985,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21767,
+      "ge_deg": 25.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": 35.66371093374697,
+        "status": "ok"
+      },
+      "full": {
+        "deg": 34.03271304635644,
+        "status": "ok"
+      }
+    },
+    {
+      "ecg_id": 21836,
+      "ge_deg": -2.0,
+      "cardio": "normal",
+      "printed": {
+        "deg": -5.412411361290465,
+        "status": "ok"
+      },
+      "full": {
+        "deg": -6.020256902010489,
+        "status": "ok"
+      }
+    }
+  ]
+}

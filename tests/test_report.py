@@ -1,4 +1,4 @@
-from ecg_photo.report import measurement_rows, reason_es
+from ecg_photo.report import axis_category_es, measurement_rows, reason_es
 
 
 def test_measurement_rows_status_and_spanish_reasons() -> None:
@@ -22,6 +22,19 @@ def test_measurement_rows_status_and_spanish_reasons() -> None:
     assert rows["QT"][1] == "dudoso: derivaciones discordantes (IQR 55 ms > 40)"
     # QTc inherits the doubt of QT
     assert rows["QTc"][0] == "425 ms" and rows["QTc"][1].startswith("dudoso")
+
+
+def test_axis_row() -> None:
+    base = {"status": {"qrs_axis_deg": "ok"}, "reasons": {}, "qrs_axis_deg": -52.0}
+    rows = {name: (value, note) for name, value, note in measurement_rows(base)}
+    assert rows["Eje QRS"] == ("-52°", "desviado a la izquierda")
+    base["printed"] = {
+        "qrs_axis_deg": {"printed": -45.0, "unit": "deg", "agrees": True, "tolerance": 39.0}
+    }
+    rows = {name: (value, note) for name, value, note in measurement_rows(base)}
+    assert rows["Eje QRS"][1] == "desviado a la izquierda; impreso -45° (coincide)"
+    assert axis_category_es(60.0) == "normal" and axis_category_es(120.0).endswith("derecha")
+    assert axis_category_es(-120.0).startswith("extremo")
 
 
 def test_missing_or_failed_intervals() -> None:

@@ -14,7 +14,8 @@ Uso rápido (una foto → señal exportada + informe PDF de una página + `overv
 bash benchmarks/setup_engines.sh          # motores y configs/engines.local.yml
 ecg-photo process foto.jpg --out salida --speed 25 --gain 10 \
     --author NOMBRE --reason "valores impresos en la hoja" [--printed-rr-ms 742] \
-    [--printed-pr-ms 160 --printed-qrs-ms 92 --printed-qt-ms 380 --printed-qtc-ms 418]
+    [--printed-pr-ms 160 --printed-qrs-ms 92 --printed-qt-ms 380 --printed-qtc-ms 418] \
+    [--printed-axis-deg 45]
 ```
 Los valores `--printed-*` son los de la cabecera que imprime el electrocardiógrafo: el programa
 compara con ellos su RR y sus intervalos y marca las discrepancias (F11 en `docs/evaluation.md`).
