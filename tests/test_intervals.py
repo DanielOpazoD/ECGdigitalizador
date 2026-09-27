@@ -152,3 +152,30 @@ def test_report_never_raises(tmp_path: Path) -> None:
     assert "error" in d and json.loads((tmp_path / INTERVALS_FILENAME).read_text())["error"]
     assert read_intervals_report(tmp_path) == d
     assert read_intervals_report(tmp_path / "none") is None
+
+
+def test_r_s_amplitudes_follow_the_12sl_convention() -> None:
+    from ecg_photo.intervals import r_s_amplitudes
+
+    t = np.linspace(0, 1, 50)
+    # rS: tiny initial r, deep S, then a terminal rise above the r
+    rs = np.interp(t, [0, 0.1, 0.5, 0.9, 1], [0, 0.04, -2.0, 0.08, 0.08])
+    assert r_s_amplitudes(rs) == pytest.approx((0.08, -2.0), abs=0.06)
+    # qR: small q first, tall R, no S
+    qr = np.interp(t, [0, 0.1, 0.5, 1], [0, -0.1, 1.5, 0.0])
+    assert r_s_amplitudes(qr) == pytest.approx((1.5, 0.0), abs=0.06)
+    # QS: no positive part -> the deflection is a Q
+    qs = np.interp(t, [0, 0.5, 1], [0, -1.2, 0])
+    assert r_s_amplitudes(qs) == (0.0, 0.0)
+
+
+def test_sokolow_lyon() -> None:
+    from ecg_photo.intervals import LeadIntervals, sokolow_lyon
+
+    leads = [
+        LeadIntervals("V1", 5, s_amp_mV=-1.2, r_amp_mV=0.2),
+        LeadIntervals("V5", 5, r_amp_mV=2.1),
+        LeadIntervals("V6", 5, r_amp_mV=1.7),
+    ]
+    assert sokolow_lyon(leads) == pytest.approx(3.3)
+    assert sokolow_lyon(leads[1:]) is None

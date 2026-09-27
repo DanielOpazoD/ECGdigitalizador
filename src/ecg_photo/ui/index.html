@@ -345,6 +345,8 @@
           : `calidad: ${q.label} · Einthoven ${res(q.einthoven_residual)} · Goldberger ${res(q.goldberger_residual)}`
             + (q.flags && q.flags.length ? ` · ${q.flags.join(', ')}` : '')
             + (q.rr_printed_ms != null && q.rr_error_pct != null ? ` · RR ${Math.round(q.rr_measured_ms)} ms frente a ${Math.round(q.rr_printed_ms)} impreso (${q.rr_error_pct > 0 ? '+' : ''}${q.rr_error_pct.toFixed(1)} %)` : '')
+            + (iv.sokolow_lyon_mV != null ? ` · Sokolow-Lyon ${iv.sokolow_lyon_mV.toFixed(1)} mV${iv.sokolow_lyon_mV >= 3.5 ? ' (≥ 3.5: voltaje de HVI)' : ''}` : '')
+            + (iv.rhythm && iv.rhythm.status === 'irregular' ? ` · RITMO: RR irregular${iv.rhythm.no_clear_p_wave ? ' sin P clara (compatible con FA)' : ''}, revisar` : iv.rhythm && iv.rhythm.status === 'regular' ? ' · ritmo: RR regular' : '')
             + ' · orientativo, no validación clínica';
       } catch (err) { /* older results have no qc.json */ }
     }

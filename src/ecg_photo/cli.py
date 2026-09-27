@@ -55,6 +55,59 @@ def _cmd_intervals(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_concordance(args: argparse.Namespace) -> int:
+    from ecg_photo.concordance import (
+        list_photos,
+        read_printed_csv,
+        run_concordance,
+        summarize,
+        write_outputs,
+        write_template,
+    )
+    from ecg_photo.process import ProcessOptions
+    from ecg_photo.store import RunConfig
+    from ecg_photo.worker import default_engines
+
+    folder = Path(args.folder)
+    if not folder.is_dir():
+        print(json.dumps({"error": f"folder not found: {folder}"}, ensure_ascii=False))
+        return 2
+    if args.template:
+        photos = list_photos(folder)
+        write_template(photos, Path(args.printed))
+        print(json.dumps({"template": str(args.printed), "photos": len(photos)}))
+        return 0
+    if args.speed is None or args.gain is None:
+        print(json.dumps({"error": "--speed and --gain are required (never assumed)"}))
+        return 2
+    try:
+        printed = read_printed_csv(Path(args.printed))
+    except (OSError, ValueError) as e:
+        print(json.dumps({"error": f"printed values: {e}"}, ensure_ascii=False))
+        return 2
+    engines = default_engines(args.engines_config)
+    if args.engine not in engines:
+        print(
+            json.dumps(
+                {"error": f"engine {args.engine!r} not configured", "available": sorted(engines)}
+            )
+        )
+        return 2
+    digitizer = engines[args.engine](RunConfig(engine=args.engine, engine_duration_s=args.duration))
+    base = ProcessOptions(
+        speed_mm_s=args.speed,
+        gain_mm_mV=args.gain,
+        author=args.author,
+        reason=args.reason,
+        engine_duration_s=args.duration,
+    )
+    rows = run_concordance(folder, printed, Path(args.out), digitizer, base)
+    summary = summarize(rows)
+    files = write_outputs(rows, summary, Path(args.out))
+    print(json.dumps({"processed": summary["processed"], "photos": summary["photos"], **files}))
+    return 0
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     from ecg_photo.doctor import as_dict, report, run_checks
 
@@ -486,6 +539,23 @@ def build_parser() -> argparse.ArgumentParser:
     cs.add_argument("--fs", type=float, default=None)
     cs.add_argument("--time-source", choices=["evidence", "engine"], default="evidence")
     cs.set_defaults(func=_cmd_confirm_scale)
+
+    cc = sub.add_parser(
+        "concordance",
+        help="compara con lo impreso por el equipo en una carpeta de fotos (validación)",
+    )
+    cc.add_argument("folder", help="carpeta con las fotos")
+    cc.add_argument("--printed", required=True, help="CSV de valores impresos (o a crear)")
+    cc.add_argument("--template", action="store_true", help="sólo escribir el CSV vacío")
+    cc.add_argument("--out", default="concordancia")
+    cc.add_argument("--speed", type=float, help="mm/s impreso en las hojas (obligatorio)")
+    cc.add_argument("--gain", type=float, help="mm/mV impreso en las hojas (obligatorio)")
+    cc.add_argument("--author", default="validación")
+    cc.add_argument("--reason", default="velocidad y ganancia impresas en la hoja")
+    cc.add_argument("--engine", default="ahus")
+    cc.add_argument("--duration", type=float, default=10.0)
+    cc.add_argument("--engines-config", type=Path, default=None)
+    cc.set_defaults(func=_cmd_concordance)
 
     dr = sub.add_parser("doctor", help="comprueba que la instalación puede digitalizar")
     dr.add_argument("--engines-config", type=Path, default=None)

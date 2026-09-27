@@ -52,6 +52,8 @@ ruff check src tests && ruff format --check src tests && mypy src && pytest -q
 ```
 
 ## Documentación
+- `docs/protocolo_validacion.md` — protocolo para validar con fotos del propio electrocardiógrafo
+  (`ecg-photo concordance`: tabla por foto y Bland-Altman frente a lo impreso).
 - `docs/guia_uso.md` — **guía de uso para el médico**: tomar la foto, procesarla, leer calidad
   y mediciones, comparar con lo impreso, límites y privacidad.
 - `docs/mission.md` — misión, principios, objetivos medibles y su estado.

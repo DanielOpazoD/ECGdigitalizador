@@ -31,6 +31,7 @@ import numpy as np
 
 from ecg_photo.contracts import load_manifest
 from ecg_photo.qc import STANDARD_LEADS, detect_qrs, observed_span
+from ecg_photo.rhythm import rhythm_alert, rhythm_features
 
 PRE_S = 0.35  # median-beat window before R
 POST_S = 0.65  # and after R (capped at 0.9 x RR)
@@ -67,6 +68,11 @@ class LeadIntervals:
     qt_ms: float | None = None
     # net QRS area of the median beat above the isoelectric level (mV x ms)
     qrs_area_mVms: float | None = None
+    # R and S amplitudes of the median beat above the isoelectric level (mV;
+    # r_s_amplitudes). ST is not reported: against 12SL its SD (0.098 mV)
+    # exceeded the criterion fixed beforehand (0.05 mV), F15
+    r_amp_mV: float | None = None
+    s_amp_mV: float | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -88,6 +94,10 @@ class Intervals:
     leads: list[LeadIntervals]
     # comparison with the values printed by the electrocardiograph, per interval
     printed: dict[str, dict] = field(default_factory=dict)
+    # irregular-rhythm alert from the longest strip (ecg_photo.rhythm, F14)
+    rhythm: dict = field(default_factory=dict)
+    # Sokolow-Lyon voltage index |S(V1)| + max(R(V5), R(V6)), mV (F15)
+    sokolow_lyon_mV: float | None = None
     note: str = "guidance only; not clinical validation"
 
 
@@ -203,6 +213,21 @@ def beat_fiducials(b: np.ndarray, fs: float, rr_s: float) -> dict[str, float | N
     return out
 
 
+R_EPS_MV = 0.02  # a positive deflection above this (noise level) is an R
+
+
+def r_s_amplitudes(qrs: np.ndarray) -> tuple[float, float]:
+    """(R, S) of a QRS above its isoelectric level, with the 12SL convention:
+    any initial positive deflection is an r, however small, and the deepest
+    point after the first positive part is the S (rS: tiny r, deep S). R is
+    the largest positive deflection. No positive part at all (QS complex):
+    the negative deflection is a Q, R = S = 0. F15."""
+    positive = np.nonzero(qrs > R_EPS_MV)[0]
+    if len(positive) == 0:
+        return 0.0, 0.0
+    return float(qrs.max()), min(0.0, float(qrs[positive[0] :].min()))
+
+
 def lead_intervals(name: str, x: np.ndarray, fs: float) -> LeadIntervals:
     span, _ = observed_span(x, fs)
     beats = detect_qrs(span, fs) if len(span) else np.array([], int)
@@ -222,6 +247,8 @@ def lead_intervals(name: str, x: np.ndarray, fs: float) -> LeadIntervals:
         q_on, q_off = int(f["qrs_on"]), int(f["qrs_off"])
         iso = float(np.median(b[max(0, q_on - round(0.02 * fs)) : q_on + 1]))
         li.qrs_area_mVms = float(np.sum(b[q_on : q_off + 1] - iso)) * ms
+        li.r_amp_mV, li.s_amp_mV = r_s_amplitudes(b[q_on : q_off + 1] - iso)
+
         if f["t_end"] is not None:
             li.qt_ms = (f["t_end"] - f["qrs_on"]) * ms
         else:
@@ -268,6 +295,18 @@ def qrs_axis(leads: list[LeadIntervals]) -> tuple[float | None, str, str | None,
     return axis, "ok", None, n
 
 
+SOKOLOW_LVH_MV = 3.5  # voltage criterion for left ventricular hypertrophy
+
+
+def sokolow_lyon(leads: list[LeadIntervals]) -> float | None:
+    by = {li.lead: li for li in leads}
+    s_v1 = getattr(by.get("V1"), "s_amp_mV", None)
+    r = [getattr(by.get(n), "r_amp_mV", None) for n in ("V5", "V6")]
+    if s_v1 is None or all(v is None for v in r):
+        return None
+    return abs(s_v1) + max(v for v in r if v is not None)
+
+
 def measure_signals(
     signals: dict[str, tuple[np.ndarray, float]], rr_ms: float | None = None
 ) -> Intervals:
@@ -299,6 +338,15 @@ def measure_signals(
             status[key] = "unavailable"
             reasons[key] = "not found in any lead"
     axis, axis_status, axis_reason, _n_axis = qrs_axis(leads)
+    rhythm = {}
+    if signals:
+        # the rhythm strip: the longest observed lead, II first (as the QC)
+        strip = max(
+            signals,
+            key=lambda n: (np.isfinite(signals[n][0]).sum() / signals[n][1], n == "II"),
+        )
+        feats = rhythm_features(*signals[strip], p_leads=count.get("pr_ms", 0))
+        rhythm = {"lead": strip, **rhythm_alert(feats)}
     status["qrs_axis_deg"] = axis_status
     count["qrs_axis_deg"] = _n_axis
     if axis_reason:
@@ -323,6 +371,8 @@ def measure_signals(
         qtc_bazett_ms=qtc_b,
         qtc_fridericia_ms=qtc_f,
         qrs_axis_deg=axis,
+        rhythm=rhythm,
+        sokolow_lyon_mV=sokolow_lyon(leads),
         spread_ms=spread,
         status=status,
         n_leads=count,
@@ -403,6 +453,9 @@ def compare_printed(iv: Intervals, printed: dict[str, float | None]) -> Interval
             entry["diff"] = round(diff, 1)
             entry["agrees"] = bool(abs(diff) <= tol)
             status_key = "qt_ms" if key == "qtc_bazett_ms" else key
+            # the status before this comparison: what the measurement alone
+            # says (concordance statistics must not use the demoted status)
+            entry["status_before"] = iv.status.get(status_key)
             if not entry["agrees"] and iv.status.get(status_key) == "ok":
                 iv.status[status_key] = "doubtful"
                 iv.reasons[status_key] = (
