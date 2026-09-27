@@ -1,5 +1,7 @@
-"""Read-only routes over a run's published result: segments, trace, quality
-report, intervals, overview image, PDF report and the study's run list."""
+"""Routes over a run's published result: segments, trace, quality report,
+intervals, overview image, PDF report and the study's run list (read-only),
+plus the values printed on the sheet header (recorded, then used to rewrite
+the advisory reports)."""
 
 import math
 from pathlib import Path
@@ -7,15 +9,24 @@ from pathlib import Path
 import numpy as np
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from ecg_photo.api_common import api_error as _err
 from ecg_photo.api_common import check_id as _check_id
 from ecg_photo.contracts import load_manifest
 from ecg_photo.intervals import read_intervals_report
+from ecg_photo.printed import PrintedValues, apply_printed, read_printed
 from ecg_photo.process import OVERVIEW_FILENAME
 from ecg_photo.qc import read_qc_report
 from ecg_photo.report import REPORT_FILENAME
 from ecg_photo.store import RunNotFound, Store
+
+
+class PrintedRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    values: PrintedValues
+    author: str = Field(min_length=1, max_length=200)
 
 
 def results_router(store: Store) -> APIRouter:
@@ -159,5 +170,21 @@ def results_router(store: Store) -> APIRouter:
         if store.get(study_id) is None:
             raise _err(404, "STUDY_NOT_FOUND", "unknown study")
         return {"runs": [j.model_dump(mode="json") for j in store.list_jobs(study_id)]}
+
+    @router.put("/studies/{study_id}/runs/{run_id}/printed")
+    def put_printed(study_id: str, run_id: str, body: PrintedRequest) -> dict:
+        """Record the header values printed by the electrocardiograph and
+        rewrite qc.json, intervals.json and report.pdf comparing with them."""
+        result = _run_result_dir(study_id, run_id)
+        if read_intervals_report(result) is None:
+            raise _err(409, "SCALE_NOT_CONFIRMED", "run has no calibrated signal to compare")
+        return apply_printed(result, body.values, author=body.author)
+
+    @router.get("/studies/{study_id}/runs/{run_id}/printed")
+    def get_printed(study_id: str, run_id: str) -> dict:
+        printed = read_printed(_run_result_dir(study_id, run_id))
+        if printed is None:
+            raise _err(404, "PRINTED_NOT_FOUND", "no printed values recorded for this run")
+        return printed
 
     return router

@@ -78,6 +78,19 @@
       <h2>Segmentos del resultado publicado</h2>
       <div id="qcBox" class="hint" role="status">—</div>
       <div id="ivBox" class="hint" role="status"></div>
+      <details id="printedBox" style="display:none; margin:6px 0">
+        <summary>Valores impresos en la hoja (cabecera del electrocardiógrafo)</summary>
+        <div class="hint">Copie lo que imprimió el equipo; deje vacío lo que no aparece. El programa compara sus mediciones con estos valores y marca como dudosas las que no coinciden. No cambia la señal.</div>
+        <div class="row">
+          <div><label for="pHr">FC (lpm)</label><input type="number" id="pHr" step="1" min="15" max="350"></div>
+          <div><label for="pPr">PR (ms)</label><input type="number" id="pPr" step="1"></div>
+          <div><label for="pQrs">QRS (ms)</label><input type="number" id="pQrs" step="1"></div>
+          <div><label for="pQt">QT (ms)</label><input type="number" id="pQt" step="1"></div>
+          <div><label for="pQtc">QTc (ms)</label><input type="number" id="pQtc" step="1"></div>
+          <div><label for="pAxis">Eje QRS (°)</label><input type="number" id="pAxis" step="1"></div>
+        </div>
+        <div class="row" style="margin-top:6px"><button id="pSave">Comparar con lo impreso</button><span id="pNote" class="hint" role="status"></span></div>
+      </details>
       <a id="reportLink" style="display:none" target="_blank" rel="noopener">Informe PDF (una página)</a>
       <img id="overview" alt="Las 12 derivaciones digitalizadas redibujadas en formato 3×4 + II (25 mm/s, 10 mm/mV)" style="display:none; width:100%; margin:6px 0; border:1px solid #ddd">
       <table id="segTable"><thead><tr><th>Segmento</th><th>Etiqueta</th><th>Estado etiqueta</th><th>Tiempo</th><th>Ganancia</th><th>Muestras</th><th>Corregir etiqueta</th></tr></thead><tbody></tbody></table>
@@ -167,6 +180,18 @@
     } catch (err) { msg(err.message, true); }
   });
   $('open').addEventListener('click', () => openStudy($('studyId').value.trim()));
+  $('pSave').addEventListener('click', async () => {
+    const run = S.study && S.study.published_run_id; if (!run) return;
+    const num = (id) => { const v = $(id).value.trim(); return v === '' ? null : Number(v); };
+    const values = { hr_bpm: num('pHr'), pr_ms: num('pPr'), qrs_ms: num('pQrs'), qt_ms: num('pQt'), qtc_ms: num('pQtc'), axis_deg: num('pAxis') };
+    const author = $('author').value.trim();
+    if (!author) { msg('Indique el autor (campo «Autor» de la configuración).', true); return; }
+    try {
+      await api('PUT', `/studies/${S.id}/runs/${run}/printed`, { values, author });
+      msg('Valores impresos registrados; calidad, intervalos e informe recalculados.');
+      await loadSegments();
+    } catch (err) { msg(err.message, true); }
+  });
 
   async function openStudy(id) {
     if (!id) return;
@@ -318,7 +343,9 @@
         const res = (v) => v == null ? '—' : v.toFixed(2);
         qcText = q.label == null ? `calidad: no calculada (${q.error || ''})`
           : `calidad: ${q.label} · Einthoven ${res(q.einthoven_residual)} · Goldberger ${res(q.goldberger_residual)}`
-            + (q.flags && q.flags.length ? ` · ${q.flags.join(', ')}` : '') + ' · orientativo, no validación clínica';
+            + (q.flags && q.flags.length ? ` · ${q.flags.join(', ')}` : '')
+            + (q.rr_printed_ms != null && q.rr_error_pct != null ? ` · RR ${Math.round(q.rr_measured_ms)} ms frente a ${Math.round(q.rr_printed_ms)} impreso (${q.rr_error_pct > 0 ? '+' : ''}${q.rr_error_pct.toFixed(1)} %)` : '')
+            + ' · orientativo, no validación clínica';
       } catch (err) { /* older results have no qc.json */ }
     }
     $('qcBox').textContent = qcText;
@@ -327,15 +354,35 @@
     if (run) {
       try {
         const iv = await api('GET', `/studies/${S.id}/runs/${run}/intervals`);
-        const one = (label, key) => iv[key] == null ? `${label} —` : `${label} ${Math.round(iv[key])} ms${iv.status && iv.status[key] !== 'ok' ? ' (dudoso)' : ''}`;
+        const cmp = (key) => {
+          const p = iv.printed && iv.printed[key];
+          if (!p) return '';
+          const u = p.unit === 'deg' ? '°' : ' ms';
+          return p.agrees === true ? ` [impreso ${Math.round(p.printed)}${u}: coincide]`
+            : p.agrees === false ? ` [impreso ${Math.round(p.printed)}${u}: NO coincide]` : ` [impreso ${Math.round(p.printed)}${u}]`;
+        };
+        const one = (label, key) => iv[key] == null ? `${label} —${cmp(key)}` : `${label} ${Math.round(iv[key])} ms${iv.status && iv.status[key] !== 'ok' ? ' (dudoso)' : ''}${cmp(key)}`;
         ivText = iv.error ? `intervalos: no calculados (${iv.error})`
           : `intervalos: FC ${iv.hr_bpm == null ? '—' : Math.round(iv.hr_bpm) + '/min'} · ${one('PR', 'pr_ms')} · ${one('QRS', 'qrs_ms')} · ${one('QT', 'qt_ms')}`
-            + ` · QTc Bazett ${iv.qtc_bazett_ms == null ? '—' : Math.round(iv.qtc_bazett_ms) + ' ms'}`
-            + ` · eje ${iv.qrs_axis_deg == null ? '—' : Math.round(iv.qrs_axis_deg) + '°'}${iv.status && iv.status.qrs_axis_deg === 'doubtful' ? ' (dudoso)' : ''}`
+            + ` · QTc Bazett ${iv.qtc_bazett_ms == null ? '—' : Math.round(iv.qtc_bazett_ms) + ' ms'}${cmp('qtc_bazett_ms')}`
+            + ` · eje ${iv.qrs_axis_deg == null ? '—' : Math.round(iv.qrs_axis_deg) + '°'}${iv.status && iv.status.qrs_axis_deg === 'doubtful' ? ' (dudoso)' : ''}${cmp('qrs_axis_deg')}`
             + ' · orientativo, no validación clínica';
       } catch (err) { /* older results have no intervals.json */ }
     }
     $('ivBox').textContent = ivText;
+    // printed header values: only for a run with calibrated intervals
+    const pb = $('printedBox'); pb.style.display = ivText ? '' : 'none';
+    const pf = { pHr: 'hr_bpm', pPr: 'pr_ms', pQrs: 'qrs_ms', pQt: 'qt_ms', pQtc: 'qtc_ms', pAxis: 'axis_deg' };
+    for (const id in pf) $(id).value = '';
+    $('pNote').textContent = '';
+    if (run && ivText) {
+      try {
+        const pr = await api('GET', `/studies/${S.id}/runs/${run}/printed`);
+        for (const id in pf) { const v = pr.values[pf[id]]; if (v != null) $(id).value = v; }
+        if (pr.values.rr_ms != null) $('pHr').value = Math.round(60000 / pr.values.rr_ms);
+        $('pNote').textContent = `registrado por ${pr.author} (${pr.recorded_at.slice(0, 16).replace('T', ' ')})`;
+      } catch (err) { /* nothing recorded yet */ }
+    }
     // 3x4 + II redraw of the published leads (worker writes it with qc.json)
     const ov = $('overview'); ov.style.display = 'none';
     const rl = $('reportLink'); rl.style.display = 'none';
