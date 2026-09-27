@@ -112,6 +112,19 @@ def measurement_rows(iv: dict | None) -> list[tuple[str, str, str]]:
     if status.get("qt_ms") != "ok" and iv.get("qtc_bazett_ms") is not None:
         qtc_note = "dudoso (QT dudoso); " + qtc_note
     rows.append(("QTc", _ms(iv.get("qtc_bazett_ms")), with_printed("qtc_bazett_ms", qtc_note)))
+    rows.append(rhythm_row(iv.get("rhythm") or {}))
+    sl = iv.get("sokolow_lyon_mV")
+    rows.append(
+        (
+            "Sokolow-Lyon",
+            "—" if sl is None else f"{sl:.1f} mV",
+            "—"
+            if sl is None
+            else (
+                "≥ 3.5 mV: criterio de voltaje de HVI (orientativo)" if sl >= 3.5 else "< 3.5 mV"
+            ),
+        )
+    )
     axis = iv.get("qrs_axis_deg")
     axis_note = axis_category_es(axis)
     if status.get("qrs_axis_deg") == "doubtful":
@@ -126,6 +139,20 @@ def measurement_rows(iv: dict | None) -> list[tuple[str, str, str]]:
         )
     )
     return rows
+
+
+def rhythm_row(rh: dict) -> tuple[str, str, str]:
+    """('Ritmo', value, note); an irregular rhythm is shown as doubtful (red)."""
+    status = rh.get("status")
+    if status == "regular":
+        return ("Ritmo", "RR regular", f"irregularidad {rh.get('irregularity', 0):.3f}")
+    if status == "irregular":
+        if rh.get("no_clear_p_wave"):
+            note = "dudoso: RR irregular sin onda P clara, compatible con FA; revisar el trazado"
+        else:
+            note = "dudoso: RR irregular; revisar el trazado (no es diagnóstico)"
+        return ("Ritmo", "RR irregular", note)
+    return ("Ritmo", "—", "no evaluable (menos de 5 latidos en la tira)")
 
 
 def axis_category_es(axis: float | None) -> str:
@@ -199,13 +226,13 @@ def render_report(run_dir: Path, out_pdf: Path, *, source_name: str | None = Non
         fontsize=8.5,
         color="#444",
     )
-    ax = fig.add_axes((0.04, 0.36, 0.92, 0.55))
+    ax = fig.add_axes((0.04, 0.40, 0.92, 0.51))
     ax.imshow(img)
     ax.set_axis_off()
 
     label = (qc or {}).get("label")
     flags = ", ".join((qc or {}).get("flags") or []) or "ninguna"
-    y = 0.315
+    y = 0.36
     fig.text(0.04, y, "Calidad de la digitalización", fontsize=10.5, weight="bold")
     fig.text(
         0.04,
@@ -219,7 +246,7 @@ def render_report(run_dir: Path, out_pdf: Path, *, source_name: str | None = Non
 
     fig.text(0.52, y, "Mediciones (entre derivaciones)", fontsize=10.5, weight="bold")
     for i, (k, v, note) in enumerate(measurement_rows(iv)):
-        yy = y - 0.03 - 0.034 * i
+        yy = y - 0.03 - 0.031 * i
         doubtful = note.startswith("dudoso")
         fig.text(0.52, yy, k, fontsize=9, weight="bold")
         fig.text(0.615, yy, v, fontsize=9, color="#b00020" if doubtful else "#000")

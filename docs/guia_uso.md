@@ -99,6 +99,17 @@ Precisión medida en valores `ok` (no es validación clínica; detalle en
 Eje: normal −30° a +90°; desviado a la izquierda −30° a −90°; a la derecha
 +90° a 180°; extremo, cuadrante noroeste.
 
+**Ritmo:** «RR regular» o «RR irregular; revisar el trazado». Si además no
+hay onda P clara: «compatible con FA». En ECG de PTB-XL, la alerta apareció en
+el 95 % de las fibrilaciones auriculares y en el 6 % de los ritmos sinusales;
+«compatible con FA», en el 60 % de las FA y el 1 % de los sinusales (F14).
+Es una llamada a mirar el trazado, **no un diagnóstico**.
+
+**Sokolow-Lyon** (\|S V1\| + R V5 o V6, la mayor): ≥ 3.5 mV es el criterio de
+voltaje de hipertrofia ventricular izquierda. Frente al programa de GE,
+diferencia mediana 0.05 mV y misma decisión en el 97 % (F15). El segmento
+**ST no se informa**: su exactitud no alcanzó el criterio fijado.
+
 ## 5. Comparar con lo que imprimió el equipo
 
 Es el control más útil: el electrocardiógrafo midió sobre la señal real.

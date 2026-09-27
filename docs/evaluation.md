@@ -21,6 +21,9 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F12](#f12-eje-eléctrico-del-qrs) | PTB-XL + 12SL + etiquetas de cardiólogos; Kaggle | eje del QRS | \|dif.\| mediana 5.6° frente a 12SL; categoría = cardiólogos 87 % (12SL 88 %) |
 | [A3](#a3-reproducibilidad-del-motor-e-instalación) | 8 imágenes Kaggle (una por tipo) | determinismo del motor; torch CPU frente a CUDA | Ahus no era determinista (hasta 1.6 mV); corregido; CPU = CUDA bit a bit |
 | [A4](#a4-tiempo-por-imagen) | 1 imagen Kaggle, perfil | tiempo por imagen | 55.2 → 48.4 s (−12 %), señales idénticas; ~35 s son inferencia de las redes |
+| [F13](#f13-ensayo-del-protocolo-de-validación-sin-fotos) | 20 PTB-XL impresos + valores GE como planilla | ensayo de `ecg-photo concordance` | `ok` 90–100 % dentro de tolerancia; 30 % `insufficient` (motor pierde derivaciones) |
+| [F14](#f14-alerta-de-ritmo-irregular) | PTB-XL, etiquetas de ritmo de cardiólogos | alerta de RR irregular | FA 95 % alertada; 6 % de falsas alarmas en sinusal; «compatible con FA» 60 % / 1 % |
+| [F15](#f15-amplitudes-r-s-sokolow-lyon-y-st) | PTB-XL + amplitudes GE 12SL | R, S, Sokolow-Lyon, ST | Sokolow-Lyon \|dif.\| mediana 0.05 mV, decisión ≥ 3.5 mV = 12SL 97 %; ST no cumple el criterio y no se incorpora |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -1054,3 +1057,123 @@ reinicio al cambiar la configuración, re-siembra por imagen); construir una
 sola figura para el PNG y el PDF de cada derivación, ~1.5 s. La meta de −30 %
 no se alcanza sin tocar la inferencia (resolución, precisión numérica,
 número de formatos candidatos) —lo que cambiaría las señales— o sin GPU.
+
+# F14: alerta de ritmo irregular
+
+`ecg_photo.rhythm`: en la tira de ritmo (la derivación más larga, II primero),
+**irregularidad = mediana(\|ΔRR\|) / mediana(RR)**. Las medianas son a
+propósito: una extrasístole aislada produce 2 diferencias grandes de ~10 y
+apenas la mueve; en la fibrilación auricular (FA) casi todas son grandes. Por
+encima del umbral: «RR irregular; revisar el trazado». Si además la onda P
+aparece en menos de 6 derivaciones impresas: «sin onda P clara, compatible
+con FA». Nunca un diagnóstico.
+
+**Datos:** etiquetas de ritmo de los cardiólogos de PTB-XL. Muestra F11 (300
+al azar) más una dirigida (200 FA y 100 con otros ritmos irregulares:
+arritmia sinusal, extrasistolia supraventricular, bigeminia, trigeminia),
+recortados como hoja 3×4 + II. Umbrales fijados con los `ecg_id` pares (el de
+irregularidad, 0.067, deja sin alerta al 95 % de los sinusales; el de onda
+P, < 6 derivaciones, es el que mejor separa FA de otros irregulares);
+resultados en los impares, no usados para fijarlos
+(`benchmarks/f14_rhythm_eval.py`,
+`benchmarks/results/f14_rhythm_ptbxl_2026-09-27.json`).
+
+| alerta (ids impares) | FA (n = 123) | otros irregulares (n = 60) | sinusal regular (n = 135) |
+|---|---|---|---|
+| RR irregular | **95 %** | 42 % | 6 % |
+| RR irregular sin onda P clara («compatible con FA») | **60 %** | 5 % | **1 %** |
+
+- La alerta de RR irregular detecta casi todas las FA con un 6 % de falsas
+  alarmas en ritmo sinusal (causas no revisadas una a una).
+- «Sin onda P clara» es específica (1 % en sinusales, 5 % en otros
+  irregulares) pero sólo en el 60 % de las FA: el detector de P confunde a
+  veces las ondas f con ondas P.
+
+En `intervals.json` (`rhythm`), la interfaz y el informe PDF (fila «Ritmo»,
+en rojo cuando es irregular).
+
+Limitaciones: señal verdadera recortada, no fotos (el efecto de la
+digitalización sobre los RR está en F7: RR dentro de ±5 % en 103/104 tiras);
+una sola base; el aleteo auricular (1 caso) no se evaluó aparte: con
+conducción fija su RR es regular y no dispararía la alerta.
+No es validación clínica.
+
+# F15: amplitudes (R, S, Sokolow-Lyon) y ST
+
+`intervals.r_s_amplitudes` sobre el latido mediano de cada derivación, desde
+la línea isoeléctrica: R = mayor deflexión positiva; S = punto más profundo
+tras la primera parte positiva del QRS; sin parte positiva (complejo QS) la
+deflexión es Q y R = S = 0 (convención de 12SL). Índice de Sokolow-Lyon =
+\|S(V1)\| + máx(R(V5), R(V6)).
+
+**Referencia:** amplitudes de GE 12SL (PTB-XL+), 600 registros PTB-XL
+descargados para F11 y F14, recortados como hoja 3×4 + II
+(`benchmarks/f15_amplitudes_12sl.py`,
+`benchmarks/results/f15_amplitudes_12sl_2026-09-27.json`). Nada se ajustó a
+los datos; se informan los `ecg_id` impares. Dos correcciones de definición
+surgieron al revisar casos: tomar como R el máximo del QRS dejaba S = 0 en
+los rS de V1 (la subida final hacia el ST supera a la r pequeña; casos vistos
+en impares), y exigir r ≥ 0.05 mV trataba como QS los rS con r diminuta
+(casos vistos en pares). La tabla es la de la definición final.
+
+| medida (ids impares) | n | sesgo | DE | \\|dif.\\| mediana | p90 |
+|---|---|---|---|---|---|
+| R, 12 derivaciones | 2746 | +0.011 | 0.154 | 0.030 | 0.120 mV |
+| S, 12 derivaciones | 2746 | −0.012 | 0.232 | 0.023 | 0.116 mV |
+| R en V5 | 321 | −0.007 | 0.129 | 0.036 | 0.129 mV |
+| S en V1 | 307 | +0.006 | 0.332 | 0.024 | 0.264 mV |
+| **Sokolow-Lyon** | 303 | −0.007 | 0.347 | 0.051 | 0.389 mV |
+| ST en el punto J, 12 derivaciones | 2746 | −0.007 | **0.098** | 0.021 | 0.070 mV |
+
+- Sokolow-Lyon ≥ 3.5 mV (criterio de voltaje de HVI): misma decisión que
+  12SL en el 97.4 % (sensibilidad 74 %, 14 de 19; especificidad 98.9 %).
+- **ST no se incorpora.** Criterio fijado antes de medir: \|sesgo\| ≤ 0.02 mV
+  y DE ≤ 0.05 mV. La DE es 0.098 mV (la mediana del error es buena, 0.021, pero
+  la cola no). Se sigue calculando sólo en este banco.
+- R, S y Sokolow-Lyon quedan en `intervals.json` (por derivación y global),
+  en la interfaz y en el informe PDF (fila «Sokolow-Lyon», orientativa).
+
+Limitaciones: señal verdadera recortada, no fotos; 12SL es la referencia del
+equipo; la cola de S en V1 (p90 0.26 mV) no se revisó caso a caso. No es
+validación clínica.
+
+# F13: ensayo del protocolo de validación (sin fotos)
+
+Ensayo completo de `docs/protocolo_validacion.md` con `ecg-photo concordance`:
+20 registros PTB-XL (mitad de comprobación de F11) dibujados como hojas
+3×4 + II limpias, **digitalizados con Ahus** de punta a punta, y como
+«valores impresos» las medidas de GE 12SL (PTB-XL+) en una planilla con `;` y
+coma decimal, como la llenaría un médico
+(`benchmarks/results/f13_concordancia_ensayo_2026-09-27.{json,csv}`).
+
+| medida | n (`ok`) | sesgo | DE | límites de acuerdo 95 % | \|dif.\| mediana | dentro de tolerancia: todos / `ok` |
+|---|---|---|---|---|---|---|
+| FC | 20 | −0.1 lpm | 1.5 | −3 a +3 | 0.3 | 95 % / 95 % |
+| PR | 19 (9) | +3.3 ms | 26.9 | −49 a +56 | 8.9 | 95 % / 100 % |
+| QRS | 20 (10) | +4.7 ms | 12.1 | −19 a +28 | 7.5 | 85 % / 90 % |
+| QT | 20 (12) | −13.2 ms | 20.3 | −53 a +27 | 17.4 | 95 % / 100 % |
+| QTc | 20 (12) | −16.3 ms | 24.5 | −64 a +32 | 20.6 | 90 % / 92 % |
+| Eje | 20 (13) | +0.9° | 19.7 | −38 a +39 | 3.3 | 90 % / 92 % |
+
+Contra los criterios del protocolo (§1), este ensayo:
+
+- **cumple** «≥ 90 % de los `ok` dentro de tolerancia» en todas las medidas y
+  el sesgo en FC, PR, QRS, QT y eje; **no cumple** el sesgo de QTc (−16 ms >
+  15);
+- **no cumple** «≤ 20 % `insufficient`»: 6 de 20 (30 %). En 5 el motor perdió
+  derivaciones o partes (`MISSING_LEAD`, `LOW_COVERAGE`, `FLAT_TRACE`, con las
+  identidades de Einthoven/Goldberger incumplidas) y en 1 el RR difiere > 5 %
+  del impreso; el control de calidad las marca correctamente;
+- **no cumple** «≥ 50 % de medidas `ok`» en PR (9 de 19, 47 %); QRS justo
+  (50 %).
+
+Error de lógica encontrado y corregido durante el ensayo: la comparación con
+lo impreso degrada a «dudoso» lo que no coincide, así que contar sólo los
+`ok` *después* de comparar era circular (daba 100 % dentro de tolerancia) y
+reducía el número de `ok`. `intervals.compare_printed` guarda ahora el estado
+previo (`status_before`) y la concordancia usa ése (prueba de regresión en
+`tests/test_concordance.py`).
+
+Limitaciones: 20 hojas sintéticas limpias, no fotos; la cifra de
+`insufficient` (motor que pierde derivaciones en hojas limpias) queda por
+investigar. No es validación clínica.
