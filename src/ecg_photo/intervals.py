@@ -331,7 +331,7 @@ def demote_on_qc(iv: Intervals, qc_label: str | None) -> Intervals:
 # largest |ours - printed| still counted as agreement (ms): 95th percentile of
 # the difference against the GE 12SL values over `ok` measurements on the
 # first half of the F11 PTB-XL sample (printed 3x4 + II signal)
-PRINTED_TOL_MS = {"pr_ms": 0.0, "qrs_ms": 0.0, "qt_ms": 0.0, "qtc_bazett_ms": 0.0}
+PRINTED_TOL_MS = {"pr_ms": 31.0, "qrs_ms": 20.0, "qt_ms": 39.0, "qtc_bazett_ms": 46.0}
 
 
 def compare_printed(iv: Intervals, printed: dict[str, float | None]) -> Intervals:

@@ -163,6 +163,19 @@ def digitize(
     return run_signals(done.run_dir)
 
 
+def saved_confirmed_run(work: Path) -> Path | None:
+    """Newest confirmed run (calibrated signal) saved by a previous --digitize."""
+    from ecg_photo.contracts import load_manifest
+
+    runs = [
+        r
+        for r in sorted((work / "runs").glob("run-*"), key=lambda p: p.stat().st_mtime)
+        if (r / "manifest.json").exists()
+        and any(s.signal_path for s in load_manifest(r / "manifest.json").segments)
+    ]
+    return runs[-1] if runs else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ludb", type=Path, default=Path("runs/f9/ludb"))
@@ -170,6 +183,11 @@ def main() -> int:
     ap.add_argument("--digitize", type=int, default=0, help="also run Ahus on the first N records")
     ap.add_argument("--work", type=Path, default=Path("runs/f9/digitized"))
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--remeasure",
+        action="store_true",
+        help="re-measure the digitized arm from the saved confirmed runs (no engine run)",
+    )
     args = ap.parse_args()
 
     ids = [int(x.split("/")[-1]) for x in (args.ludb / "RECORDS").read_text().split()]
@@ -190,7 +208,7 @@ def main() -> int:
     rows = []
     cache = args.work / "cases.jsonl"
     done_dig = {}
-    if cache.exists():
+    if cache.exists() and not args.remeasure:
         for line in cache.read_text().splitlines():
             r = json.loads(line)
             done_dig[r["record"]] = r["digitized"]
@@ -203,6 +221,11 @@ def main() -> int:
         row["full"] = intervals_json(full)
         row["printed"] = intervals_json(measure_signals({k: (v, fs) for k, v in pr.items()}))
         if dig is not None and n < args.digitize:
+            saved = saved_confirmed_run(args.work / str(rid))
+            if args.remeasure and saved is not None:
+                from ecg_photo.intervals import run_signals
+
+                done_dig[rid] = intervals_json(measure_signals(run_signals(saved)))
             if rid not in done_dig:
                 s = digitize(sig, fs, args.work / str(rid), dig)
                 res = intervals_json(measure_signals(s)) if s else None

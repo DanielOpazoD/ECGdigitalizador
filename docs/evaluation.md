@@ -17,6 +17,7 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F8](#f8-formatos-distintos-de-34--ii-objetivo-o8-de-docsmissionmd) | PTB-XL impreso 3×4 y 6×2 + Kaggle | formatos de hoja | 6×2: 0.70 → 0.993 sin empeorar 3×4 |
 | [F9](#f9-intervalos-pr-qrs-qt-objetivo-o7-de-docsmissionmd) | LUDB (anotaciones de cardiólogos) | PR, QRS, QT | hoja impresa, valores `ok`: QRS +1.6 ± 9.8 ms, QT −13.7 ± 13.2 ms (CSE sí), PR −3.6 ± 11.5 ms |
 | [F10](#f10-intervalos-en-imágenes-reales-kaggle) | Kaggle escaneos y fotos reales | error que añade la digitalización a PR/QRS/QT | PR y QT \|dif.\| ≈ 5 ms; QRS +8 ms más ancho |
+| [F11](#f11-coinciden-nuestros-intervalos-con-los-que-imprime-el-electrocardiógrafo) | PTB-XL + medidas GE 12SL (PTB-XL+) | acuerdo con lo que imprime un GE | QT corregido (−20 → ≈ 0 ms de sesgo); tolerancias para contrastar con la cabecera impresa |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -824,8 +825,13 @@ Registros pares (diferencia medida − cardiólogos, ms; «todos» incluye los
 - La señal completa (12 × 10 s) no mejora a la impresa: más latidos también
   suman latidos atípicos; el método no se ajustó para ese caso, que no es el
   del programa.
-- QT se mide ~10–15 ms más corto que los cardiólogos (sesgo sistemático del
-  criterio de fin de T), dentro de la tolerancia CSE de 25 ms.
+- QT se medía ~10–15 ms más corto que los cardiólogos con la mediana entre
+  derivaciones. **Actualizado en F11:** QT pasa a ser el percentil 75 entre
+  derivaciones (el QT es global); en estos mismos registros pares, hoja
+  impresa, valores `ok`: **−2.7 ± 13.5 ms** (\|dif.\| mediana 8 ms) frente a
+  −13.7 ± 13.2 ms; digitalizado `ok`: +2.2 ± 22.2 ms (9 registros). La tabla
+  de arriba conserva los valores con la mediana; el JSON de resultados ya
+  lleva los nuevos.
 
 Limitaciones: una sola base (LUDB, un electrocardiógrafo Schiller), 100
 registros de prueba y sólo 20 por el motor; la hoja digitalizada es una
@@ -878,3 +884,53 @@ Diferencia digitalizado − señal verdadera (ms; n · media ± DE · \|dif.\| m
 
 Limitaciones: 10 registros; la referencia es el algoritmo, no cardiólogos;
 fs de la verdad variable (250–1025 Hz). No es validación clínica.
+
+# F11: ¿coinciden nuestros intervalos con los que imprime el electrocardiógrafo?
+
+El GE MAC2000 del usuario imprime FC, PR, QRS, QT y QTc calculados por el
+programa GE Marquette 12SL. PTB-XL+ (PhysioNet) publica esas medidas 12SL
+globales para cada registro de PTB-XL; se comparan con `ecg_photo.intervals`
+sobre 300 registros PTB-XL elegidos al azar (semilla fija), recortados como una
+hoja 3×4 + II (`benchmarks/f11_intervals_12sl.py`,
+`benchmarks/results/f11_intervals_12sl_2026-09-27.json`).
+
+**Hallazgo:** con la mediana entre derivaciones, nuestro QT salía **19–22 ms
+más corto** que el QT impreso por 12SL (en las dos mitades de la muestra); PR
+(+3 / −1 ms) y QRS (−2 / −6 ms) coincidían. El QT es un intervalo global
+(inicio de QRS más temprano a fin de T más tardío); el percentil 75 entre
+derivaciones no tiene sesgo frente a 12SL (−0.6 / −3.2 ms) y además acerca el
+QT a los cardiólogos de LUDB (F9: −13.7 → −2.7 ms). **Cambio:** QT = percentil
+75 entre derivaciones; PR y QRS siguen con la mediana. Un QT medido corto
+puede ocultar un QT prolongado, por eso importa.
+
+Nota: una referencia «global» construida con las marcas por derivación de
+LUDB (inicio más temprano a fin más tardío entre las 12 anotaciones) sale
+28 ms más ancha en QRS y 40 ms en QT que la mediana: toma el extremo de 12
+anotaciones independientes y no sirve como objetivo.
+
+Diferencia nuestra − 12SL, segunda mitad (150 registros, no usada para
+elegir tolerancias), hoja impresa 3×4 + II, valores `ok`:
+
+| medida | n | media ± DE (ms) | \|dif.\| mediana | tolerancia (p95 de la 1.ª mitad) | dentro |
+|---|---|---|---|---|---|
+| RR | 150 | −3.0 ± 41.1 | 1 | 31 ms | 96 % |
+| PR | 86 | −6.2 ± 12.0 | 9 | 31 ms | 99 % |
+| QRS | 128 | −4.8 ± 15.2 | 6 | 20 ms | 97 % |
+| QT | 100 | −16.2 ± 33.1 | 18 | 39 ms | 91 % |
+| QTc Bazett | 100 | −14.3 ± 48.2 | 21 | 46 ms | 91 % |
+
+(Con todos los valores, no sólo `ok`, el QT queda en −5.4 ± 42.2 ms.)
+
+**Uso:** `ecg-photo process ... --printed-pr-ms --printed-qrs-ms
+--printed-qt-ms --printed-qtc-ms` compara cada intervalo con lo impreso en la
+cabecera (`intervals.compare_printed`, tolerancias de la tabla). Fuera de
+tolerancia, un valor `ok` pasa a `doubtful` con el motivo; `intervals.json`
+(`printed`) y el informe PDF lo muestran («impreso X ms (coincide / NO
+coincide)»). En la muestra de comprobación, entre el 1 % y el 9 % de los
+valores `ok` quedarían marcados sin que haya error de digitalización (la
+señal es la verdadera): son diferencias de método con 12SL, y una alerta pide
+revisar el original, no invalida la medida.
+
+Limitaciones: la comparación usa la señal verdadera, no fotos (el error que
+añade la digitalización está en F10); 12SL no es una referencia clínica sino
+la del equipo; tolerancias de 150 registros. No es validación clínica.

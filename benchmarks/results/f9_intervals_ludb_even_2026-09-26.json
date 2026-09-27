@@ -1,7 +1,7 @@
 {
-  "generated": "2026-09-26T21:43:20.895119+00:00",
+  "generated": "2026-09-27T01:46:02.905777+00:00",
   "scope": "LUDB records (cardiologist annotations); not clinical validation",
-  "commit": "07413e2fe49330e96928e0d47908864cb86aabe8",
+  "commit": "c4f0d9a5119494ee398a61ce24394c93c7ac2a3e",
   "split": "even",
   "n_records": 100,
   "summary": {
@@ -35,10 +35,10 @@
       "qt_ms": {
         "n": 100,
         "n_truth": 100,
-        "mean_diff_ms": -10.535,
-        "sd_diff_ms": 37.96371573122436,
-        "median_abs_ms": 13.0,
-        "p90_abs_ms": 39.20000000000002,
+        "mean_diff_ms": 3.87,
+        "sd_diff_ms": 43.43395194796557,
+        "median_abs_ms": 9.5,
+        "p90_abs_ms": 39.15000000000001,
         "cse_mean_sd_ms": [
           25,
           30
@@ -76,15 +76,15 @@
       "qt_ms": {
         "n": 100,
         "n_truth": 100,
-        "mean_diff_ms": -13.385,
-        "sd_diff_ms": 28.416798186845742,
-        "median_abs_ms": 14.5,
-        "p90_abs_ms": 41.300000000000026,
+        "mean_diff_ms": 3.485,
+        "sd_diff_ms": 30.296885778554667,
+        "median_abs_ms": 10.75,
+        "p90_abs_ms": 35.900000000000034,
         "cse_mean_sd_ms": [
           25,
           30
         ],
-        "within_cse": true
+        "within_cse": false
       }
     },
     "digitized": {
@@ -117,15 +117,15 @@
       "qt_ms": {
         "n": 20,
         "n_truth": 20,
-        "mean_diff_ms": -4.95,
-        "sd_diff_ms": 19.86460751132394,
-        "median_abs_ms": 13.0,
-        "p90_abs_ms": 35.55,
+        "mean_diff_ms": 20.884999999999998,
+        "sd_diff_ms": 38.65589455969848,
+        "median_abs_ms": 18.150000000000006,
+        "p90_abs_ms": 54.35000000000008,
         "cse_mean_sd_ms": [
           25,
           30
         ],
-        "within_cse": true
+        "within_cse": false
       }
     },
     "full|ok": {
@@ -158,10 +158,10 @@
       "qt_ms": {
         "n": 77,
         "n_truth": 100,
-        "mean_diff_ms": -14.987012987012987,
-        "sd_diff_ms": 34.91069188752378,
-        "median_abs_ms": 12.0,
-        "p90_abs_ms": 25.10000000000001,
+        "mean_diff_ms": -4.8896103896103895,
+        "sd_diff_ms": 35.60414887272928,
+        "median_abs_ms": 8.0,
+        "p90_abs_ms": 21.10000000000001,
         "cse_mean_sd_ms": [
           25,
           30
@@ -199,10 +199,10 @@
       "qt_ms": {
         "n": 73,
         "n_truth": 100,
-        "mean_diff_ms": -13.657534246575343,
-        "sd_diff_ms": 13.161886450913013,
-        "median_abs_ms": 14.0,
-        "p90_abs_ms": 29.0,
+        "mean_diff_ms": -2.732876712328767,
+        "sd_diff_ms": 13.53315942821886,
+        "median_abs_ms": 8.0,
+        "p90_abs_ms": 20.9,
         "cse_mean_sd_ms": [
           25,
           30
@@ -240,10 +240,10 @@
       "qt_ms": {
         "n": 9,
         "n_truth": 20,
-        "mean_diff_ms": -9.5,
-        "sd_diff_ms": 22.43044805615795,
-        "median_abs_ms": 20.0,
-        "p90_abs_ms": 36.5,
+        "mean_diff_ms": 2.244444444444443,
+        "sd_diff_ms": 22.242982663702676,
+        "median_abs_ms": 8.5,
+        "p90_abs_ms": 35.5,
         "cse_mean_sd_ms": [
           25,
           30
@@ -263,7 +263,7 @@
       "full": {
         "pr_ms": 203.0,
         "qrs_ms": 76.0,
-        "qt_ms": 388.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -278,7 +278,7 @@
       "printed": {
         "pr_ms": 199.6,
         "qrs_ms": 76.0,
-        "qt_ms": 390.0,
+        "qt_ms": 412.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -293,7 +293,7 @@
       "digitized": {
         "pr_ms": 189.6,
         "qrs_ms": 94.0,
-        "qt_ms": 381.0,
+        "qt_ms": 399.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -316,7 +316,7 @@
       "full": {
         "pr_ms": 156.5,
         "qrs_ms": 96.0,
-        "qt_ms": 386.0,
+        "qt_ms": 393.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -331,7 +331,7 @@
       "printed": {
         "pr_ms": 170.9,
         "qrs_ms": 116.0,
-        "qt_ms": 392.0,
+        "qt_ms": 411.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -346,7 +346,7 @@
       "digitized": {
         "pr_ms": 153.7,
         "qrs_ms": 103.0,
-        "qt_ms": 392.5,
+        "qt_ms": 398.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -369,7 +369,7 @@
       "full": {
         "pr_ms": 155.6,
         "qrs_ms": 81.0,
-        "qt_ms": 387.0,
+        "qt_ms": 404.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -384,7 +384,7 @@
       "printed": {
         "pr_ms": 131.5,
         "qrs_ms": 89.0,
-        "qt_ms": 390.0,
+        "qt_ms": 403.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -399,7 +399,7 @@
       "digitized": {
         "pr_ms": 140.7,
         "qrs_ms": 84.0,
-        "qt_ms": 382.5,
+        "qt_ms": 409.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -437,7 +437,7 @@
       "printed": {
         "pr_ms": null,
         "qrs_ms": 158.0,
-        "qt_ms": 377.0,
+        "qt_ms": 385.0,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "ok",
@@ -452,7 +452,7 @@
       "digitized": {
         "pr_ms": 247.2,
         "qrs_ms": 156.0,
-        "qt_ms": 359.5,
+        "qt_ms": 382.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -475,7 +475,7 @@
       "full": {
         "pr_ms": 187.6,
         "qrs_ms": 95.0,
-        "qt_ms": 416.0,
+        "qt_ms": 432.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -490,7 +490,7 @@
       "printed": {
         "pr_ms": 202.2,
         "qrs_ms": 90.0,
-        "qt_ms": 424.0,
+        "qt_ms": 436.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -505,7 +505,7 @@
       "digitized": {
         "pr_ms": 208.2,
         "qrs_ms": 95.0,
-        "qt_ms": 423.0,
+        "qt_ms": 430.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -528,7 +528,7 @@
       "full": {
         "pr_ms": 100.0,
         "qrs_ms": 112.0,
-        "qt_ms": 390.0,
+        "qt_ms": 420.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -543,7 +543,7 @@
       "printed": {
         "pr_ms": 83.6,
         "qrs_ms": 138.0,
-        "qt_ms": 380.0,
+        "qt_ms": 414.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -558,7 +558,7 @@
       "digitized": {
         "pr_ms": 174.7,
         "qrs_ms": 149.0,
-        "qt_ms": 395.5,
+        "qt_ms": 412.2,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -581,7 +581,7 @@
       "full": {
         "pr_ms": 151.5,
         "qrs_ms": 92.0,
-        "qt_ms": 364.0,
+        "qt_ms": 371.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -596,7 +596,7 @@
       "printed": {
         "pr_ms": 143.3,
         "qrs_ms": 94.0,
-        "qt_ms": 369.0,
+        "qt_ms": 369.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -611,7 +611,7 @@
       "digitized": {
         "pr_ms": 147.6,
         "qrs_ms": 94.5,
-        "qt_ms": 390.0,
+        "qt_ms": 401.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -634,7 +634,7 @@
       "full": {
         "pr_ms": 169.0,
         "qrs_ms": 80.0,
-        "qt_ms": 355.0,
+        "qt_ms": 363.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -649,7 +649,7 @@
       "printed": {
         "pr_ms": 173.1,
         "qrs_ms": 88.0,
-        "qt_ms": 363.0,
+        "qt_ms": 387.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -664,7 +664,7 @@
       "digitized": {
         "pr_ms": 160.6,
         "qrs_ms": 87.5,
-        "qt_ms": 364.5,
+        "qt_ms": 384.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -687,7 +687,7 @@
       "full": {
         "pr_ms": 163.6,
         "qrs_ms": 94.0,
-        "qt_ms": 338.0,
+        "qt_ms": 347.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -702,7 +702,7 @@
       "printed": {
         "pr_ms": 158.8,
         "qrs_ms": 96.0,
-        "qt_ms": 346.0,
+        "qt_ms": 350.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -717,7 +717,7 @@
       "digitized": {
         "pr_ms": 151.1,
         "qrs_ms": 99.5,
-        "qt_ms": 342.0,
+        "qt_ms": 348.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -740,7 +740,7 @@
       "full": {
         "pr_ms": 197.5,
         "qrs_ms": 94.0,
-        "qt_ms": 378.0,
+        "qt_ms": 387.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -755,7 +755,7 @@
       "printed": {
         "pr_ms": 186.6,
         "qrs_ms": 94.0,
-        "qt_ms": 374.0,
+        "qt_ms": 385.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -770,7 +770,7 @@
       "digitized": {
         "pr_ms": 161.2,
         "qrs_ms": 101.5,
-        "qt_ms": 380.5,
+        "qt_ms": 415.8,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -793,7 +793,7 @@
       "full": {
         "pr_ms": 189.5,
         "qrs_ms": 109.0,
-        "qt_ms": 325.0,
+        "qt_ms": 379.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -808,7 +808,7 @@
       "printed": {
         "pr_ms": 186.6,
         "qrs_ms": 113.0,
-        "qt_ms": 348.0,
+        "qt_ms": 383.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -823,7 +823,7 @@
       "digitized": {
         "pr_ms": 179.5,
         "qrs_ms": 124.0,
-        "qt_ms": 357.0,
+        "qt_ms": 383.8,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -846,7 +846,7 @@
       "full": {
         "pr_ms": 119.7,
         "qrs_ms": 186.0,
-        "qt_ms": 489.0,
+        "qt_ms": 507.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -861,7 +861,7 @@
       "printed": {
         "pr_ms": 119.7,
         "qrs_ms": 191.0,
-        "qt_ms": 471.0,
+        "qt_ms": 502.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -876,7 +876,7 @@
       "digitized": {
         "pr_ms": null,
         "qrs_ms": 183.0,
-        "qt_ms": 480.0,
+        "qt_ms": 511.2,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "ok",
@@ -899,7 +899,7 @@
       "full": {
         "pr_ms": 140.7,
         "qrs_ms": 104.0,
-        "qt_ms": 436.0,
+        "qt_ms": 442.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -914,7 +914,7 @@
       "printed": {
         "pr_ms": 112.5,
         "qrs_ms": 112.0,
-        "qt_ms": 442.0,
+        "qt_ms": 464.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -929,7 +929,7 @@
       "digitized": {
         "pr_ms": 128.6,
         "qrs_ms": 114.0,
-        "qt_ms": 439.0,
+        "qt_ms": 461.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -952,7 +952,7 @@
       "full": {
         "pr_ms": 164.5,
         "qrs_ms": 86.0,
-        "qt_ms": 412.0,
+        "qt_ms": 416.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -967,7 +967,7 @@
       "printed": {
         "pr_ms": 158.4,
         "qrs_ms": 99.0,
-        "qt_ms": 414.0,
+        "qt_ms": 423.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -982,7 +982,7 @@
       "digitized": {
         "pr_ms": 155.8,
         "qrs_ms": 99.0,
-        "qt_ms": 414.5,
+        "qt_ms": 420.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1005,7 +1005,7 @@
       "full": {
         "pr_ms": 178.0,
         "qrs_ms": 112.0,
-        "qt_ms": 408.0,
+        "qt_ms": 418.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1020,7 +1020,7 @@
       "printed": {
         "pr_ms": 181.0,
         "qrs_ms": 124.0,
-        "qt_ms": 414.0,
+        "qt_ms": 416.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1035,7 +1035,7 @@
       "digitized": {
         "pr_ms": 169.8,
         "qrs_ms": 114.0,
-        "qt_ms": 417.0,
+        "qt_ms": 425.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1058,7 +1058,7 @@
       "full": {
         "pr_ms": 159.0,
         "qrs_ms": 92.0,
-        "qt_ms": 380.0,
+        "qt_ms": 385.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1073,7 +1073,7 @@
       "printed": {
         "pr_ms": 153.0,
         "qrs_ms": 95.0,
-        "qt_ms": 406.0,
+        "qt_ms": 502.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -1088,7 +1088,7 @@
       "digitized": {
         "pr_ms": 162.4,
         "qrs_ms": 98.0,
-        "qt_ms": 424.0,
+        "qt_ms": 513.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1111,7 +1111,7 @@
       "full": {
         "pr_ms": null,
         "qrs_ms": 168.0,
-        "qt_ms": 465.0,
+        "qt_ms": 477.0,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "ok",
@@ -1126,7 +1126,7 @@
       "printed": {
         "pr_ms": null,
         "qrs_ms": 143.0,
-        "qt_ms": 439.0,
+        "qt_ms": 454.0,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "doubtful",
@@ -1141,7 +1141,7 @@
       "digitized": {
         "pr_ms": 235.4,
         "qrs_ms": 164.5,
-        "qt_ms": 456.0,
+        "qt_ms": 494.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1164,7 +1164,7 @@
       "full": {
         "pr_ms": 143.9,
         "qrs_ms": 98.0,
-        "qt_ms": 382.0,
+        "qt_ms": 386.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1179,7 +1179,7 @@
       "printed": {
         "pr_ms": 148.2,
         "qrs_ms": 96.0,
-        "qt_ms": 382.0,
+        "qt_ms": 387.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1194,7 +1194,7 @@
       "digitized": {
         "pr_ms": 144.8,
         "qrs_ms": 105.0,
-        "qt_ms": 381.0,
+        "qt_ms": 396.2,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -1217,7 +1217,7 @@
       "full": {
         "pr_ms": 319.2,
         "qrs_ms": 101.0,
-        "qt_ms": 385.0,
+        "qt_ms": 420.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1270,7 +1270,7 @@
       "full": {
         "pr_ms": 169.5,
         "qrs_ms": 88.0,
-        "qt_ms": 381.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1285,7 +1285,7 @@
       "printed": {
         "pr_ms": 176.6,
         "qrs_ms": 84.0,
-        "qt_ms": 382.0,
+        "qt_ms": 412.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1300,7 +1300,7 @@
       "digitized": {
         "pr_ms": 188.7,
         "qrs_ms": 91.5,
-        "qt_ms": 384.0,
+        "qt_ms": 492.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1323,7 +1323,7 @@
       "full": {
         "pr_ms": 175.9,
         "qrs_ms": 90.0,
-        "qt_ms": 429.0,
+        "qt_ms": 431.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1338,7 +1338,7 @@
       "printed": {
         "pr_ms": 177.7,
         "qrs_ms": 89.0,
-        "qt_ms": 426.0,
+        "qt_ms": 428.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1362,7 +1362,7 @@
       "full": {
         "pr_ms": 234.5,
         "qrs_ms": 145.0,
-        "qt_ms": 372.0,
+        "qt_ms": 395.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -1377,7 +1377,7 @@
       "printed": {
         "pr_ms": null,
         "qrs_ms": 146.0,
-        "qt_ms": 372.0,
+        "qt_ms": 379.5,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "ok",
@@ -1401,7 +1401,7 @@
       "full": {
         "pr_ms": 165.2,
         "qrs_ms": 109.0,
-        "qt_ms": 389.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1416,7 +1416,7 @@
       "printed": {
         "pr_ms": 157.6,
         "qrs_ms": 124.0,
-        "qt_ms": 404.0,
+        "qt_ms": 411.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1440,7 +1440,7 @@
       "full": {
         "pr_ms": 169.0,
         "qrs_ms": 107.0,
-        "qt_ms": 488.0,
+        "qt_ms": 566.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1455,7 +1455,7 @@
       "printed": {
         "pr_ms": 176.7,
         "qrs_ms": 109.0,
-        "qt_ms": 482.0,
+        "qt_ms": 540.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1479,7 +1479,7 @@
       "full": {
         "pr_ms": 160.0,
         "qrs_ms": 90.0,
-        "qt_ms": 369.0,
+        "qt_ms": 377.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1494,7 +1494,7 @@
       "printed": {
         "pr_ms": 136.6,
         "qrs_ms": 105.0,
-        "qt_ms": 382.0,
+        "qt_ms": 419.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1518,7 +1518,7 @@
       "full": {
         "pr_ms": 197.9,
         "qrs_ms": 128.0,
-        "qt_ms": 420.0,
+        "qt_ms": 447.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1533,7 +1533,7 @@
       "printed": {
         "pr_ms": 209.2,
         "qrs_ms": 136.0,
-        "qt_ms": 405.0,
+        "qt_ms": 430.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1557,7 +1557,7 @@
       "full": {
         "pr_ms": 158.8,
         "qrs_ms": 80.0,
-        "qt_ms": 397.0,
+        "qt_ms": 407.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1572,7 +1572,7 @@
       "printed": {
         "pr_ms": 156.2,
         "qrs_ms": 80.0,
-        "qt_ms": 400.0,
+        "qt_ms": 406.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1596,7 +1596,7 @@
       "full": {
         "pr_ms": 134.7,
         "qrs_ms": 116.0,
-        "qt_ms": 336.0,
+        "qt_ms": 338.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1611,7 +1611,7 @@
       "printed": {
         "pr_ms": 231.8,
         "qrs_ms": 118.0,
-        "qt_ms": 345.0,
+        "qt_ms": 376.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1635,7 +1635,7 @@
       "full": {
         "pr_ms": 162.5,
         "qrs_ms": 101.0,
-        "qt_ms": 362.0,
+        "qt_ms": 370.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1650,7 +1650,7 @@
       "printed": {
         "pr_ms": 161.0,
         "qrs_ms": 105.0,
-        "qt_ms": 350.0,
+        "qt_ms": 358.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1674,7 +1674,7 @@
       "full": {
         "pr_ms": 125.4,
         "qrs_ms": 106.0,
-        "qt_ms": 420.0,
+        "qt_ms": 431.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -1689,7 +1689,7 @@
       "printed": {
         "pr_ms": null,
         "qrs_ms": 112.0,
-        "qt_ms": 424.0,
+        "qt_ms": 430.0,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "doubtful",
@@ -1713,7 +1713,7 @@
       "full": {
         "pr_ms": 179.3,
         "qrs_ms": 87.0,
-        "qt_ms": 340.0,
+        "qt_ms": 345.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1728,7 +1728,7 @@
       "printed": {
         "pr_ms": 171.5,
         "qrs_ms": 104.0,
-        "qt_ms": 344.0,
+        "qt_ms": 355.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -1752,7 +1752,7 @@
       "full": {
         "pr_ms": 183.9,
         "qrs_ms": 76.0,
-        "qt_ms": 394.0,
+        "qt_ms": 408.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1767,7 +1767,7 @@
       "printed": {
         "pr_ms": 177.8,
         "qrs_ms": 84.0,
-        "qt_ms": 404.0,
+        "qt_ms": 409.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1791,7 +1791,7 @@
       "full": {
         "pr_ms": 181.4,
         "qrs_ms": 92.0,
-        "qt_ms": 402.0,
+        "qt_ms": 411.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1806,7 +1806,7 @@
       "printed": {
         "pr_ms": 184.9,
         "qrs_ms": 105.0,
-        "qt_ms": 402.0,
+        "qt_ms": 413.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1830,7 +1830,7 @@
       "full": {
         "pr_ms": 162.8,
         "qrs_ms": 81.0,
-        "qt_ms": 370.0,
+        "qt_ms": 389.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1845,7 +1845,7 @@
       "printed": {
         "pr_ms": 146.9,
         "qrs_ms": 89.0,
-        "qt_ms": 388.0,
+        "qt_ms": 406.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1869,7 +1869,7 @@
       "full": {
         "pr_ms": 139.7,
         "qrs_ms": 73.0,
-        "qt_ms": 338.0,
+        "qt_ms": 350.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1884,7 +1884,7 @@
       "printed": {
         "pr_ms": 131.5,
         "qrs_ms": 74.0,
-        "qt_ms": 334.0,
+        "qt_ms": 347.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1908,7 +1908,7 @@
       "full": {
         "pr_ms": 195.9,
         "qrs_ms": 116.0,
-        "qt_ms": 401.0,
+        "qt_ms": 415.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1923,7 +1923,7 @@
       "printed": {
         "pr_ms": 200.1,
         "qrs_ms": 115.0,
-        "qt_ms": 396.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -1947,7 +1947,7 @@
       "full": {
         "pr_ms": 34.1,
         "qrs_ms": 24.0,
-        "qt_ms": 152.0,
+        "qt_ms": 160.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -1962,7 +1962,7 @@
       "printed": {
         "pr_ms": 135.1,
         "qrs_ms": 112.0,
-        "qt_ms": 297.0,
+        "qt_ms": 481.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -1986,7 +1986,7 @@
       "full": {
         "pr_ms": 169.1,
         "qrs_ms": 96.0,
-        "qt_ms": 380.0,
+        "qt_ms": 395.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2001,7 +2001,7 @@
       "printed": {
         "pr_ms": 146.0,
         "qrs_ms": 96.0,
-        "qt_ms": 358.0,
+        "qt_ms": 381.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2025,7 +2025,7 @@
       "full": {
         "pr_ms": 218.1,
         "qrs_ms": 90.0,
-        "qt_ms": 400.0,
+        "qt_ms": 418.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2040,7 +2040,7 @@
       "printed": {
         "pr_ms": 214.5,
         "qrs_ms": 94.0,
-        "qt_ms": 400.0,
+        "qt_ms": 410.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2064,7 +2064,7 @@
       "full": {
         "pr_ms": 185.2,
         "qrs_ms": 76.0,
-        "qt_ms": 362.0,
+        "qt_ms": 384.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -2079,7 +2079,7 @@
       "printed": {
         "pr_ms": 160.5,
         "qrs_ms": 94.0,
-        "qt_ms": 370.0,
+        "qt_ms": 376.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -2103,7 +2103,7 @@
       "full": {
         "pr_ms": 127.7,
         "qrs_ms": 114.0,
-        "qt_ms": 439.0,
+        "qt_ms": 450.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -2118,7 +2118,7 @@
       "printed": {
         "pr_ms": 133.0,
         "qrs_ms": 116.0,
-        "qt_ms": 438.0,
+        "qt_ms": 463.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -2142,7 +2142,7 @@
       "full": {
         "pr_ms": 133.9,
         "qrs_ms": 116.0,
-        "qt_ms": 416.0,
+        "qt_ms": 423.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2157,7 +2157,7 @@
       "printed": {
         "pr_ms": 266.3,
         "qrs_ms": 109.0,
-        "qt_ms": 426.0,
+        "qt_ms": 444.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2181,7 +2181,7 @@
       "full": {
         "pr_ms": 103.3,
         "qrs_ms": 89.0,
-        "qt_ms": 344.0,
+        "qt_ms": 367.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2196,7 +2196,7 @@
       "printed": {
         "pr_ms": 135.7,
         "qrs_ms": 90.0,
-        "qt_ms": 352.0,
+        "qt_ms": 361.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2220,7 +2220,7 @@
       "full": {
         "pr_ms": 249.6,
         "qrs_ms": 90.0,
-        "qt_ms": 366.0,
+        "qt_ms": 370.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2235,7 +2235,7 @@
       "printed": {
         "pr_ms": 253.2,
         "qrs_ms": 92.0,
-        "qt_ms": 336.0,
+        "qt_ms": 351.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2259,7 +2259,7 @@
       "full": {
         "pr_ms": null,
         "qrs_ms": 190.0,
-        "qt_ms": 505.0,
+        "qt_ms": 555.0,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "ok",
@@ -2274,7 +2274,7 @@
       "printed": {
         "pr_ms": null,
         "qrs_ms": 190.0,
-        "qt_ms": 488.0,
+        "qt_ms": 506.0,
         "status": {
           "pr_ms": "unavailable",
           "qrs_ms": "ok",
@@ -2298,7 +2298,7 @@
       "full": {
         "pr_ms": 170.3,
         "qrs_ms": 77.0,
-        "qt_ms": 344.0,
+        "qt_ms": 346.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2313,7 +2313,7 @@
       "printed": {
         "pr_ms": 125.9,
         "qrs_ms": 86.0,
-        "qt_ms": 323.0,
+        "qt_ms": 331.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2337,7 +2337,7 @@
       "full": {
         "pr_ms": 172.9,
         "qrs_ms": 102.0,
-        "qt_ms": 348.0,
+        "qt_ms": 362.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2352,7 +2352,7 @@
       "printed": {
         "pr_ms": 174.7,
         "qrs_ms": 96.0,
-        "qt_ms": 376.0,
+        "qt_ms": 384.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2376,7 +2376,7 @@
       "full": {
         "pr_ms": 319.3,
         "qrs_ms": 82.0,
-        "qt_ms": 343.0,
+        "qt_ms": 345.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2391,7 +2391,7 @@
       "printed": {
         "pr_ms": 304.0,
         "qrs_ms": 80.0,
-        "qt_ms": 316.0,
+        "qt_ms": 338.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2415,7 +2415,7 @@
       "full": {
         "pr_ms": 162.9,
         "qrs_ms": 96.0,
-        "qt_ms": 541.0,
+        "qt_ms": 551.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2430,7 +2430,7 @@
       "printed": {
         "pr_ms": 167.9,
         "qrs_ms": 96.0,
-        "qt_ms": 510.0,
+        "qt_ms": 518.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2454,7 +2454,7 @@
       "full": {
         "pr_ms": 130.0,
         "qrs_ms": 64.0,
-        "qt_ms": 437.0,
+        "qt_ms": 442.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2469,7 +2469,7 @@
       "printed": {
         "pr_ms": 129.9,
         "qrs_ms": 78.0,
-        "qt_ms": 429.0,
+        "qt_ms": 437.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2493,7 +2493,7 @@
       "full": {
         "pr_ms": 195.6,
         "qrs_ms": 85.0,
-        "qt_ms": 416.0,
+        "qt_ms": 422.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2508,7 +2508,7 @@
       "printed": {
         "pr_ms": 185.1,
         "qrs_ms": 86.0,
-        "qt_ms": 424.0,
+        "qt_ms": 428.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2532,7 +2532,7 @@
       "full": {
         "pr_ms": 237.1,
         "qrs_ms": 152.0,
-        "qt_ms": 438.0,
+        "qt_ms": 462.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -2547,7 +2547,7 @@
       "printed": {
         "pr_ms": 101.1,
         "qrs_ms": 149.0,
-        "qt_ms": 412.0,
+        "qt_ms": 470.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -2571,7 +2571,7 @@
       "full": {
         "pr_ms": 200.5,
         "qrs_ms": 92.0,
-        "qt_ms": 337.0,
+        "qt_ms": 345.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2586,7 +2586,7 @@
       "printed": {
         "pr_ms": 207.0,
         "qrs_ms": 94.0,
-        "qt_ms": 342.0,
+        "qt_ms": 360.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2610,7 +2610,7 @@
       "full": {
         "pr_ms": 248.1,
         "qrs_ms": 135.0,
-        "qt_ms": 396.0,
+        "qt_ms": 399.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2625,7 +2625,7 @@
       "printed": {
         "pr_ms": 249.3,
         "qrs_ms": 139.0,
-        "qt_ms": 380.0,
+        "qt_ms": 406.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2649,7 +2649,7 @@
       "full": {
         "pr_ms": 200.9,
         "qrs_ms": 100.0,
-        "qt_ms": 344.0,
+        "qt_ms": 346.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2664,7 +2664,7 @@
       "printed": {
         "pr_ms": 279.0,
         "qrs_ms": 107.0,
-        "qt_ms": 336.0,
+        "qt_ms": 360.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2688,7 +2688,7 @@
       "full": {
         "pr_ms": 255.6,
         "qrs_ms": 84.0,
-        "qt_ms": 320.0,
+        "qt_ms": 330.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2703,7 +2703,7 @@
       "printed": {
         "pr_ms": 264.6,
         "qrs_ms": 92.0,
-        "qt_ms": 322.0,
+        "qt_ms": 326.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2727,7 +2727,7 @@
       "full": {
         "pr_ms": 138.3,
         "qrs_ms": 87.0,
-        "qt_ms": 329.0,
+        "qt_ms": 331.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -2742,7 +2742,7 @@
       "printed": {
         "pr_ms": 146.9,
         "qrs_ms": 91.0,
-        "qt_ms": 352.0,
+        "qt_ms": 354.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2781,7 +2781,7 @@
       "printed": {
         "pr_ms": 155.8,
         "qrs_ms": 184.0,
-        "qt_ms": 345.0,
+        "qt_ms": 359.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -2820,7 +2820,7 @@
       "printed": {
         "pr_ms": 170.2,
         "qrs_ms": 75.0,
-        "qt_ms": 398.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2844,7 +2844,7 @@
       "full": {
         "pr_ms": 215.2,
         "qrs_ms": 104.0,
-        "qt_ms": 398.0,
+        "qt_ms": 413.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2859,7 +2859,7 @@
       "printed": {
         "pr_ms": 213.2,
         "qrs_ms": 108.0,
-        "qt_ms": 412.0,
+        "qt_ms": 466.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -2883,7 +2883,7 @@
       "full": {
         "pr_ms": 163.6,
         "qrs_ms": 68.0,
-        "qt_ms": 398.0,
+        "qt_ms": 399.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2898,7 +2898,7 @@
       "printed": {
         "pr_ms": 159.1,
         "qrs_ms": 69.0,
-        "qt_ms": 400.0,
+        "qt_ms": 407.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -2922,7 +2922,7 @@
       "full": {
         "pr_ms": 180.7,
         "qrs_ms": 96.0,
-        "qt_ms": 489.0,
+        "qt_ms": 515.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3000,7 +3000,7 @@
       "full": {
         "pr_ms": 166.3,
         "qrs_ms": 88.0,
-        "qt_ms": 410.0,
+        "qt_ms": 413.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3015,7 +3015,7 @@
       "printed": {
         "pr_ms": 165.0,
         "qrs_ms": 86.0,
-        "qt_ms": 412.0,
+        "qt_ms": 432.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3039,7 +3039,7 @@
       "full": {
         "pr_ms": 216.0,
         "qrs_ms": 120.0,
-        "qt_ms": 497.0,
+        "qt_ms": 520.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -3054,7 +3054,7 @@
       "printed": {
         "pr_ms": 200.0,
         "qrs_ms": 132.0,
-        "qt_ms": 528.0,
+        "qt_ms": 540.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -3078,7 +3078,7 @@
       "full": {
         "pr_ms": 154.7,
         "qrs_ms": 85.0,
-        "qt_ms": 388.0,
+        "qt_ms": 403.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3093,7 +3093,7 @@
       "printed": {
         "pr_ms": 154.9,
         "qrs_ms": 89.0,
-        "qt_ms": 380.0,
+        "qt_ms": 390.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3117,7 +3117,7 @@
       "full": {
         "pr_ms": 234.1,
         "qrs_ms": 97.0,
-        "qt_ms": 395.0,
+        "qt_ms": 411.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3132,7 +3132,7 @@
       "printed": {
         "pr_ms": 239.5,
         "qrs_ms": 102.0,
-        "qt_ms": 397.0,
+        "qt_ms": 404.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3156,7 +3156,7 @@
       "full": {
         "pr_ms": 130.0,
         "qrs_ms": 88.0,
-        "qt_ms": 340.0,
+        "qt_ms": 356.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3171,7 +3171,7 @@
       "printed": {
         "pr_ms": 124.2,
         "qrs_ms": 87.0,
-        "qt_ms": 332.0,
+        "qt_ms": 342.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3195,7 +3195,7 @@
       "full": {
         "pr_ms": 143.0,
         "qrs_ms": 98.0,
-        "qt_ms": 398.0,
+        "qt_ms": 423.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3210,7 +3210,7 @@
       "printed": {
         "pr_ms": 138.5,
         "qrs_ms": 93.0,
-        "qt_ms": 376.0,
+        "qt_ms": 391.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3234,7 +3234,7 @@
       "full": {
         "pr_ms": 151.7,
         "qrs_ms": 82.0,
-        "qt_ms": 344.0,
+        "qt_ms": 347.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3249,7 +3249,7 @@
       "printed": {
         "pr_ms": 171.4,
         "qrs_ms": 80.0,
-        "qt_ms": 338.0,
+        "qt_ms": 343.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3273,7 +3273,7 @@
       "full": {
         "pr_ms": 117.1,
         "qrs_ms": 82.0,
-        "qt_ms": 326.0,
+        "qt_ms": 335.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3288,7 +3288,7 @@
       "printed": {
         "pr_ms": 124.6,
         "qrs_ms": 81.0,
-        "qt_ms": 325.0,
+        "qt_ms": 333.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3312,7 +3312,7 @@
       "full": {
         "pr_ms": 121.9,
         "qrs_ms": 76.0,
-        "qt_ms": 382.0,
+        "qt_ms": 391.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3327,7 +3327,7 @@
       "printed": {
         "pr_ms": 117.9,
         "qrs_ms": 83.0,
-        "qt_ms": 366.0,
+        "qt_ms": 379.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3351,7 +3351,7 @@
       "full": {
         "pr_ms": 147.1,
         "qrs_ms": 102.0,
-        "qt_ms": 380.0,
+        "qt_ms": 386.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -3366,7 +3366,7 @@
       "printed": {
         "pr_ms": 152.3,
         "qrs_ms": 92.0,
-        "qt_ms": 386.0,
+        "qt_ms": 394.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -3390,7 +3390,7 @@
       "full": {
         "pr_ms": 97.9,
         "qrs_ms": 94.0,
-        "qt_ms": 353.0,
+        "qt_ms": 359.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3405,7 +3405,7 @@
       "printed": {
         "pr_ms": 95.4,
         "qrs_ms": 90.0,
-        "qt_ms": 356.0,
+        "qt_ms": 361.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3429,7 +3429,7 @@
       "full": {
         "pr_ms": 136.6,
         "qrs_ms": 92.0,
-        "qt_ms": 418.0,
+        "qt_ms": 448.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -3444,7 +3444,7 @@
       "printed": {
         "pr_ms": 159.6,
         "qrs_ms": 81.0,
-        "qt_ms": 404.0,
+        "qt_ms": 416.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -3468,7 +3468,7 @@
       "full": {
         "pr_ms": 100.5,
         "qrs_ms": 94.0,
-        "qt_ms": 350.0,
+        "qt_ms": 351.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3483,7 +3483,7 @@
       "printed": {
         "pr_ms": 105.8,
         "qrs_ms": 96.0,
-        "qt_ms": 341.0,
+        "qt_ms": 354.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3507,7 +3507,7 @@
       "full": {
         "pr_ms": 128.3,
         "qrs_ms": 86.0,
-        "qt_ms": 338.0,
+        "qt_ms": 352.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3522,7 +3522,7 @@
       "printed": {
         "pr_ms": 136.7,
         "qrs_ms": 90.0,
-        "qt_ms": 330.0,
+        "qt_ms": 340.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3546,7 +3546,7 @@
       "full": {
         "pr_ms": 131.3,
         "qrs_ms": 89.0,
-        "qt_ms": 382.0,
+        "qt_ms": 392.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3561,7 +3561,7 @@
       "printed": {
         "pr_ms": 128.5,
         "qrs_ms": 86.0,
-        "qt_ms": 386.0,
+        "qt_ms": 394.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3585,7 +3585,7 @@
       "full": {
         "pr_ms": 143.7,
         "qrs_ms": 81.0,
-        "qt_ms": 352.0,
+        "qt_ms": 372.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3600,7 +3600,7 @@
       "printed": {
         "pr_ms": 158.7,
         "qrs_ms": 76.0,
-        "qt_ms": 342.0,
+        "qt_ms": 361.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3624,7 +3624,7 @@
       "full": {
         "pr_ms": 154.5,
         "qrs_ms": 82.0,
-        "qt_ms": 388.0,
+        "qt_ms": 426.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3639,7 +3639,7 @@
       "printed": {
         "pr_ms": 156.6,
         "qrs_ms": 92.0,
-        "qt_ms": 384.0,
+        "qt_ms": 387.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3663,7 +3663,7 @@
       "full": {
         "pr_ms": 170.9,
         "qrs_ms": 108.0,
-        "qt_ms": 333.0,
+        "qt_ms": 337.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3678,7 +3678,7 @@
       "printed": {
         "pr_ms": 184.0,
         "qrs_ms": 106.0,
-        "qt_ms": 328.0,
+        "qt_ms": 340.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3702,7 +3702,7 @@
       "full": {
         "pr_ms": 159.6,
         "qrs_ms": 85.0,
-        "qt_ms": 364.0,
+        "qt_ms": 370.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3717,7 +3717,7 @@
       "printed": {
         "pr_ms": 163.1,
         "qrs_ms": 86.0,
-        "qt_ms": 372.0,
+        "qt_ms": 376.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3741,7 +3741,7 @@
       "full": {
         "pr_ms": 179.3,
         "qrs_ms": 96.0,
-        "qt_ms": 363.0,
+        "qt_ms": 482.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3756,7 +3756,7 @@
       "printed": {
         "pr_ms": 157.5,
         "qrs_ms": 106.0,
-        "qt_ms": 362.0,
+        "qt_ms": 372.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3780,7 +3780,7 @@
       "full": {
         "pr_ms": 102.9,
         "qrs_ms": 104.0,
-        "qt_ms": 392.0,
+        "qt_ms": 402.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3795,7 +3795,7 @@
       "printed": {
         "pr_ms": 124.1,
         "qrs_ms": 106.0,
-        "qt_ms": 386.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -3819,7 +3819,7 @@
       "full": {
         "pr_ms": 146.3,
         "qrs_ms": 105.0,
-        "qt_ms": 420.0,
+        "qt_ms": 454.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -3834,7 +3834,7 @@
       "printed": {
         "pr_ms": 260.0,
         "qrs_ms": 105.0,
-        "qt_ms": 411.0,
+        "qt_ms": 417.5,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "doubtful",
@@ -3858,7 +3858,7 @@
       "full": {
         "pr_ms": 118.9,
         "qrs_ms": 87.0,
-        "qt_ms": 390.0,
+        "qt_ms": 392.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3873,7 +3873,7 @@
       "printed": {
         "pr_ms": 103.5,
         "qrs_ms": 96.0,
-        "qt_ms": 393.0,
+        "qt_ms": 400.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3897,7 +3897,7 @@
       "full": {
         "pr_ms": 111.4,
         "qrs_ms": 90.0,
-        "qt_ms": 382.0,
+        "qt_ms": 404.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3912,7 +3912,7 @@
       "printed": {
         "pr_ms": 112.7,
         "qrs_ms": 90.0,
-        "qt_ms": 369.0,
+        "qt_ms": 381.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3936,7 +3936,7 @@
       "full": {
         "pr_ms": 158.5,
         "qrs_ms": 119.0,
-        "qt_ms": 395.0,
+        "qt_ms": 425.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3951,7 +3951,7 @@
       "printed": {
         "pr_ms": 157.0,
         "qrs_ms": 123.0,
-        "qt_ms": 396.0,
+        "qt_ms": 407.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -3975,7 +3975,7 @@
       "full": {
         "pr_ms": 158.0,
         "qrs_ms": 118.0,
-        "qt_ms": 308.0,
+        "qt_ms": 317.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -3990,7 +3990,7 @@
       "printed": {
         "pr_ms": 137.6,
         "qrs_ms": 110.0,
-        "qt_ms": 306.0,
+        "qt_ms": 308.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -4014,7 +4014,7 @@
       "full": {
         "pr_ms": 178.8,
         "qrs_ms": 100.0,
-        "qt_ms": 373.0,
+        "qt_ms": 393.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -4029,7 +4029,7 @@
       "printed": {
         "pr_ms": 151.2,
         "qrs_ms": 107.0,
-        "qt_ms": 353.0,
+        "qt_ms": 369.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4053,7 +4053,7 @@
       "full": {
         "pr_ms": 132.0,
         "qrs_ms": 84.0,
-        "qt_ms": 362.0,
+        "qt_ms": 380.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4068,7 +4068,7 @@
       "printed": {
         "pr_ms": 143.8,
         "qrs_ms": 94.0,
-        "qt_ms": 350.0,
+        "qt_ms": 369.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -4092,7 +4092,7 @@
       "full": {
         "pr_ms": 141.9,
         "qrs_ms": 83.0,
-        "qt_ms": 356.0,
+        "qt_ms": 364.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4107,7 +4107,7 @@
       "printed": {
         "pr_ms": 148.6,
         "qrs_ms": 81.0,
-        "qt_ms": 364.0,
+        "qt_ms": 380.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4131,7 +4131,7 @@
       "full": {
         "pr_ms": 186.3,
         "qrs_ms": 80.0,
-        "qt_ms": 336.0,
+        "qt_ms": 346.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -4146,7 +4146,7 @@
       "printed": {
         "pr_ms": 196.5,
         "qrs_ms": 80.0,
-        "qt_ms": 336.0,
+        "qt_ms": 339.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4170,7 +4170,7 @@
       "full": {
         "pr_ms": 142.7,
         "qrs_ms": 76.0,
-        "qt_ms": 313.0,
+        "qt_ms": 319.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4185,7 +4185,7 @@
       "printed": {
         "pr_ms": 127.3,
         "qrs_ms": 88.0,
-        "qt_ms": 310.0,
+        "qt_ms": 324.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4209,7 +4209,7 @@
       "full": {
         "pr_ms": 220.6,
         "qrs_ms": 96.0,
-        "qt_ms": 339.0,
+        "qt_ms": 342.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4224,7 +4224,7 @@
       "printed": {
         "pr_ms": 275.4,
         "qrs_ms": 96.0,
-        "qt_ms": 316.0,
+        "qt_ms": 330.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -4248,7 +4248,7 @@
       "full": {
         "pr_ms": 157.4,
         "qrs_ms": 102.0,
-        "qt_ms": 390.0,
+        "qt_ms": 399.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4263,7 +4263,7 @@
       "printed": {
         "pr_ms": 149.6,
         "qrs_ms": 108.0,
-        "qt_ms": 394.0,
+        "qt_ms": 397.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "doubtful",
@@ -4287,7 +4287,7 @@
       "full": {
         "pr_ms": 127.4,
         "qrs_ms": 93.0,
-        "qt_ms": 376.0,
+        "qt_ms": 382.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4302,7 +4302,7 @@
       "printed": {
         "pr_ms": 109.5,
         "qrs_ms": 92.0,
-        "qt_ms": 378.0,
+        "qt_ms": 412.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4326,7 +4326,7 @@
       "full": {
         "pr_ms": 137.1,
         "qrs_ms": 120.0,
-        "qt_ms": 360.0,
+        "qt_ms": 386.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4341,7 +4341,7 @@
       "printed": {
         "pr_ms": 144.9,
         "qrs_ms": 114.0,
-        "qt_ms": 358.0,
+        "qt_ms": 415.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",
@@ -4365,7 +4365,7 @@
       "full": {
         "pr_ms": 136.8,
         "qrs_ms": 83.0,
-        "qt_ms": 399.0,
+        "qt_ms": 406.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4380,7 +4380,7 @@
       "printed": {
         "pr_ms": 141.2,
         "qrs_ms": 82.0,
-        "qt_ms": 398.0,
+        "qt_ms": 407.0,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4404,7 +4404,7 @@
       "full": {
         "pr_ms": 139.7,
         "qrs_ms": 96.0,
-        "qt_ms": 389.0,
+        "qt_ms": 399.5,
         "status": {
           "pr_ms": "ok",
           "qrs_ms": "ok",
@@ -4419,7 +4419,7 @@
       "printed": {
         "pr_ms": 156.3,
         "qrs_ms": 99.0,
-        "qt_ms": 382.0,
+        "qt_ms": 403.0,
         "status": {
           "pr_ms": "doubtful",
           "qrs_ms": "ok",

@@ -151,10 +151,18 @@ def test_cli_process(tmp_path: Path, monkeypatch, capsys) -> None:
     assert "input not found" in capsys.readouterr().out
     assert main([*base, "--out", str(tmp_path / "a"), "--engine", "nope"]) == 2
     assert "not configured" in capsys.readouterr().out
-    assert main([*base, "--out", str(tmp_path / "b"), "--engine", "fake", "--duration", "3"]) == 0
+    printed = ["--printed-qrs-ms", "5000", "--printed-pr-ms", "160"]
+    args = [*base, "--out", str(tmp_path / "b"), "--engine", "fake", "--duration", "3"]
+    assert main([*args, *printed]) == 0
     res = json.loads(capsys.readouterr().out)
     assert res["time_source"] == "engine" and res["qc_label"] is not None
     assert Path(res["overview"]).exists()
+    # the printed header values reach intervals.json: an impossible printed QRS
+    # never "agrees", whatever the measurement
+    summary = json.loads((tmp_path / "b" / "summary.json").read_text())
+    cmp = summary["intervals"]["printed"]
+    assert cmp["qrs_ms"]["printed_ms"] == 5000 and cmp["qrs_ms"]["agrees"] in (False, None)
+    assert cmp["pr_ms"]["tolerance_ms"] == 31.0 and "qt_ms" not in cmp
 
 
 def test_process_6x2_layout(tmp_path: Path) -> None:
