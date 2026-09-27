@@ -12,6 +12,7 @@ import yaml
 
 from ecg_photo.contracts import TransformChain, TransformStep
 from ecg_photo.digitizers.base import (
+    ENGINE_HASH_SEED,
     EngineNotReady,
     EngineOutput,
     EngineSpec,
@@ -25,6 +26,19 @@ from ecg_photo.transforms import homography_folds, homography_from_points
 LEAD_NAMES_12 = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 PATCH_MARKER = "save_geometry_json"
 PATCH_FILE = "src/digitize.py"
+# Ahus draws random subsets (torch.randperm in the perspective detector and the
+# dewarper, torch.randn tie-breaking in the signal extractor) and torch seeds
+# its generator at random in every process: the same image gave signals up to
+# 1.6 mV apart between runs (a Kaggle mould scan, A3). The engine is started
+# through this entry point with every generator seeded; Ahus' code is not
+# modified.
+SEEDED_ENTRY = (
+    "import random, runpy, sys\n"
+    "import numpy, torch\n"
+    "random.seed(0); numpy.random.seed(0); torch.manual_seed(0)\n"
+    "sys.argv = ['src/digitize.py'] + sys.argv[1:]\n"
+    "runpy.run_path('src/digitize.py', run_name='__main__')\n"
+)
 
 
 # the George-Moody 3x4 layouts + standard_6x2; Ahus' own lead_layouts_all.yml
@@ -112,15 +126,14 @@ class AhusDigitizer:
         in_dir = work_dir / "in"
         shutil.copy2(image_path, in_dir / Path(image_path).name)
 
-        env = {**os.environ, "PYTHONPATH": str(self.ahus_root)}
+        env = {
+            **os.environ,
+            "PYTHONPATH": str(self.ahus_root),
+            "PYTHONHASHSEED": ENGINE_HASH_SEED,
+        }
         t0 = time.monotonic()
         proc = subprocess.run(
-            [
-                str(self.python_exe),
-                "src/digitize.py",
-                "--config",
-                str(cfg_path),
-            ],
+            [str(self.python_exe), "-c", SEEDED_ENTRY, "--config", str(cfg_path)],
             cwd=self.ahus_root,
             env=env,
             check=False,

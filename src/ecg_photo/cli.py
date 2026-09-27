@@ -55,6 +55,17 @@ def _cmd_intervals(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    from ecg_photo.doctor import as_dict, report, run_checks
+
+    checks, usable = run_checks(args.engines_config)
+    if args.json:
+        print(json.dumps(as_dict(checks, usable), indent=2, ensure_ascii=False))
+    else:
+        print(report(checks, usable))
+    return 0 if usable else 1
+
+
 def _do_export(root: Path, out_dir: Path, dpi: float, speed: float, gain: float) -> int:
     from ecg_photo.process import export_run
 
@@ -475,6 +486,11 @@ def build_parser() -> argparse.ArgumentParser:
     cs.add_argument("--fs", type=float, default=None)
     cs.add_argument("--time-source", choices=["evidence", "engine"], default="evidence")
     cs.set_defaults(func=_cmd_confirm_scale)
+
+    dr = sub.add_parser("doctor", help="comprueba que la instalación puede digitalizar")
+    dr.add_argument("--engines-config", type=Path, default=None)
+    dr.add_argument("--json", action="store_true")
+    dr.set_defaults(func=_cmd_doctor)
 
     sv = sub.add_parser("serve")
     sv.add_argument("--store", required=True, help="store directory")

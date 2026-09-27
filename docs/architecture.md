@@ -60,6 +60,7 @@ Principios que el código hace cumplir (no sólo documenta):
 | Rutas locales de motores | `configs/engines.local.yml` (no versionado; lo escribe `benchmarks/setup_engines.sh`) |
 | Checkouts y pesos de motores | `external/` (no versionado; commits y sha256 en `configs/checkpoints.json`) |
 | Parches mínimos a motores | `patches/` |
+| Instalación y diagnóstico | `install.sh` (programa + motores, versiones fijadas en `requirements.lock` y `configs/engines/`); `ecg-photo doctor` (`doctor.py`) |
 | Almacén de `serve` / `batch` | directorio `--store` (un proceso por almacén, con bloqueo) |
 | Corridas de bancos | `runs/` (no versionado); resultados resumidos en `benchmarks/results/` |
 | Imágenes reales de pacientes | nunca en el repositorio |
