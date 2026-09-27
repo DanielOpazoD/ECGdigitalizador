@@ -146,6 +146,7 @@ def test_ahus_relative_work_dir_and_stderr_tail(tmp_path, monkeypatch) -> None:
         seen["cfg_exists_from_cwd"] = (Path(cwd) / cfg).exists()
         eff = yaml.safe_load(cfg.read_text())
         seen["images_path"] = eff["DATA"]["images_path"]
+        seen["save_mode"] = eff["DATA"]["save_mode"]
         seen["hash_seed"] = kw["env"].get("PYTHONHASHSEED")
         seen["cmd"] = cmd
         seen["layouts"] = eff["MODEL"]["KWARGS"]["config"]["LAYOUT_IDENTIFIER"]["config_path"]
@@ -176,6 +177,7 @@ def test_ahus_relative_work_dir_and_stderr_tail(tmp_path, monkeypatch) -> None:
     assert layouts.is_absolute() and layouts.name == "ahus_lead_layouts.yml"
     # A3: the engine runs with a fixed hash seed (reproducible output)
     assert seen["hash_seed"] == "0"
+    assert seen["save_mode"] == "timeseries_only"  # A4: no diagnostic PNG
     # ... and every random generator seeded before Ahus' digitize.py runs
     assert seen["cmd"][1] == "-c" and "torch.manual_seed(0)" in seen["cmd"][2]
     assert "run_path('src/digitize.py'" in seen["cmd"][2]

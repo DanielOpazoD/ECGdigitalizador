@@ -39,7 +39,7 @@ está lista.
    están impresas en la hoja (normalmente 25 mm/s y 10 mm/mV), eje temporal
    «evidencia», su nombre en **Autor** y un **Motivo** («valores impresos en la
    hoja»). *Guardar como revisión nueva* y *Ejecutar trabajo*.
-3. Esperar 1–2 minutos: el trabajo pasa a «completed» y se publica.
+3. Esperar alrededor de 1 minuto: el trabajo pasa a «completed» y se publica.
 4. Revisar la línea de **calidad**, la de **intervalos**, el trazado
    redibujado y el **Informe PDF**.
 
@@ -131,4 +131,4 @@ digitalización o de una diferencia de método con el equipo; en ambos casos,
 | `insufficient` con `LIMB_LEADS_INCONSISTENT` en un trazado de bajo voltaje | posible falsa alarma: comparar a ojo el trazado redibujado con la hoja |
 | Eje temporal «supuesto del motor» en vez de «medido en la imagen» | no se pudo medir la rejilla (sombra, reflejo, rejilla muy tenue) |
 | Formato no reconocido | sólo 3×4 + II y 6×2 están evaluados |
-| Tarda 1–2 minutos | normal en un computador sin tarjeta gráfica |
+| Tarda cerca de 1 minuto | normal en un computador sin tarjeta gráfica: ~35 s son la red neuronal del motor |
