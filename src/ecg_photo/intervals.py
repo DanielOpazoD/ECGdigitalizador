@@ -65,6 +65,8 @@ class LeadIntervals:
     pr_ms: float | None = None
     qrs_ms: float | None = None
     qt_ms: float | None = None
+    # net QRS area of the median beat above the isoelectric level (mV x ms)
+    qrs_area_mVms: float | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -77,6 +79,7 @@ class Intervals:
     qt_ms: float | None
     qtc_bazett_ms: float | None
     qtc_fridericia_ms: float | None
+    qrs_axis_deg: float | None
     spread_ms: dict[str, float | None]  # IQR over leads per interval
     status: dict[str, str]  # ok | doubtful | unavailable, per interval
     n_leads: dict[str, int]
@@ -216,6 +219,9 @@ def lead_intervals(name: str, x: np.ndarray, fs: float) -> LeadIntervals:
     ms = 1000.0 / fs
     if f["qrs_on"] is not None and f["qrs_off"] is not None:
         li.qrs_ms = (f["qrs_off"] - f["qrs_on"]) * ms
+        q_on, q_off = int(f["qrs_on"]), int(f["qrs_off"])
+        iso = float(np.median(b[max(0, q_on - round(0.02 * fs)) : q_on + 1]))
+        li.qrs_area_mVms = float(np.sum(b[q_on : q_off + 1] - iso)) * ms
         if f["t_end"] is not None:
             li.qt_ms = (f["t_end"] - f["qrs_on"]) * ms
         else:
@@ -227,6 +233,39 @@ def lead_intervals(name: str, x: np.ndarray, fs: float) -> LeadIntervals:
     else:
         li.notes.append("QRS boundaries not found")
     return li
+
+
+# frontal-plane angle of each limb lead (degrees, hexaxial reference system)
+LIMB_LEAD_ANGLES = {"I": 0.0, "II": 60.0, "III": 120.0, "aVR": -150.0, "aVL": -30.0, "aVF": 90.0}
+AXIS_MIN_LEADS = 4
+# below this net QRS vector (mV x ms) the axis is indeterminate (equiphasic
+# complexes in every limb lead)
+AXIS_MIN_AMPLITUDE_MVMS = 4.0
+
+
+def qrs_axis(leads: list[LeadIntervals]) -> tuple[float | None, str, str | None, int]:
+    """Frontal QRS axis (degrees, -180..180] from the net QRS areas of the
+    limb leads: each lead is the projection of one vector on its hexaxial
+    angle, fitted by least squares over all available limb leads (more robust
+    than I and aVF alone). Returns (axis, status, reason, n_leads)."""
+    rows = [
+        (LIMB_LEAD_ANGLES[li.lead], li.qrs_area_mVms)
+        for li in leads
+        if li.lead in LIMB_LEAD_ANGLES and li.qrs_area_mVms is not None
+    ]
+    n = len(rows)
+    if n < 2 or len({a for a, _ in rows}) < 2:
+        return None, "unavailable", "fewer than 2 limb leads with a QRS", n
+    ang = np.radians([a for a, _ in rows])
+    area = np.array([v for _, v in rows])
+    design = np.column_stack([np.cos(ang), np.sin(ang)])
+    (x, y), *_ = np.linalg.lstsq(design, area, rcond=None)
+    axis = float(np.degrees(np.arctan2(y, x)))
+    if float(np.hypot(x, y)) < AXIS_MIN_AMPLITUDE_MVMS:
+        return axis, "doubtful", "indeterminate: net QRS near zero in every limb lead", n
+    if n < AXIS_MIN_LEADS:
+        return axis, "doubtful", f"found in {n} limb lead(s) only", n
+    return axis, "ok", None, n
 
 
 def measure_signals(
@@ -259,6 +298,11 @@ def measure_signals(
             res[key] = spread[key] = None
             status[key] = "unavailable"
             reasons[key] = "not found in any lead"
+    axis, axis_status, axis_reason, _n_axis = qrs_axis(leads)
+    status["qrs_axis_deg"] = axis_status
+    count["qrs_axis_deg"] = _n_axis
+    if axis_reason:
+        reasons["qrs_axis_deg"] = axis_reason
     qtc_b = qtc_f = None
     if res["qt_ms"] is not None and rr_ms is not None:
         rr_s = rr_ms / 1000.0
@@ -278,6 +322,7 @@ def measure_signals(
         qt_ms=res["qt_ms"],
         qtc_bazett_ms=qtc_b,
         qtc_fridericia_ms=qtc_f,
+        qrs_axis_deg=axis,
         spread_ms=spread,
         status=status,
         n_leads=count,
@@ -332,31 +377,36 @@ def demote_on_qc(iv: Intervals, qc_label: str | None) -> Intervals:
 # the difference against the GE 12SL values over `ok` measurements on the
 # first half of the F11 PTB-XL sample (printed 3x4 + II signal)
 PRINTED_TOL_MS = {"pr_ms": 31.0, "qrs_ms": 20.0, "qt_ms": 39.0, "qtc_bazett_ms": 46.0}
+# frontal QRS axis vs the 12SL axis (F12, same protocol), degrees
+PRINTED_TOL_DEG = {"qrs_axis_deg": 39.0}
 
 
 def compare_printed(iv: Intervals, printed: dict[str, float | None]) -> Intervals:
     """Compare with the electrocardiograph's printed values (keys of
-    PRINTED_TOL_MS; None/absent = not printed). An `ok` interval outside the
-    tolerance becomes `doubtful`: either the digitization or the machine is
-    wrong, and the original must be looked at."""
-    for key, tol in PRINTED_TOL_MS.items():
+    PRINTED_TOL_MS and PRINTED_TOL_DEG; None/absent = not printed). An `ok`
+    value outside the tolerance becomes `doubtful`: either the digitization
+    or the machine is wrong, and the original must be looked at."""
+    tolerances = [(k, t, "ms") for k, t in PRINTED_TOL_MS.items()]
+    tolerances += [(k, t, "deg") for k, t in PRINTED_TOL_DEG.items()]
+    for key, tol, unit in tolerances:
         p = printed.get(key)
         if p is None:
             continue
-        if not (np.isfinite(p) and p > 0):
-            raise ValueError(f"printed {key} must be > 0")
+        if not np.isfinite(p) or (unit == "ms" and p <= 0):
+            raise ValueError(f"printed {key} must be finite" + (" and > 0" if unit == "ms" else ""))
         ours = getattr(iv, key)
-        entry: dict = {"printed_ms": float(p), "tolerance_ms": tol}
+        entry: dict = {"printed": float(p), "tolerance": tol, "unit": unit}
         if ours is None:
             entry["agrees"] = None
         else:
-            entry["diff_ms"] = round(ours - p, 1)
-            entry["agrees"] = bool(abs(ours - p) <= tol)
+            diff = ours - p if unit == "ms" else (ours - p + 180.0) % 360.0 - 180.0
+            entry["diff"] = round(diff, 1)
+            entry["agrees"] = bool(abs(diff) <= tol)
             status_key = "qt_ms" if key == "qtc_bazett_ms" else key
             if not entry["agrees"] and iv.status.get(status_key) == "ok":
                 iv.status[status_key] = "doubtful"
                 iv.reasons[status_key] = (
-                    f"differs from printed {key} by {ours - p:+.0f} ms (> {tol:.0f})"
+                    f"differs from printed {key} by {diff:+.0f} {unit} (> {tol:.0f})"
                 )
         iv.printed[key] = entry
     return iv

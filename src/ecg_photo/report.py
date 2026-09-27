@@ -36,8 +36,17 @@ REASONS_ES = (
     (re.compile(r"digitization quality insufficient"), "calidad de digitalización insuficiente"),
     (re.compile(r"RR not measured"), "RR no medido"),
     (
-        re.compile(r"differs from printed \w+ by ([+-]\d+) ms \(> (\d+)\)"),
-        r"difiere del impreso en \1 ms (> \2)",
+        re.compile(r"indeterminate: net QRS near zero in every limb lead"),
+        "indeterminado: QRS isodifásico en todas las derivaciones de miembros",
+    ),
+    (re.compile(r"fewer than 2 limb leads with a QRS"), "menos de 2 derivaciones de miembros"),
+    (
+        re.compile(r"found in (\d+) limb lead\(s\) only"),
+        r"hallado sólo en \1 derivación(es) de miembros",
+    ),
+    (
+        re.compile(r"differs from printed \w+ by ([+-]\d+) (ms|deg) \(> (\d+)\)"),
+        lambda m: f"difiere del impreso en {m[1]}{'°' if m[2] == 'deg' else ' ms'} (> {m[3]})",
     ),
     (re.compile(r"RR (\d+) ms outside .*"), r"RR \1 ms fuera de rango"),
 )
@@ -72,7 +81,8 @@ def measurement_rows(iv: dict | None) -> list[tuple[str, str, str]]:
         if not p:
             return text
         mark = {True: "coincide", False: "NO coincide", None: "sin medida"}[p.get("agrees")]
-        return f"{text}; impreso {p['printed_ms']:.0f} ms ({mark})"
+        unit = "°" if p.get("unit") == "deg" else " ms"
+        return f"{text}; impreso {p['printed']:.0f}{unit} ({mark})"
 
     def note(key: str) -> str:
         return with_printed(key, _note(key))
@@ -102,7 +112,34 @@ def measurement_rows(iv: dict | None) -> list[tuple[str, str, str]]:
     if status.get("qt_ms") != "ok" and iv.get("qtc_bazett_ms") is not None:
         qtc_note = "dudoso (QT dudoso); " + qtc_note
     rows.append(("QTc", _ms(iv.get("qtc_bazett_ms")), with_printed("qtc_bazett_ms", qtc_note)))
+    axis = iv.get("qrs_axis_deg")
+    axis_note = axis_category_es(axis)
+    if status.get("qrs_axis_deg") == "doubtful":
+        axis_note = f"dudoso: {reason_es(reasons.get('qrs_axis_deg', ''))}"
+    elif status.get("qrs_axis_deg") == "unavailable":
+        axis_note = reason_es(reasons.get("qrs_axis_deg", "no medible"))
+    rows.append(
+        (
+            "Eje QRS",
+            "—" if axis is None else f"{axis:+.0f}°",
+            with_printed("qrs_axis_deg", axis_note),
+        )
+    )
     return rows
+
+
+def axis_category_es(axis: float | None) -> str:
+    """Normal -30..+90; left deviation -90..-30; right deviation +90..180 and
+    the extreme (northwest) quadrant."""
+    if axis is None:
+        return "—"
+    if -30.0 <= axis <= 90.0:
+        return "normal"
+    if -90.0 <= axis < -30.0:
+        return "desviado a la izquierda"
+    if axis > 90.0:
+        return "desviado a la derecha"
+    return "extremo (cuadrante noroeste)"
 
 
 def scale_lines(manifest: Manifest) -> list[str]:

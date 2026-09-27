@@ -161,8 +161,9 @@ def test_cli_process(tmp_path: Path, monkeypatch, capsys) -> None:
     # never "agrees", whatever the measurement
     summary = json.loads((tmp_path / "b" / "summary.json").read_text())
     cmp = summary["intervals"]["printed"]
-    assert cmp["qrs_ms"]["printed_ms"] == 5000 and cmp["qrs_ms"]["agrees"] in (False, None)
-    assert cmp["pr_ms"]["tolerance_ms"] == 31.0 and "qt_ms" not in cmp
+    assert cmp["qrs_ms"]["printed"] == 5000 and cmp["qrs_ms"]["agrees"] in (False, None)
+    assert cmp["pr_ms"]["tolerance"] == 31.0 and cmp["pr_ms"]["unit"] == "ms"
+    assert "qt_ms" not in cmp
 
 
 def test_process_6x2_layout(tmp_path: Path) -> None:

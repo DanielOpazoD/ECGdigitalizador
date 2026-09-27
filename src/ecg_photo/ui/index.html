@@ -330,7 +330,9 @@
         const one = (label, key) => iv[key] == null ? `${label} —` : `${label} ${Math.round(iv[key])} ms${iv.status && iv.status[key] !== 'ok' ? ' (dudoso)' : ''}`;
         ivText = iv.error ? `intervalos: no calculados (${iv.error})`
           : `intervalos: FC ${iv.hr_bpm == null ? '—' : Math.round(iv.hr_bpm) + '/min'} · ${one('PR', 'pr_ms')} · ${one('QRS', 'qrs_ms')} · ${one('QT', 'qt_ms')}`
-            + ` · QTc Bazett ${iv.qtc_bazett_ms == null ? '—' : Math.round(iv.qtc_bazett_ms) + ' ms'} · orientativo, no validación clínica`;
+            + ` · QTc Bazett ${iv.qtc_bazett_ms == null ? '—' : Math.round(iv.qtc_bazett_ms) + ' ms'}`
+            + ` · eje ${iv.qrs_axis_deg == null ? '—' : Math.round(iv.qrs_axis_deg) + '°'}${iv.status && iv.status.qrs_axis_deg === 'doubtful' ? ' (dudoso)' : ''}`
+            + ' · orientativo, no validación clínica';
       } catch (err) { /* older results have no intervals.json */ }
     }
     $('ivBox').textContent = ivText;

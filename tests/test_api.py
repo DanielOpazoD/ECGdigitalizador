@@ -162,7 +162,9 @@ def test_patch_run_publish_export(tmp_path) -> None:
         assert rep.status_code == 200 and rep.content.startswith(b"%PDF")
         assert client.get(f"/studies/{sid}/runs/run-nope/report").status_code == 404
         iv = client.get(f"/studies/{sid}/runs/{run_id}/intervals")
-        assert iv.status_code == 200 and set(iv.json()["status"]) == {"pr_ms", "qrs_ms", "qt_ms"}
+        assert iv.status_code == 200 and {"pr_ms", "qrs_ms", "qt_ms", "qrs_axis_deg"} == set(
+            iv.json()["status"]
+        )
 
         ex = client.post(
             f"/studies/{sid}/exports",
