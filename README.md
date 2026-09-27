@@ -56,6 +56,8 @@ ruff check src tests && ruff format --check src tests && mypy src && pytest -q
   (`ecg-photo concordance`: tabla por foto y Bland-Altman frente a lo impreso).
 - `docs/guia_uso.md` — **guía de uso para el médico**: tomar la foto, procesarla, leer calidad
   y mediciones, comparar con lo impreso, límites y privacidad.
+- `docs/regulatorio/` — borrador de uso previsto, análisis de riesgos (ISO 14971) y trazabilidad
+  requisito → prueba (IEC 62304); no es una declaración regulatoria.
 - `docs/mission.md` — misión, principios, objetivos medibles y su estado.
 - `docs/architecture.md` — capas, flujo de datos, dónde vive cada cosa, cómo extender.
 - `docs/pipeline.md` — las dos corridas (`digitize`, `confirm-scale`) y `ecg-photo process`.
