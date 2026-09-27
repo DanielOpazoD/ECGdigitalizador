@@ -934,3 +934,19 @@ revisar el original, no invalida la medida.
 Limitaciones: la comparación usa la señal verdadera, no fotos (el error que
 añade la digitalización está en F10); 12SL no es una referencia clínica sino
 la del equipo; tolerancias de 150 registros. No es validación clínica.
+
+## PR: intentos de reducir su dispersión (descartados)
+
+PR es el único intervalo con DE algo por encima de la tolerancia CSE
+(11.5 ms frente a 10 en LUDB, hoja impresa, `ok`). Probado sobre las mitades
+de ajuste (LUDB impares, primera mitad 12SL) y comprobado en las otras:
+
+| cambio | mitades de ajuste | mitades de comprobación | decisión |
+|---|---|---|---|
+| amplitud mínima de P 0.03–0.08 mV × IQR máximo 25–40 ms | ninguna combinación mejora en las dos referencias | — | descartado |
+| PR sólo de derivaciones con P ≥ 30–70 % de la mayor | 0.6 mejora 12SL (DE 27 → 16) pero empeora LUDB (11 → 17) | — | descartado |
+| PR `ok` sólo con ≥ 5 derivaciones (antes 3) | 12SL DE 27 → 14 (quita un error de 207 ms), LUDB igual | LUDB 11.5 → 11.5; 12SL 12.0 → 12.1, con 4–6 valores `ok` menos | descartado: la mejora era un solo caso |
+
+Con hojas impresas cada derivación tiene 2.5 s (2–4 latidos) y la onda P es
+pequeña; la DE de ~11–12 ms frente a cardiólogos y frente a 12SL parece el
+límite de este método. Los valores con PR poco fiable ya salen `doubtful`.

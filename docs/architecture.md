@@ -9,9 +9,9 @@ prioriza: `docs/mission.md`. Detalle de cada etapa: `docs/pipeline.md`,
 ## Capas (dependencias sólo hacia abajo, sin ciclos)
 
 ```
-Entrada     cli.py  ·  api.py (FastAPI) + ui/index.html  ·  batch.py
+Entrada     cli.py  ·  api.py + api_results.py (FastAPI) + ui/index.html  ·  batch.py
                 │            │                                │
-Orquestación    process.py (un comando)   worker.py (cola, 1 trabajo)   store.py (estudios, revisiones, corridas)
+Orquestación    process.py (un comando)   worker.py (cola, 1 trabajo)   store.py + store_models.py (estudios, revisiones, corridas)
                 │                               │
 Dominio     ingest.py → pipeline.py (digitize_page, confirm_scale) → qc.py, intervals.py → export.py / render.py
             grid.py · aligned.py · calibration.py · transforms.py · signal.py · geometry.py · measure.py
@@ -96,9 +96,11 @@ Principios que el código hace cumplir (no sólo documenta):
 
 ## Deuda técnica conocida
 
-- `api.create_app` (≈340 líneas) y `cli.build_parser` concentran todas las
-  rutas / subcomandos en una función cada uno.
-- `store.py` (≈870 líneas) mezcla estudios, revisiones, corridas, bloqueo y
-  recuperación tras reinicio.
+- `cli.build_parser` concentra todos los subcomandos en una función.
+- La clase `Store` (≈620 líneas) reúne estudios, revisiones, corridas,
+  bloqueo y recuperación tras reinicio; sus modelos y errores ya están en
+  `store_models.py` y las rutas de lectura de resultados de la API en
+  `api_results.py` (ambos extraídos sin cambiar el contrato: mismas 19 rutas
+  y mismo esquema OpenAPI).
 - Instalar como wheel no incluye `configs/` (hay que fijar
   `ECG_PHOTO_CONFIG_DIR`).
