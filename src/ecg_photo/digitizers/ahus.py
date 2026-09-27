@@ -104,6 +104,9 @@ class AhusDigitizer:
         out_dir = work_dir / "out"
         in_dir.mkdir(parents=True, exist_ok=True)
         cfg["DATA"]["images_path"] = str(in_dir)
+        # only the time series and the geometry are read back: skipping Ahus'
+        # diagnostic PNG saves ~5 s of ~46 s per image, identical output (A4)
+        cfg["DATA"]["save_mode"] = "timeseries_only"
         cfg["DATA"]["output_path"] = str(out_dir)
         cfg_path = work_dir / "effective_config.yml"
         cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")

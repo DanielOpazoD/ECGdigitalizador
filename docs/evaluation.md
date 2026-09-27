@@ -20,6 +20,7 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F11](#f11-coinciden-nuestros-intervalos-con-los-que-imprime-el-electrocardiógrafo) | PTB-XL + medidas GE 12SL (PTB-XL+) | acuerdo con lo que imprime un GE | QT corregido (−20 → ≈ 0 ms de sesgo); tolerancias para contrastar con la cabecera impresa |
 | [F12](#f12-eje-eléctrico-del-qrs) | PTB-XL + 12SL + etiquetas de cardiólogos; Kaggle | eje del QRS | \|dif.\| mediana 5.6° frente a 12SL; categoría = cardiólogos 87 % (12SL 88 %) |
 | [A3](#a3-reproducibilidad-del-motor-e-instalación) | 8 imágenes Kaggle (una por tipo) | determinismo del motor; torch CPU frente a CUDA | Ahus no era determinista (hasta 1.6 mV); corregido; CPU = CUDA bit a bit |
+| [A4](#a4-tiempo-por-imagen) | 1 imagen Kaggle, perfil | tiempo por imagen | 55.2 → 48.4 s (−12 %), señales idénticas; ~35 s son inferencia de las redes |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -1032,3 +1033,24 @@ sólo-CPU, pesos verificados por sha256 y `ecg-photo doctor` al final. Probada
 reconstruyendo desde cero los entornos de ambos motores: `doctor` en verde y
 `ecg-photo process` de punta a punta con cada motor (12 derivaciones, calidad
 `good`, eje por evidencia).
+
+# A4: tiempo por imagen
+
+Perfil de `ecg-photo process` sobre una imagen Kaggle (CPU de 4 núcleos,
+torch 4 hilos): **55.2 s**, de los que 45.6 s (83 %) son el subproceso de Ahus
+y ~10 s el programa (exportar PNG y PDF de 12 derivaciones ~3.3 s, rejilla
+~1.9 s, ingreso, confirmación, calidad, intervalos, informe). Dentro de Ahus:
+inferencia de las redes ~34.5 s (U-Net ~23 s, casi todo convoluciones;
+identificador de derivaciones ~10 s); arranque, importaciones y carga de
+modelos ~6 s; y un PNG de diagnóstico que el programa no usa ~5 s.
+
+**Cambio:** Ahus corre con `save_mode: timeseries_only` (no dibuja ese PNG).
+La señal y la geometría salen idénticas byte a byte; `ecg-photo process`
+pasa de 55.2 s a **48.4 s (−12 %)** con las 12 señales exportadas idénticas.
+
+**Descartado:** mantener el motor cargado entre imágenes ahorraría como mucho
+~6 s (arranque y carga) con bastante complejidad (proceso persistente,
+reinicio al cambiar la configuración, re-siembra por imagen); construir una
+sola figura para el PNG y el PDF de cada derivación, ~1.5 s. La meta de −30 %
+no se alcanza sin tocar la inferencia (resolución, precisión numérica,
+número de formatos candidatos) —lo que cambiaría las señales— o sin GPU.
