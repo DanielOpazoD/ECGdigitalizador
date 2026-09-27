@@ -70,5 +70,7 @@ mínimo, medir antes/después y documentarlo con sus limitaciones.
 ## Fuera de alcance
 
 - Diagnóstico automático o interpretación clínica.
-- Validación clínica o regulatoria (requeriría datos y protocolo propios).
+- Validación clínica o regulatoria (requeriría datos y protocolo propios; el
+  borrador de uso previsto, análisis de riesgos y trazabilidad está en
+  `docs/regulatorio/`).
 - Rendimiento en GPU (el entorno de trabajo es CPU).
