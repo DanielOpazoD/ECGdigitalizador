@@ -21,6 +21,22 @@ Los valores `--printed-*` son los de la cabecera que imprime el electrocardiógr
 compara con ellos su RR y sus intervalos y marca las discrepancias (F11 en `docs/evaluation.md`).
 
 ## Instalación
+
+**En un paso** (Linux / macOS; necesita `python3.12`, `git`, `curl` y
+[`uv`](https://docs.astral.sh/uv/); descarga ~2.5 GB la primera vez):
+
+```bash
+./install.sh                  # programa + motor Ahus (CPU)
+./install.sh --with-digitiser # además el motor secundario ECG-Digitiser
+```
+
+Crea `.venv` con las versiones de `requirements.lock`, instala los motores en `external/` con
+sus versiones fijadas (`configs/engines/*-requirements.lock`, torch sólo CPU; otra compilación
+con `TORCH_INDEX_URL`), verifica el sha256 de los pesos y termina con `ecg-photo doctor`, que
+comprueba en cualquier momento que la instalación puede digitalizar. Es idempotente.
+
+Sólo el programa, sin motores (desarrollo, pruebas):
+
 ```bash
 python3.12 -m venv .venv && . .venv/bin/activate
 pip install -c requirements.lock -e .[dev]

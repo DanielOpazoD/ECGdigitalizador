@@ -28,6 +28,9 @@ están evaluados.
 
 ## 2. Procesarla
 
+Instalación: `./install.sh` (ver `README.md`); `ecg-photo doctor` dice si
+está lista.
+
 **Interfaz web** (`ecg-photo serve --store DIRECTORIO` y abrir
 `http://127.0.0.1:8000/ui`; sólo accesible desde el mismo computador):
 

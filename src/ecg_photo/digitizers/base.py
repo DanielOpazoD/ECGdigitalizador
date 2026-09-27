@@ -54,6 +54,13 @@ class EngineOutput:
     geometry: dict[str, LeadGeometry] | None = None
 
 
+# Engines iterate over Python sets and dicts built from them; with the default
+# per-process hash randomisation the same image could give a different signal
+# on each run (Ahus: up to 0.68 mV and 17 samples observed/not observed apart
+# on a Kaggle photo, A3). A fixed seed makes every engine run reproducible.
+ENGINE_HASH_SEED = "0"
+
+
 class Digitizer(Protocol):
     spec: EngineSpec
 

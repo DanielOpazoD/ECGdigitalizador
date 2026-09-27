@@ -11,6 +11,7 @@ import wfdb  # type: ignore[import-untyped]
 
 from ecg_photo.contracts import TransformChain, TransformStep
 from ecg_photo.digitizers.base import (
+    ENGINE_HASH_SEED,
     EngineNotReady,
     EngineOutput,
     EngineSpec,
@@ -99,6 +100,7 @@ class EcgDigitiserDigitizer:
             **os.environ,
             "PATH": str(self.python_exe.parent) + os.pathsep + os.environ.get("PATH", ""),
             "PYTHONPATH": str(self.root),
+            "PYTHONHASHSEED": ENGINE_HASH_SEED,
         }
         t0 = time.monotonic()
         proc = subprocess.run(

@@ -19,6 +19,7 @@ de cada una (r@lag: correlación por derivación con la verdad tras alinear
 | [F10](#f10-intervalos-en-imágenes-reales-kaggle) | Kaggle escaneos y fotos reales | error que añade la digitalización a PR/QRS/QT | PR y QT \|dif.\| ≈ 5 ms; QRS +8 ms más ancho |
 | [F11](#f11-coinciden-nuestros-intervalos-con-los-que-imprime-el-electrocardiógrafo) | PTB-XL + medidas GE 12SL (PTB-XL+) | acuerdo con lo que imprime un GE | QT corregido (−20 → ≈ 0 ms de sesgo); tolerancias para contrastar con la cabecera impresa |
 | [F12](#f12-eje-eléctrico-del-qrs) | PTB-XL + 12SL + etiquetas de cardiólogos; Kaggle | eje del QRS | \|dif.\| mediana 5.6° frente a 12SL; categoría = cardiólogos 87 % (12SL 88 %) |
+| [A3](#a3-reproducibilidad-del-motor-e-instalación) | 8 imágenes Kaggle (una por tipo) | determinismo del motor; torch CPU frente a CUDA | Ahus no era determinista (hasta 1.6 mV); corregido; CPU = CUDA bit a bit |
 
 Las secciones siguen en orden cronológico; cuando una fase posterior cambia
 una conclusión anterior, la posterior lo dice.
@@ -995,3 +996,39 @@ PDF (fila «Eje QRS» con la categoría) lo muestran.
 Limitaciones: 300 registros de un solo equipo de adquisición; la categoría de
 los cardiólogos existe en 173 de ellos; hoja limpia (el efecto de la foto está
 en F10). No es validación clínica.
+
+# A3: reproducibilidad del motor e instalación
+
+Al comprobar que la compilación de torch sólo-CPU daba las mismas señales que
+la de CUDA apareció un defecto previo: **Ahus no era determinista**. Una misma
+imagen podía dar señales distintas en dos corridas, con cualquier compilación
+de torch, por dos causas:
+
+- el orden de iteración de conjuntos de Python cambia en cada proceso
+  (`PYTHONHASHSEED`): hasta 0.68 mV y 17 muestras observadas/no observadas de
+  diferencia en una foto de impresión (Kaggle 0005);
+- torch siembra su generador al azar en cada proceso, y Ahus submuestrea
+  puntos con `torch.randperm` (detector de perspectiva, corrector de
+  deformación) y desempata con `torch.randn`: hasta 1.6 mV de diferencia en un
+  escaneo con moho (Kaggle 0012), en 8 de las 12 derivaciones.
+
+**Cambio:** los adaptadores lanzan los motores con `PYTHONHASHSEED=0`, y Ahus a
+través de un punto de entrada que siembra `random`, `numpy` y `torch` antes de
+ejecutar su `digitize.py` (su código no se modifica). Con eso, dos corridas
+dan la misma señal bit a bit, y torch CPU y torch CUDA dan **señales idénticas
+bit a bit en 8 imágenes, una de cada tipo Kaggle** (0003, 0004, 0005, 0006,
+0009, 0010, 0011, 0012), con igual o menor tiempo. De ahí la instalación con
+torch sólo-CPU: el entorno de Ahus pasa de 6.2 GB a 1.7 GB.
+
+Consecuencia para leer los bancos anteriores (F6-b a F12 con motor): cada
+cifra es una realización de un motor no determinista; en las imágenes donde se
+activa el submuestreo, una repetición podía variar. Las conclusiones se
+apoyaban en decenas de imágenes y no dependen de una sola, pero las cifras
+exactas no eran reproducibles bit a bit; desde este cambio sí lo son.
+
+Instalación (`install.sh`): entorno del programa desde `requirements.lock`,
+entornos de los motores desde `configs/engines/*-requirements.lock` con torch
+sólo-CPU, pesos verificados por sha256 y `ecg-photo doctor` al final. Probada
+reconstruyendo desde cero los entornos de ambos motores: `doctor` en verde y
+`ecg-photo process` de punta a punta con cada motor (12 derivaciones, calidad
+`good`, eje por evidencia).
