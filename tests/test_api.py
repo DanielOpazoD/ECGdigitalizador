@@ -166,6 +166,36 @@ def test_patch_run_publish_export(tmp_path) -> None:
             iv.json()["status"]
         )
 
+        # values printed on the sheet header: recorded and compared (PR A1)
+        printed_url = f"/studies/{sid}/runs/{run_id}/printed"
+        assert client.get(printed_url).status_code == 404
+        bad = client.put(printed_url, json={"values": {"hr_bpm": 900}, "author": "t"})
+        assert bad.status_code == 422
+        both = client.put(
+            printed_url, json={"values": {"hr_bpm": 60, "rr_ms": 1000}, "author": "t"}
+        )
+        assert both.status_code == 422
+        pv = client.put(
+            printed_url,
+            json={"values": {"rr_ms": 3000, "qrs_ms": 90, "axis_deg": 270}, "author": "dr"},
+        )
+        assert pv.status_code == 200, pv.text
+        body = pv.json()
+        assert body["printed"]["author"] == "dr"
+        assert body["printed"]["values"]["axis_deg"] == -90.0  # 270 printed = -90
+        assert body["qc"]["rr_printed_ms"] == 3000
+        assert set(body["intervals"]["printed"]) <= {"qrs_ms", "qrs_axis_deg"}
+        assert client.get(printed_url).json()["values"]["qrs_ms"] == 90
+        # the rewritten reports are what the other routes now serve
+        assert client.get(f"/studies/{sid}/runs/{run_id}/qc").json()["rr_printed_ms"] == 3000
+        assert client.get(f"/studies/{sid}/runs/{run_id}/report").status_code == 200
+        assert (
+            client.put(
+                f"/studies/{sid}/runs/run-nope/printed", json={"values": {}, "author": "t"}
+            ).status_code
+            == 404
+        )
+
         ex = client.post(
             f"/studies/{sid}/exports",
             json={"revision": 2, "run_id": run_id, "formats": ["csv", "json", "png"]},
